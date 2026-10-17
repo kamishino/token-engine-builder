@@ -48,6 +48,19 @@ npm run deploy   # junction-link dist/* into ~/.agents/skills (rebuilds stale, p
 
 Each `dist/<skill>/` also carries its own `SKILL.md` (agent instructions), `templates/`, and `assets/` — see `ARCHITECTURE.md` §1. Agents working in this repo should start at `AGENTS.md`.
 
+## Releases
+
+Versioned with changesets (whole-set version in `package.json`). Cut a release:
+
+```bash
+npm run changeset   # record each user-visible change as it lands
+npm run release     # consume changesets into a version bump
+npm run package     # build + write release/ zips + SHA256SUMS.txt
+gh release create v<version> release/* --title "v<version>"
+```
+
+Artifacts: one zip per skill (`token-engine-<skill>-v<version>.zip`, extract into an agents skills dir and run) plus a full bundle zip. `release/` is gitignored; artifacts attach to the GitHub release.
+
 ## Contributing
 
 Small, colocated changes: edit `src/skills/<skill>/` or `src/shared/`, run `npm run check`, and update the owning doc in the same commit (`AGENTS.md` for rules, `ARCHITECTURE.md` for design moves). Conventional commits (`type(scope): description`, ≤72 chars, imperative). Never hand-edit `dist/`.
