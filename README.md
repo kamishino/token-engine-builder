@@ -1,6 +1,12 @@
 # token-engine-builder
 
-Builds and packages self-contained AI agent skills for 3-tier W3C DTCG design tokens. Each skill under `src/skills/<skill-name>/` builds 1:1 into `dist/<skill-name>/` — copy that folder to `~/agents/skills/<skill-name>/` and it runs standalone (`node`, no `npm install`).
+Builds and packages self-contained AI agent skills for 3-tier W3C DTCG design tokens. Each skill under `src/skills/<skill-name>/` builds 1:1 into `dist/<skill-name>/` — copy that folder to `~/agents/skills/<skill-name>/` and it runs standalone with plain `node`, no `npm install`.
+
+## Why this exists
+
+Hand-authored design tokens drift: hex values leak into semantic layers, contrast goes unmeasured, and build configs depend on toolchain installs. This repo derives the whole system from one OKLCH anchor through deterministic math (ramps, modular type, 4px spacing), gates it on measured WCAG 2.1 contrast, and ships each pipeline stage as a portable skill with its dependencies inlined at build time.
+
+Built with TypeScript, Vite (SSR/Node lib mode), `colorjs.io/fn` partial imports (only `sRGB` + `OKLCH` registered), and Style Dictionary v4 driven programmatically.
 
 ## Pipeline
 
@@ -11,17 +17,41 @@ Builds and packages self-contained AI agent skills for 3-tier W3C DTCG design to
 4-token-build    build.mjs --tokens tokens     → tokens.css + Tailwind v4 theme.css
 ```
 
-## Develop
+Raw values live only in `1-primitive/`; semantic (per-theme) and component tokens are `{alias}`-only. See `ARCHITECTURE.md` §3.
+
+## Install
+
+Requires Node `>=20`.
 
 ```bash
 npm install        # everything is a devDependency — Vite inlines it at build time
+npm run check      # typecheck + lint + build (run before yielding)
 npm run build      # → dist/<skill>/ (SKILL.md + scripts/*.mjs + templates/ + assets/)
-npm run check      # typecheck + lint + build
 ```
 
-## Architecture notes
+## Use
 
-- **Tree-shaking**: `colorjs.io` is imported only via `colorjs.io/fn` procedural partials, registering just `sRGB` + `OKLCH` (`src/shared/colors.ts`); ESLint bans the monolithic entry. Vite builds in SSR/Node mode (`resolve.conditions: ['node']`, `ssr.noExternal`) with `treeshake: { moduleSideEffects: false }` + esbuild minify; Node built-ins stay external, all npm deps inline. `scripts/build-all.mjs` builds one skill per Vite pass so no shared chunk leaks between skill folders.
-- **Style Dictionary v4** is driven programmatically with ESM imports (`style-dictionary`, `style-dictionary/utils`) and custom hooks: `color/oklch`, `dimension/rem`, `tailwind/v4-theme` (`src/shared/compiler.ts`). Token sources are expanded/merged in-process and passed as inline `tokens` — SD's bundled glob loader does not survive re-bundling.
-- **Portability**: bundled scripts resolve `templates/`/`assets/` from `import.meta.url` (`src/shared/paths.ts`), never from cwd.
-- **Tiers**: raw values live only in `1-primitive/`; semantic (per-theme) and component tokens are `{alias}`-only. `audit.mjs` enforces it.
+```bash
+# 1. Record the anchor (interview in skill 1, or copy the example)
+cp dist/1-design-style/assets/style-spec.example.json style-spec.json
+
+# 2. Generate the 3-tier tree
+node dist/2-token-math/scripts/generate.mjs --spec style-spec.json --out tokens
+
+# 3. Gate on contrast (exit 0 ships, exit 1 stops)
+node dist/3-token-audit/scripts/audit.mjs --tokens tokens --min-ratio 4.5
+
+# 4. Build one theme at a time, then deploy the skill folder
+node dist/4-token-build/scripts/build.mjs --tokens tokens --out build --theme light
+cp -r dist/4-token-build ~/agents/skills/4-token-build
+```
+
+Each `dist/<skill>/` also carries its own `SKILL.md` (agent instructions), `templates/`, and `assets/` — see `ARCHITECTURE.md` §1. Agents working in this repo should start at `AGENTS.md`.
+
+## Contributing
+
+Small, colocated changes: edit `src/skills/<skill>/` or `src/shared/`, run `npm run check`, and update the owning doc in the same commit (`AGENTS.md` for rules, `ARCHITECTURE.md` for design moves). Conventional commits (`type(scope): description`, ≤72 chars, imperative). Never hand-edit `dist/`.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

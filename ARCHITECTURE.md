@@ -1,0 +1,41 @@
+# ARCHITECTURE.md — token-engine-builder
+
+Deep design: module contracts, token discipline, and the three load-bearing build decisions. `AGENTS.md` states the rules; this file explains why.
+
+## 1. System overview
+
+```
+style-spec.json ──generate.mjs──▶ tokens/ (3-tier) ──audit.mjs──▶ gate (0/1) ──build.mjs──▶ tokens.css + theme.css
+       ▲                              │                                                    │
+ 1-design-style              2-token-math                                          4-token-build
+ (interview)              (templates + math)            3-token-audit (WCAG 2.1 gatekeeper)
+```
+
+Skill packages are colocated (`src/skills/<skill>/`: `SKILL.md`, `scripts/*.ts`, `templates/`, `assets/`) and mirrored 1:1 into `dist/<skill>/` by the `sync-skill-packages` Vite plugin (`closeBundle`: copy `SKILL.md` + `templates/` + `assets/`, `chmod 0o755` on `scripts/*.mjs`). A `dist/<skill>/` folder runs standalone: `node scripts/<name>.mjs` with no install.
+
+## 2. Module contracts (`src/shared/`)
+
+| Module        | Owns                                                                                                                                                  | Key exports                                                                                                                                                                                               |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `types.ts`    | DTCG 3-tier types, `StyleSpec` (skill 1→2 contract), `AuditReport`, `BuildTokensOptions`                                                              | `DesignToken`, `TokenGroup`, `OklchColor`, `ColorRamp`, `StyleSpec`, `ContrastResult`                                                                                                                     |
+| `colors.ts`   | OKLCH engine on `colorjs.io/fn` partials; registers only `sRGB` + `OKLCH` (rest tree-shaken)                                                          | `parseToOklch`, `dtcgToOklch`, `formatOklch`, `oklchToHex`, `dtcgColorValue`, `contrastRatio`, `checkContrast`, `buildRamp` (anchor lands exactly on step 500; chroma tapers 100%→10% by offset distance) |
+| `scales.ts`   | Modular type (`base × ratioⁿ`), 4px spacing, `fluidClamp`, radius                                                                                     | `modularScale`, `typographyScale`, `fluidClamp`, `spacingScale` (comfortable 1.0 / compact 0.875), `radiusScale`                                                                                          |
+| `compiler.ts` | SD v4 programmatic builder: custom `color/oklch` + `dimension/rem` transforms, `token-engine/css-variables` (DTCG mode) + `tailwind/v4-theme` formats | `buildTokens`, `loadTokenSources`, `expandSource`, `oklchTransform`, `dimensionRemTransform`                                                                                                              |
+| `paths.ts`    | Portable skill paths (`import.meta.url`) vs cwd-relative user paths                                                                                   | `scriptDir`, `skillRoot`, `templatePath`, `assetPath`, `getArg`, `hasFlag`, `fromCwd`                                                                                                                     |
+
+## 3. Token tiers and alias discipline
+
+- `1-primitive/` — only raw values: OKLCH color ramps (`{colorSpace:'oklch', components:[l,c,h]}` + hex fallback), px dimensions, font stacks/weights.
+- `2-semantic/` — one file per theme (`light`/`dark`), identical paths, `{alias}` values only.
+- `3-component/` — button/card/input, `{alias}` values only (color → semantic roles; spacing/radius → primitives).
+- `audit.mjs` checks 7 fg/bg pairs per theme (body, secondary, surface, action, button, card, input), every alias in the merged tree resolves (cycle depth ≤16), and zero raw values/hex above Tier 1. `--min-ratio` default 4.5; negative probe `--min-ratio 21` exits 1.
+
+## 4. Build pipeline — three decisions that each fixed a real failure
+
+1. **One Vite pass per skill** (`scripts/build-all.mjs`, `SKILL_ENTRY`, `inlineDynamicImports`). A single multi-entry build emits shared `dist/_chunks/`, so a copied skill folder breaks. Per-skill passes inline shared code into each `.mjs`: generate 49 kB, audit 48 kB, build 1.5 MB (Style Dictionary inlined).
+2. **SSR/Node build** (`resolve.conditions: ['node']`, `ssr: { target: 'node', noExternal: true }`, all Node builtins external, `treeshake.moduleSideEffects: false`, esbuild minify, `#!/usr/bin/env node` banner). Default client conditions resolve SD's `./fs` export to the browser memfs shim — outputs go to memory and zero files land on disk.
+3. **In-process token merge, inline `tokens`** (`loadTokenSources`/`expandSource` in `compiler.ts`). SD's bundled glob loader (`@bundled-es-modules/glob`) does not survive re-bundling into a standalone `.mjs`; build globs are cwd-relative with forward slashes, expanded here instead. `build.mjs` fails closed when an expected output file is missing.
+
+## 5. Verified behavior (smoke, not tests)
+
+Portable proof: `dist/*` copied outside the repo, run from a foreign cwd with no install. Generate lands the anchor exactly (`oklch(60% 0.15 250)` at `brand.500`); audit passes light+dark (ratios 5.21–17.09 across 7 pairs/theme); dark build emits 42 `oklch()` values per file, 0 `undefined`; rem dimensions (`--spacing-1: 0.25rem`); Tailwind `@theme` carries `--color-*`. There is no test suite — this smoke run is the verification gate.
