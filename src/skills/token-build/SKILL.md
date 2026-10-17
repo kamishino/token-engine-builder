@@ -3,10 +3,7 @@ name: token-build
 description: 'Final stage of the pipeline: compile audited 3-tier tokens to CSS variables and Tailwind v4 @theme via Style Dictionary. Use when audit passes and CSS/Tailwind output is needed.'
 license: MIT
 compatibility: Node.js >=22.12
-allowed-tools:
-  - Bash
-  - Read
-  - Write
+allowed-tools: 'Bash Read Write'
 ---
 
 # Token Build — Tokens → CSS + Tailwind v4

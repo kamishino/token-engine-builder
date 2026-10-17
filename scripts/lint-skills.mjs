@@ -33,8 +33,8 @@ for (const entry of readdirSync(skillsDir, { withFileTypes: true })) {
     fail('license is missing (Agent Skills spec optional field, required here)');
   if (!fields.get('compatibility'))
     fail('compatibility is missing (Agent Skills spec optional field, required here)');
-  if (fields.has('allowed-tools') && fields.get('allowed-tools') !== '') {
-    fail('allowed-tools must use YAML list form (one `- Tool` per line), not an inline string');
+  if (!fields.get('allowed-tools')) {
+    fail('allowed-tools is missing (Agent Skills spec space-separated string, required here)');
   }
   for (const [key, value] of fields) {
     const quoted =

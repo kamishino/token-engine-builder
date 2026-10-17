@@ -3,10 +3,7 @@ name: token-math
 description: 'Second in the pipeline: generate the 3-tier DTCG token tree from style-spec.json. Use when the spec exists and tokens/ is missing or the anchor changed.'
 license: MIT
 compatibility: Node.js >=22.12
-allowed-tools:
-  - Bash
-  - Read
-  - Write
+allowed-tools: 'Bash Read Write'
 ---
 
 # Token Math — `style-spec.json` → 3-Tier Tokens
@@ -21,7 +18,7 @@ Deterministic: same spec in, same tokens out. The script does the math (OKLCH ra
    node ./scripts/generate.mjs --spec style-spec.json --out tokens
    ```
 
-   (`--force` overwrites an existing `tokens/`; ask before using it.) It copies `templates/tokens/` then rewrites Tier-1 primitives from the spec — brand anchor lands exactly on `color.brand.500`.
+   (`--force` overwrites an existing `tokens/`; ask before using it. Preview with `--dry-run` first.) It copies `templates/tokens/` then rewrites Tier-1 primitives from the spec — brand anchor lands exactly on `color.brand.500`.
    - Done when: exit 0 and `tokens/primitive/color.tokens.json` contains the spec anchor at `brand.500`.
 
 2. **Respect the tiers** in any manual edit afterwards: raw values only in `primitive/`; `semantic/` (one file per theme, same paths) and `component/` contain `{alias}` values only.
