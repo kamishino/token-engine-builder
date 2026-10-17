@@ -1,6 +1,6 @@
 ---
 name: token-audit
-description: Third in the pipeline: audit a 3-tier token tree as a WCAG gatekeeper. Use after generating or editing tokens, before building or shipping them; exit 1 blocks the build.
+description: 'Third in the pipeline: audit a 3-tier token tree as a WCAG gatekeeper. Use after generating or editing tokens, before building or shipping them; exit 1 blocks the build.'
 ---
 
 # Token Audit — WCAG 2.1 Gatekeeper

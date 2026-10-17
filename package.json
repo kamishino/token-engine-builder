@@ -13,9 +13,10 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:css": "node scripts/sample-css.mjs",
+    "lint:skills": "node scripts/lint-skills.mjs",
     "format": "prettier --check .",
     "format:write": "prettier --write .",
-    "check": "npm run typecheck && npm run lint && npm run build && npm run lint:css"
+    "check": "npm run typecheck && npm run lint && npm run lint:skills && npm run build && npm run lint:css"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
