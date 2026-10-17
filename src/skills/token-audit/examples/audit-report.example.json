@@ -23,15 +23,15 @@
           "pass": true
         },
         {
-          "foreground": "semantic.color.action.primaryText",
+          "foreground": "semantic.color.action.primary-text",
           "background": "semantic.color.action.primary",
-          "ratio": 5.19,
+          "ratio": 7.32,
           "pass": true
         },
         {
           "foreground": "component.button.text",
           "background": "component.button.bg",
-          "ratio": 5.19,
+          "ratio": 7.32,
           "pass": true
         },
         {
@@ -72,7 +72,7 @@
           "pass": true
         },
         {
-          "foreground": "semantic.color.action.primaryText",
+          "foreground": "semantic.color.action.primary-text",
           "background": "semantic.color.action.primary",
           "ratio": 6.56,
           "pass": true

@@ -14,8 +14,8 @@
         "inverse": { "$value": "{color.neutral.50}" }
       },
       "action": {
-        "primary": { "$value": "{color.brand.600}" },
-        "primary-hover": { "$value": "{color.brand.700}" },
+        "primary": { "$value": "{color.brand.700}" },
+        "primary-hover": { "$value": "{color.brand.800}" },
         "primary-text": { "$value": "{color.neutral.50}" }
       },
       "border": {

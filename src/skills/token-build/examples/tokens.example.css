@@ -63,13 +63,13 @@
   --semantic-color-text-primary: oklch(28% 0.0038 250deg);
   --semantic-color-text-secondary: oklch(44% 0.0079 250deg);
   --semantic-color-text-inverse: oklch(98% 0.0012 250deg);
-  --semantic-color-action-primary: oklch(52% 0.1243 250deg);
-  --semantic-color-action-primary-hover: oklch(44% 0.0986 250deg);
+  --semantic-color-action-primary: oklch(44% 0.0986 250deg);
+  --semantic-color-action-primary-hover: oklch(36% 0.0729 250deg);
   --semantic-color-action-primary-text: oklch(98% 0.0012 250deg);
   --semantic-color-border-default: oklch(78% 0.0074 250deg);
   --semantic-color-border-strong: oklch(60% 0.012 250deg);
-  --component-button-bg: oklch(52% 0.1243 250deg);
-  --component-button-bg-hover: oklch(44% 0.0986 250deg);
+  --component-button-bg: oklch(44% 0.0986 250deg);
+  --component-button-bg-hover: oklch(36% 0.0729 250deg);
   --component-button-text: oklch(98% 0.0012 250deg);
   --component-button-radius: 0.5rem;
   --component-button-padding-x: 1rem;
