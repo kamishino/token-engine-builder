@@ -14,13 +14,16 @@ import type { ColorRamp, StyleSpec, TokenGroup } from '../../../shared/types.js'
 const argv = process.argv.slice(2);
 
 if (hasFlag(argv, '--help')) {
-  console.log('Usage: generate.mjs --spec <style-spec.json> --out <tokens-dir> [--force]');
+  console.log(
+    'Usage: generate.mjs --spec <style-spec.json> --out <tokens-dir> [--force] [--dry-run]',
+  );
   process.exit(0);
 }
 
 const specPath = fromCwd(getArg(argv, '--spec', 'style-spec.json') as string);
 const outDir = fromCwd(getArg(argv, '--out', 'tokens') as string);
 const force = hasFlag(argv, '--force');
+const dryRun = hasFlag(argv, '--dry-run');
 
 if (!existsSync(specPath)) {
   console.error(`style-spec not found: ${specPath} (run skill design-style first)`);
@@ -48,6 +51,20 @@ if (
 if (!spec.typography || !(spec.typography.ratio > 1) || !(spec.typography.baseSizePx > 0)) {
   console.error('invalid style-spec: typography.baseSizePx > 0 and typography.ratio > 1 required');
   process.exit(1);
+}
+
+if (dryRun) {
+  console.log(`would generate 3-tier tokens for "${spec.name}" → ${outDir}`);
+  console.log('would copy: templates/tokens/** (semantic/component aliases, tier templates)');
+  for (const file of [
+    'primitive/color.tokens.json',
+    'primitive/typography.tokens.json',
+    'primitive/spacing.tokens.json',
+    'primitive/radius.tokens.json',
+  ]) {
+    console.log(`would write: ${file} (anchor lands on brand.500)`);
+  }
+  process.exit(0);
 }
 
 // 1. Scaffold: copy bundled templates/tokens/** → --out (portable via import.meta.url).
