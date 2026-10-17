@@ -12,12 +12,12 @@ Built with TypeScript, Vite (SSR/Node lib mode), `colorjs.io/fn` partial imports
 
 ```text
 design-style      Socratic interview first          → style-spec.json
-token-math        generate.mjs --spec …             → tokens/ (1-primitive → 2-semantic → 3-component)
+token-math        generate.mjs --spec …         → tokens/ (primitive → semantic → component)
 token-audit       audit.mjs --tokens tokens         → WCAG 2.1 gate (exit 0/1)
 token-build       build.mjs --tokens tokens         → tokens.css + Tailwind v4 theme.css
 ```
 
-Raw values live only in `1-primitive/`; semantic (per-theme) and component tokens are `{alias}`-only. See `ARCHITECTURE.md` §3.
+Raw values live only in `primitive/`; semantic (per-theme) and component tokens are `{alias}`-only. See `ARCHITECTURE.md` §3.
 
 ## Install
 

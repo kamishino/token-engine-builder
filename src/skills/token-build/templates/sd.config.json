@@ -1,9 +1,9 @@
 {
-  "$description": "Base Style Dictionary v4 config template. build.mjs feeds the same shape programmatically via src/shared/compiler.ts (custom color/oklch + dimension/rem transforms, tailwind/v4-theme format).",
+  "$description": "Base Style Dictionary config template. build.mjs feeds the same shape programmatically via src/shared/compiler.ts (custom color/oklch + dimension/rem transforms, tailwind/v4-theme format).",
   "source": [
-    "tokens/1-primitive/**/*.tokens.json",
-    "tokens/2-semantic/light.tokens.json",
-    "tokens/3-component/**/*.tokens.json"
+    "tokens/primitive/**/*.tokens.json",
+    "tokens/semantic/light.tokens.json",
+    "tokens/component/**/*.tokens.json"
   ],
   "platforms": {
     "css": {

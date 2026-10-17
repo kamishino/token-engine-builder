@@ -13,7 +13,7 @@ TypeScript + Vite (SSR/Node lib mode) builder that packages colocated AI agent s
 
 ## WHY — intent
 
-One OKLCH anchor derives the whole token system; deterministic math downstream. Tiers: raw values only in `1-primitive/`; `2-semantic/` (per-theme, same paths) and `3-component/` are `{alias}`-only. `audit.mjs` enforces it — exit 0 ships, exit 1 stops.
+Tiers: raw values only in `primitive/`; `semantic/` (per-theme, same paths) and `component/` are `{alias}`-only. `audit.mjs` enforces it — exit 0 ships, exit 1 stops.
 
 ## HOW — commands (these get used; nothing else is blessed)
 
@@ -30,7 +30,7 @@ Node `>=20`. No test suite — portable smoke (copied `dist/*`, foreign cwd: gen
 1. `colorjs.io/fn` partials only (`ColorSpace`, `sRGB`, `OKLCH`, `to`, `serialize`, `contrastWCAG21`, `parse`); register just `sRGB` + `OKLCH`. Monolithic `colorjs.io` entry is banned.
 2. `devDependencies` only. Vite inlines everything; `node:*` stays external.
 3. Bundled scripts resolve `templates/` + `assets/` from `import.meta.url` (`paths.ts`), never from `process.cwd()`. User inputs (specs, `--out`) are cwd-relative by design.
-4. Tier discipline: no `#hex`/`oklch()`/px literals outside `1-primitive/`; semantic + component tokens alias only.
+4. Tier discipline: no `#hex`/`oklch()`/px literals outside `primitive/`; semantic + component tokens alias only.
 
 ## Working rules
 

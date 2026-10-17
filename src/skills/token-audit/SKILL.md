@@ -26,7 +26,7 @@ Binary gate: exit 0 ships, exit 1 stops. Never soften a failure by lowering `--m
 2. **Remediate failures** (no human needed, max 3 loops):
    - Contrast shortfall → move the offending primitive step one step further from its background (e.g. semantic alias `neutral.700` → `neutral.800`), or shift the anchor `l` in `style-spec.json` ≥ 0.05 and re-run `token-math`.
    - Unresolved alias → fix the target path; aliases are dotted from the merged tree root (`{color.brand.500}`).
-   - Raw value above Tier 1 → move it into `1-primitive/` and alias it.
+   - Raw value above Tier 1 → move it into `primitive/` and alias it.
    - Done when: audit exits 0, or 3 loops elapsed → escalate with the failing pairs table.
 3. **Report**: paste the ratio table; state PASS/FAIL per theme.
    - Done when: every pair from the report is accounted for in your reply.

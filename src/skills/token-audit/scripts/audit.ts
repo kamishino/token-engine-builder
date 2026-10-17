@@ -121,12 +121,12 @@ const PAIRS: ReadonlyArray<readonly [string, string]> = [
 
 function auditTheme(themeName: string): AuditReport {
   const files: Array<{ path: string; tier: string }> = [];
-  for (const path of tokenFiles(join(tokensDir, '1-primitive')))
-    files.push({ path, tier: '1-primitive' });
-  const semanticFile = join(tokensDir, '2-semantic', `${themeName}.tokens.json`);
-  if (existsSync(semanticFile)) files.push({ path: semanticFile, tier: '2-semantic' });
-  for (const path of tokenFiles(join(tokensDir, '3-component')))
-    files.push({ path, tier: '3-component' });
+  for (const path of tokenFiles(join(tokensDir, 'primitive')))
+    files.push({ path, tier: 'primitive' });
+  const semanticFile = join(tokensDir, 'semantic', `${themeName}.tokens.json`);
+  if (existsSync(semanticFile)) files.push({ path: semanticFile, tier: 'semantic' });
+  for (const path of tokenFiles(join(tokensDir, 'component')))
+    files.push({ path, tier: 'component' });
 
   const flat = new Map<string, { value: unknown; tier: string }>();
   const tree: Json = {};
@@ -138,7 +138,7 @@ function auditTheme(themeName: string): AuditReport {
 
   const rawValueViolations: string[] = [];
   for (const [path, entry] of flat) {
-    if (entry.tier === '1-primitive') continue;
+    if (entry.tier === 'primitive') continue;
     if (typeof entry.value !== 'string' || !ALIAS.test(entry.value.trim())) {
       rawValueViolations.push(`${path} (${entry.tier}: raw value, alias required)`);
     }

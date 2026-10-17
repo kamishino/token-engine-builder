@@ -43,9 +43,9 @@ if (!existsSync(baseConfig)) {
 // patterns (bundled glob engines mishandle absolute Windows drive paths).
 const globBase = relative(process.cwd(), tokensDir).replaceAll('\\', '/');
 const source = [
-  `${globBase}/1-primitive/**/*.tokens.json`,
-  `${globBase}/2-semantic/${theme}.tokens.json`,
-  `${globBase}/3-component/**/*.tokens.json`,
+  `${globBase}/primitive/**/*.tokens.json`,
+  `${globBase}/semantic/${theme}.tokens.json`,
+  `${globBase}/component/**/*.tokens.json`,
 ];
 
 try {

@@ -67,7 +67,7 @@ function writeTokenFile(segments: string[], data: unknown): void {
   writeFileSync(join(outDir, ...segments), `${JSON.stringify(data, null, 2)}\n`, 'utf8');
 }
 
-writeTokenFile(['1-primitive', 'color.tokens.json'], {
+writeTokenFile(['primitive', 'color.tokens.json'], {
   $description: `Tier 1 — OKLCH ramps for "${spec.name}". Anchor lands on brand.500. Generated; do not hand-edit hex.`,
   color: {
     $type: 'color',
@@ -76,7 +76,7 @@ writeTokenFile(['1-primitive', 'color.tokens.json'], {
   },
 });
 
-writeTokenFile(['1-primitive', 'typography.tokens.json'], {
+writeTokenFile(['primitive', 'typography.tokens.json'], {
   $description: `Tier 1 — modular type scale (base ${spec.typography.baseSizePx}px, ratio ${spec.typography.ratio}). Generated.`,
   fontFamily: { $type: 'fontFamily', sans: { $value: spec.typography.fontFamily } },
   fontSize: typographyScale(spec.typography.baseSizePx, spec.typography.ratio),
@@ -89,12 +89,12 @@ writeTokenFile(['1-primitive', 'typography.tokens.json'], {
   },
 });
 
-writeTokenFile(['1-primitive', 'spacing.tokens.json'], {
+writeTokenFile(['primitive', 'spacing.tokens.json'], {
   $description: `Tier 1 — ${spec.spacingBasePx}px-base spacing (${spec.density}). Generated.`,
   spacing: spacingScale(spec.spacingBasePx, spec.density),
 });
 
-writeTokenFile(['1-primitive', 'radius.tokens.json'], {
+writeTokenFile(['primitive', 'radius.tokens.json'], {
   $description: 'Tier 1 — corner radii. Generated.',
   radius: radiusScale(spec.radius),
 });

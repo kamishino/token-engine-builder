@@ -11,7 +11,7 @@ style-spec.json ──generate.mjs──▶ tokens/ (3-tier) ──audit.mjs─�
  (interview first)      (templates + math)            token-audit (WCAG 2.1 gatekeeper)
 ```
 
-Skill packages are colocated (`src/skills/<skill>/`: `SKILL.md`, `scripts/*.ts`, `templates/`, `assets/`) and mirrored 1:1 into `dist/<skill>/` by the `sync-skill-packages` Vite plugin (`closeBundle`: copy `SKILL.md` + `templates/` + `assets/`, `chmod 0o755` on `scripts/*.mjs`). A `dist/<skill>/` folder runs standalone: `node scripts/<name>.mjs` with no install.
+Skill packages are colocated (`src/skills/<skill>/`: `SKILL.md`, `scripts/*.ts`, `templates/`, `assets/`) and mirrored 1:1 into `dist/<skill>/` by the `sync-skill-packages` Vite plugin (`closeBundle`: copy `SKILL.md` + `templates/` + `assets/` + `examples/`, `chmod 0o755` on `scripts/*.mjs`). Per-skill `README.md` files stay in `src/` — `dist/` is production-readiness. A `dist/<skill>/` folder runs standalone: `node scripts/<name>.mjs` with no install.
 
 ## 2. Module contracts (`src/shared/`)
 
@@ -25,9 +25,9 @@ Skill packages are colocated (`src/skills/<skill>/`: `SKILL.md`, `scripts/*.ts`,
 
 ## 3. Token tiers and alias discipline
 
-- `1-primitive/` — only raw values: OKLCH color ramps (`{colorSpace:'oklch', components:[l,c,h]}` + hex fallback), px dimensions, font stacks/weights.
-- `2-semantic/` — one file per theme (`light`/`dark`), identical paths, `{alias}` values only.
-- `3-component/` — button/card/input, `{alias}` values only (color → semantic roles; spacing/radius → primitives).
+- `primitive/` — only raw values: OKLCH color ramps (`{colorSpace:'oklch', components:[l,c,h]}` + hex fallback), px dimensions, font stacks/weights.
+- `semantic/` — one file per theme (`light`/`dark`), identical paths, `{alias}` values only.
+- `component/` — button/card/input, `{alias}` values only (color → semantic roles; spacing/radius → primitives).
 - `audit.mjs` checks 7 fg/bg pairs per theme (body, secondary, surface, action, button, card, input), every alias in the merged tree resolves (cycle depth ≤16), and zero raw values/hex above Tier 1. `--min-ratio` default 4.5; negative probe `--min-ratio 21` exits 1.
 
 ## 4. Build pipeline — three decisions that each fixed a real failure
