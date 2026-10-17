@@ -29,7 +29,8 @@ function discoverEntries(): Record<string, string> {
 
 /**
  * Mirrors every `src/skills/<skill>/` package into `dist/<skill>/`:
- * SKILL.md + templates/ + assets/ copied verbatim; bundled scripts made executable.
+ * SKILL.md + README.md + templates/ + assets/ + examples/ copied verbatim;
+ * bundled scripts made executable.
  */
 function syncSkillPackages(): Plugin {
   return {
@@ -41,10 +42,12 @@ function syncSkillPackages(): Plugin {
         const dest = join(distDir, skill.name);
         mkdirSync(dest, { recursive: true });
 
-        const skillMd = join(src, 'SKILL.md');
-        if (existsSync(skillMd)) cpSync(skillMd, join(dest, 'SKILL.md'));
+        for (const file of ['SKILL.md', 'README.md'] as const) {
+          const from = join(src, file);
+          if (existsSync(from)) cpSync(from, join(dest, file));
+        }
 
-        for (const dir of ['templates', 'assets'] as const) {
+        for (const dir of ['templates', 'assets', 'examples'] as const) {
           const from = join(src, dir);
           if (existsSync(from)) cpSync(from, join(dest, dir), { recursive: true });
         }
