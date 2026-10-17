@@ -9,6 +9,7 @@
  *
  * Usage: node scripts/package-release.mjs [--skip-build]
  */
+import { Buffer } from 'node:buffer';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
