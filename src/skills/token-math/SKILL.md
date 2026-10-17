@@ -1,6 +1,8 @@
 ---
 name: token-math
 description: 'Second in the pipeline: generate the 3-tier DTCG token tree from style-spec.json. Use when the spec exists and tokens/ is missing or the anchor changed.'
+license: MIT
+compatibility: Node.js >=22.12
 ---
 
 # Token Math — `style-spec.json` → 3-Tier Tokens

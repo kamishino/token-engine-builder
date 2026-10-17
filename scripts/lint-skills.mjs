@@ -29,6 +29,10 @@ for (const entry of readdirSync(skillsDir, { withFileTypes: true })) {
   const fail = (reason) => failures.push(`${entry.name}: ${reason}`);
   if (fields.get('name') !== entry.name) fail(`name is ${JSON.stringify(fields.get('name'))}`);
   if (!fields.get('description')) fail('description is missing or empty');
+  if (!fields.get('license'))
+    fail('license is missing (Agent Skills spec optional field, required here)');
+  if (!fields.get('compatibility'))
+    fail('compatibility is missing (Agent Skills spec optional field, required here)');
   for (const [key, value] of fields) {
     const quoted =
       value.length >= 2 &&

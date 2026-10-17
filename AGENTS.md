@@ -40,6 +40,13 @@ Node `>=20`. No test suite — portable smoke (copied `dist/*`, foreign cwd: gen
 - Token schema move → update `token-math` templates + `compiler.ts` + audit expectations together.
 - Build pipeline move → update `vite.config.ts` + `scripts/build-all.mjs` + `ARCHITECTURE.md` §4 together.
 - Docs never restate `package.json` scripts or `--help` output — point at them.
+- Every user-visible change ships with a changeset file (`.changeset/<name>.md`, patch/minor); `npm run release` consumes them into a version bump.
+
+## Skill lifecycle (adding, renaming, deprecating)
+
+- New skill: folder `src/skills/<slug>/` with `SKILL.md` (`name` = slug, quoted trigger-style `description`, `license`, `compatibility`), `scripts/`, `templates/`, `assets/` as needed. Register it: pipeline order words in description, README pipeline + Use sections, ARCHITECTURE diagram if it moves a seam, changeset file. `lint:skills` enforces frontmatter; `check` proves the bundle.
+- Rename: move folder + update every reference (grep the old slug, excluding lock/dist) + docs + changeset, one commit, no aliases.
+- Deprecate: keep the folder one release with a `deprecated:` frontmatter note and a changeset, remove next release.
 
 ## Progressive disclosure (read on demand)
 
