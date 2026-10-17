@@ -1,0 +1,27 @@
+---
+name: 3-token-audit
+description: Audit a 3-tier token tree as a WCAG gatekeeper. Use after generating or editing tokens, before building or shipping them; exit 1 blocks the build.
+---
+
+# Token Audit — WCAG 2.1 Gatekeeper
+
+Binary gate: exit 0 ships, exit 1 stops. Never soften a failure by lowering `--min-ratio` without the user saying so.
+
+## Steps
+
+1. **Run the gate** (both themes by default):
+
+   ```bash
+   node ./scripts/audit.mjs --tokens tokens --min-ratio 4.5
+   ```
+
+   Checks: every fg/bg role pair (body text, secondary text, action, button, card, input), every alias resolves, zero raw values above Tier 1.
+   - Done when: the report prints per-theme PASS/FAIL lines and an exit code.
+
+2. **Remediate failures** (no human needed, max 3 loops):
+   - Contrast shortfall → move the offending primitive step one step further from its background (e.g. semantic alias `neutral.700` → `neutral.800`), or shift the anchor `l` in `style-spec.json` ≥ 0.05 and re-run `2-token-math`.
+   - Unresolved alias → fix the target path; aliases are dotted from the merged tree root (`{color.brand.500}`).
+   - Raw value above Tier 1 → move it into `1-primitive/` and alias it.
+   - Done when: audit exits 0, or 3 loops elapsed → escalate with the failing pairs table.
+3. **Report**: paste the ratio table; state PASS/FAIL per theme.
+   - Done when: every pair from the report is accounted for in your reply.

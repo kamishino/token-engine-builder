@@ -1,0 +1,14 @@
+{
+  "$description": "Tier 3 — input. Aliases only.",
+  "component": {
+    "input": {
+      "bg": { "$value": "{semantic.color.bg.canvas}", "$type": "color" },
+      "text": { "$value": "{semantic.color.text.primary}", "$type": "color" },
+      "border": { "$value": "{semantic.color.border.strong}", "$type": "color" },
+      "radius": { "$value": "{radius.sm}", "$type": "dimension" },
+      "paddingX": { "$value": "{spacing.3}", "$type": "dimension" },
+      "paddingY": { "$value": "{spacing.2}", "$type": "dimension" },
+      "fontSize": { "$value": "{fontSize.base}", "$type": "dimension" }
+    }
+  }
+}

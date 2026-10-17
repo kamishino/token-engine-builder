@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "token-engine/style-spec.schema.json",
+  "title": "StyleSpec",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "brandAnchor",
+    "neutralHue",
+    "neutralChroma",
+    "typography",
+    "spacingBasePx",
+    "density",
+    "radius",
+    "targets"
+  ],
+  "properties": {
+    "name": { "type": "string", "minLength": 1 },
+    "brandAnchor": { "$ref": "#/$defs/oklch" },
+    "neutralHue": { "type": "number", "minimum": 0, "maximum": 360 },
+    "neutralChroma": { "type": "number", "minimum": 0, "maximum": 0.05 },
+    "typography": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fontFamily", "baseSizePx", "ratio"],
+      "properties": {
+        "fontFamily": { "type": "string", "minLength": 1 },
+        "baseSizePx": { "type": "number", "exclusiveMinimum": 0 },
+        "ratio": { "type": "number", "exclusiveMinimum": 1 }
+      }
+    },
+    "spacingBasePx": { "type": "number", "exclusiveMinimum": 0 },
+    "density": { "enum": ["comfortable", "compact"] },
+    "radius": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sm", "md", "lg", "full"],
+      "properties": {
+        "sm": { "type": "number", "minimum": 0 },
+        "md": { "type": "number", "minimum": 0 },
+        "lg": { "type": "number", "minimum": 0 },
+        "full": { "type": "number", "minimum": 0 }
+      }
+    },
+    "targets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minWcagRatio"],
+      "properties": { "minWcagRatio": { "type": "number", "minimum": 1, "maximum": 21 } }
+    }
+  },
+  "$defs": {
+    "oklch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["l", "c", "h"],
+      "properties": {
+        "l": { "type": "number", "minimum": 0, "maximum": 1 },
+        "c": { "type": "number", "minimum": 0, "maximum": 0.4 },
+        "h": { "type": "number", "minimum": 0, "maximum": 360 },
+        "alpha": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    }
+  }
+}

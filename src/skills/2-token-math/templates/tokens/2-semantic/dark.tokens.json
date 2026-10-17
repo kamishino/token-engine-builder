@@ -1,0 +1,27 @@
+{
+  "$description": "Tier 2 — semantic roles, DARK theme. Same paths as light.tokens.json; load ONE theme per build.",
+  "semantic": {
+    "color": {
+      "$type": "color",
+      "bg": {
+        "canvas": { "$value": "{color.neutral.950}" },
+        "surface": { "$value": "{color.neutral.900}" },
+        "raised": { "$value": "{color.brand.950}" }
+      },
+      "text": {
+        "primary": { "$value": "{color.neutral.50}" },
+        "secondary": { "$value": "{color.neutral.300}" },
+        "inverse": { "$value": "{color.neutral.900}" }
+      },
+      "action": {
+        "primary": { "$value": "{color.brand.400}" },
+        "primaryHover": { "$value": "{color.brand.300}" },
+        "primaryText": { "$value": "{color.neutral.950}" }
+      },
+      "border": {
+        "default": { "$value": "{color.neutral.700}" },
+        "strong": { "$value": "{color.neutral.500}" }
+      }
+    }
+  }
+}

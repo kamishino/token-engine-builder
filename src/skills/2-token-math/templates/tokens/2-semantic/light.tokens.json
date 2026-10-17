@@ -1,0 +1,27 @@
+{
+  "$description": "Tier 2 — semantic roles, LIGHT theme. Aliases ONLY; no raw values.",
+  "semantic": {
+    "color": {
+      "$type": "color",
+      "bg": {
+        "canvas": { "$value": "{color.neutral.50}" },
+        "surface": { "$value": "{color.neutral.100}" },
+        "raised": { "$value": "{color.brand.50}" }
+      },
+      "text": {
+        "primary": { "$value": "{color.neutral.900}" },
+        "secondary": { "$value": "{color.neutral.700}" },
+        "inverse": { "$value": "{color.neutral.50}" }
+      },
+      "action": {
+        "primary": { "$value": "{color.brand.600}" },
+        "primaryHover": { "$value": "{color.brand.700}" },
+        "primaryText": { "$value": "{color.neutral.50}" }
+      },
+      "border": {
+        "default": { "$value": "{color.neutral.300}" },
+        "strong": { "$value": "{color.neutral.500}" }
+      }
+    }
+  }
+}
