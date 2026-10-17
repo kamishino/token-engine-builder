@@ -11,7 +11,8 @@ export type DtcgTokenType =
   | 'number'
   | 'string'
   | 'duration'
-  | 'cubicBezier';
+  | 'cubicBezier'
+  | 'shadow';
 
 /** DTCG color value: OKLCH is the only authoring space in this engine. */
 export interface DtcgColorValue {

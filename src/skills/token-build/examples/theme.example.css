@@ -3,6 +3,13 @@
  */
 
 @theme {
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --duration-slow: 400ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
+  --ease-accelerate: cubic-bezier(0.3, 0, 1, 1);
   --color-brand-50: oklch(98% 0.015 250deg);
   --color-brand-100: oklch(96% 0.0343 250deg);
   --color-brand-200: oklch(88% 0.06 250deg);
@@ -30,6 +37,10 @@
   --radius-md: 0.5rem;
   --radius-lg: 1rem;
   --radius-full: 624.9375rem;
+  --shadow-sm: 0 1px 2px 0 oklch(20% 0 0deg / 8%);
+  --shadow-md: 0 4px 12px -2px oklch(20% 0 0deg / 12%);
+  --shadow-lg: 0 12px 32px -8px oklch(20% 0 0deg / 16%);
+  --shadow-xl: 0 24px 48px -12px oklch(20% 0 0deg / 20%);
   --spacing-0: 0;
   --spacing-1: 0.25rem;
   --spacing-2: 0.5rem;
@@ -57,6 +68,13 @@
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
+  --z-base: 0;
+  --z-raised: 10;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-overlay: 300;
+  --z-modal: 400;
+  --z-toast: 500;
   --color-semantic-color-bg-canvas: oklch(98% 0.0012 250deg);
   --color-semantic-color-bg-surface: oklch(96% 0.0027 250deg);
   --color-semantic-color-bg-raised: oklch(98% 0.015 250deg);

@@ -58,10 +58,12 @@ export function dtcgToOklch(value: DtcgColorValue | string): OklchColor {
   };
 }
 
-/** `oklch(60% 0.15 250deg)` CSS serialization of OKLCH coords (explicit hue unit). */
+/** `oklch(60% 0.15 250deg)` CSS serialization of OKLCH coords (explicit hue unit, alpha-safe). */
 export function formatOklch(color: OklchColor): string {
   ensureSpaces();
-  return serialize(plain(color)).replace(/ ([0-9.]+)\)$/, ' $1deg)');
+  return serialize(plain(color))
+    .replace(/ ([0-9.]+)(\)| \/)/, ' $1deg$2')
+    .replace(/\/ ([0-9.]+)\)/, (_match, alpha: string) => `/ ${Number((Number(alpha) * 100).toFixed(2))}%)`);
 }
 
 /** sRGB hex (`#rrggbb`) fallback for OKLCH coords, gamut-clipped by colorjs.io. */

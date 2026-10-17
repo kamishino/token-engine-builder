@@ -69,6 +69,67 @@ export const dimensionRemTransform = {
   },
 };
 
+/** DTCG dimension object → CSS length, preserving its authored unit (shadows stay px). */
+function dimensionToCss(value: unknown): string {
+  if (value !== null && typeof value === 'object' && 'value' in value && 'unit' in value) {
+    const dimension = value as { value: number; unit: string };
+    return dimension.value === 0 ? '0' : `${dimension.value}${dimension.unit}`;
+  }
+  return String(value);
+}
+
+export const durationCssTransform = {
+  name: 'duration/css',
+  type: 'value' as const,
+  transitive: true,
+  filter: (token: SdToken) => (token.$type ?? token.type) === 'duration',
+  transform: (token: SdToken) => dimensionToCss(tokenValue(token)),
+};
+
+export const cubicBezierCssTransform = {
+  name: 'cubicBezier/css',
+  type: 'value' as const,
+  transitive: true,
+  filter: (token: SdToken) => (token.$type ?? token.type) === 'cubicBezier',
+  transform: (token: SdToken) => {
+    const value = tokenValue(token);
+    return Array.isArray(value) ? `cubic-bezier(${value.join(', ')})` : value;
+  },
+};
+
+interface ShadowValue {
+  color?: DtcgColorValue | string;
+  offsetX?: unknown;
+  offsetY?: unknown;
+  blur?: unknown;
+  spread?: unknown;
+  inset?: boolean;
+}
+
+export const shadowCssTransform = {
+  name: 'shadow/css',
+  type: 'value' as const,
+  transitive: true,
+  filter: (token: SdToken) => (token.$type ?? token.type) === 'shadow',
+  transform: (token: SdToken) => {
+    const compose = (shadow: ShadowValue): string =>
+      [
+        shadow.inset === true ? 'inset' : '',
+        dimensionToCss(shadow.offsetX ?? 0),
+        dimensionToCss(shadow.offsetY ?? 0),
+        dimensionToCss(shadow.blur ?? 0),
+        dimensionToCss(shadow.spread ?? 0),
+        shadow.color === undefined ? '' : formatOklch(dtcgToOklch(shadow.color)),
+      ]
+        .filter((part) => part !== '')
+        .join(' ');
+    const value = tokenValue(token);
+    if (Array.isArray(value)) return value.map((entry) => compose(entry as ShadowValue)).join(', ');
+    if (value !== null && typeof value === 'object') return compose(value as ShadowValue);
+    return value;
+  },
+};
+
 /** camelCase path segment → kebab-case (`bgHover` → `bg-hover`), digits untouched. */
 function kebab(segment: string): string {
   return segment.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
@@ -96,6 +157,18 @@ function themeName(type: string, path: string[]): string {
   }
   if (type === 'dimension' && segments[0] === 'spacing') {
     return `--spacing-${segments.slice(1).join('-')}`;
+  }
+  if (type === 'shadow' && segments[0] === 'shadow') {
+    return `--shadow-${segments.slice(1).join('-')}`;
+  }
+  if (type === 'number' && segments[0] === 'z-index') {
+    return `--z-${segments.slice(1).join('-')}`;
+  }
+  if (type === 'duration' && segments[0] === 'animation') {
+    return `--duration-${segments.slice(2).join('-')}`;
+  }
+  if (type === 'cubicBezier' && segments[0] === 'animation') {
+    return `--ease-${segments.slice(2).join('-')}`;
   }
   const prefix =
     type === 'fontFamily'
@@ -216,9 +289,20 @@ export async function buildTokens(options: BuildTokensOptions): Promise<string[]
       transforms: {
         'color/oklch': oklchTransform as never,
         'dimension/rem': dimensionRemTransform as never,
+        'duration/css': durationCssTransform as never,
+        'cubicBezier/css': cubicBezierCssTransform as never,
+        'shadow/css': shadowCssTransform as never,
       },
       transformGroups: {
-        'token-engine/css': ['attribute/cti', 'name/kebab', 'color/oklch', 'dimension/rem'],
+        'token-engine/css': [
+          'attribute/cti',
+          'name/kebab',
+          'color/oklch',
+          'dimension/rem',
+          'duration/css',
+          'cubicBezier/css',
+          'shadow/css',
+        ],
       },
       formats: {
         'token-engine/css-variables': cssVariablesFormat as never,
