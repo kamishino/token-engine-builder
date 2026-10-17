@@ -3,6 +3,10 @@ name: design-style
 description: 'First in the pipeline: interview for brand aesthetic, then record the anchor as style-spec.json. Use when starting a design system, choosing brand color/type/density, or no style-spec.json exists yet.'
 license: MIT
 compatibility: Node.js >=22.12
+allowed-tools:
+  - Ask
+  - Read
+  - Write
 ---
 
 # Design Style — Socratic Interview → `style-spec.json`
