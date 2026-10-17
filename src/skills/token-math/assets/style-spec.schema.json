@@ -24,7 +24,14 @@
     },
     "brandAnchor": { "$ref": "#/$defs/oklch" },
     "harmony": {
-      "enum": ["triadic", "analogous", "complementary", "split-complementary", "tetradic", "monochromatic"],
+      "enum": [
+        "triadic",
+        "analogous",
+        "complementary",
+        "split-complementary",
+        "tetradic",
+        "monochromatic"
+      ],
       "$description": "Optional harmony method; token-math derives secondary/accent ramps when set."
     },
     "neutralHue": { "type": "number", "minimum": 0, "maximum": 360 },

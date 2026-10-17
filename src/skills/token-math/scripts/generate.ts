@@ -6,9 +6,19 @@
  */
 import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { buildFeedbackColors, buildHarmony, buildRamp, dtcgColorValue } from '../../../shared/colors.js';
+import {
+  buildFeedbackColors,
+  buildHarmony,
+  buildRamp,
+  dtcgColorValue,
+} from '../../../shared/colors.js';
 import { fromCwd, getArg, hasFlag, templatePath } from '../../../shared/paths.js';
-import { lineHeightScale, radiusScale, spacingScale, typographyScale } from '../../../shared/scales.js';
+import {
+  lineHeightScale,
+  radiusScale,
+  spacingScale,
+  typographyScale,
+} from '../../../shared/scales.js';
 import type { ColorRamp, HarmonyMethod, StyleSpec, TokenGroup } from '../../../shared/types.js';
 
 const argv = process.argv.slice(2);

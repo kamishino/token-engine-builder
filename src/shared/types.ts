@@ -60,12 +60,7 @@ export type RampStep = 50 | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900 
 export type ColorRamp = Record<RampStep, OklchColor>;
 
 export type HarmonyMethod =
-  | 'triadic'
-  | 'analogous'
-  | 'complementary'
-  | 'split-complementary'
-  | 'tetradic'
-  | 'monochromatic';
+  'triadic' | 'analogous' | 'complementary' | 'split-complementary' | 'tetradic' | 'monochromatic';
 
 export type FeedbackRole = 'success' | 'warning' | 'danger' | 'info' | 'help';
 
