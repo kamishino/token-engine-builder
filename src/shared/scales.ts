@@ -38,6 +38,17 @@ export function typographyScale(baseSizePx: number, ratio: number): TokenGroup {
   return group;
 }
 
+/** Unitless line-height steps (CSS `line-height` multipliers, not dimensions). */
+export function lineHeightScale(): TokenGroup {
+  return {
+    $type: 'number',
+    tight: { $value: 1.1, $type: 'number' },
+    snug: { $value: 1.25, $type: 'number' },
+    normal: { $value: 1.5, $type: 'number' },
+    relaxed: { $value: 1.75, $type: 'number' },
+  };
+}
+
 /** Fluid `clamp()` between min/max viewport widths for one modular type step. */
 export function fluidClamp(
   minSizePx: number,

@@ -152,6 +152,9 @@ function themeName(type: string, path: string[]): string {
   if (type === 'dimension' && segments[0] === 'font-size') {
     return `--text-${segments.slice(1).join('-')}`;
   }
+  if (type === 'number' && segments[0] === 'line-height') {
+    return `--leading-${segments.slice(1).join('-')}`;
+  }
   if (type === 'dimension' && segments[0] === 'radius') {
     return `--radius-${segments.slice(1).join('-')}`;
   }

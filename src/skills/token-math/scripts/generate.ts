@@ -6,10 +6,10 @@
  */
 import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { buildRamp, dtcgColorValue } from '../../../shared/colors.js';
+import { buildFeedbackColors, buildHarmony, buildRamp, dtcgColorValue } from '../../../shared/colors.js';
 import { fromCwd, getArg, hasFlag, templatePath } from '../../../shared/paths.js';
-import { radiusScale, spacingScale, typographyScale } from '../../../shared/scales.js';
-import type { ColorRamp, StyleSpec, TokenGroup } from '../../../shared/types.js';
+import { lineHeightScale, radiusScale, spacingScale, typographyScale } from '../../../shared/scales.js';
+import type { ColorRamp, HarmonyMethod, StyleSpec, TokenGroup } from '../../../shared/types.js';
 
 const argv = process.argv.slice(2);
 
@@ -53,6 +53,19 @@ if (!spec.typography || !(spec.typography.ratio > 1) || !(spec.typography.baseSi
   process.exit(1);
 }
 
+const HARMONY_METHODS: readonly HarmonyMethod[] = [
+  'triadic',
+  'analogous',
+  'complementary',
+  'split-complementary',
+  'tetradic',
+  'monochromatic',
+];
+if (spec.harmony !== undefined && !HARMONY_METHODS.includes(spec.harmony)) {
+  console.error(`invalid style-spec: harmony must be one of ${HARMONY_METHODS.join(', ')}`);
+  process.exit(1);
+}
+
 if (dryRun) {
   console.log(`would generate 3-tier tokens for "${spec.name}" → ${outDir}`);
   console.log('would copy: templates/tokens/** (semantic/component aliases, tier templates)');
@@ -90,6 +103,20 @@ writeTokenFile(['primitive', 'color.tokens.json'], {
     $type: 'color',
     brand: rampGroup(buildRamp(anchor)),
     neutral: rampGroup(buildRamp({ l: 0.6, c: spec.neutralChroma, h: spec.neutralHue })),
+    ...(spec.harmony === undefined
+      ? {}
+      : Object.fromEntries(
+          buildHarmony(anchor, spec.harmony).map((color, index) => [
+            index === 0 ? 'secondary' : 'accent',
+            rampGroup(buildRamp(color)),
+          ]),
+        )),
+    feedback: Object.fromEntries(
+      Object.entries(buildFeedbackColors()).map(([role, color]) => [
+        role,
+        { $value: dtcgColorValue(color), $type: 'color' },
+      ]),
+    ),
   },
 });
 
@@ -104,6 +131,7 @@ writeTokenFile(['primitive', 'typography.tokens.json'], {
     semibold: { $value: 600 },
     bold: { $value: 700 },
   },
+  'line-height': lineHeightScale(),
 });
 
 writeTokenFile(['primitive', 'spacing.tokens.json'], {

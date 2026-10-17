@@ -15,7 +15,15 @@ import {
   sRGB,
   to,
 } from 'colorjs.io/fn';
-import type { ColorRamp, ContrastResult, DtcgColorValue, OklchColor, RampStep } from './types.js';
+import type {
+  ColorRamp,
+  ContrastResult,
+  DtcgColorValue,
+  FeedbackRole,
+  HarmonyMethod,
+  OklchColor,
+  RampStep,
+} from './types.js';
 
 let registered = false;
 
@@ -160,4 +168,43 @@ export function buildRamp(anchor: OklchColor): ColorRamp {
     };
   });
   return ramp;
+}
+
+const HARMONY_RULES: Record<HarmonyMethod, { offsets: readonly number[]; chromaFactor: number }> = {
+  triadic: { offsets: [120, 240], chromaFactor: 0.85 },
+  analogous: { offsets: [35, -35], chromaFactor: 0.85 },
+  complementary: { offsets: [180], chromaFactor: 1 },
+  'split-complementary': { offsets: [150, 210], chromaFactor: 0.9 },
+  tetradic: { offsets: [90, 180], chromaFactor: 0.8 },
+  monochromatic: { offsets: [0], chromaFactor: 0.6 },
+};
+
+/**
+ * Derive harmony anchors from a brand anchor: hue rotated by the method's
+ * offsets, chroma scaled by its factor (capped at 0.30), lightness preserved
+ * inside the UI-viable band. First result is `secondary`, second `accent`.
+ */
+export function buildHarmony(anchor: OklchColor, method: HarmonyMethod): OklchColor[] {
+  const rule = HARMONY_RULES[method];
+  return rule.offsets.map((offset) => ({
+    l: Number(Math.min(0.68, Math.max(0.42, anchor.l)).toFixed(4)),
+    c: Number(Math.min(0.3, Math.max(0.02, anchor.c * rule.chromaFactor)).toFixed(4)),
+    h: Number(((((anchor.h + offset) % 360) + 360) % 360).toFixed(2)),
+    alpha: anchor.alpha ?? 1,
+  }));
+}
+
+const FEEDBACK_ANCHORS: Record<FeedbackRole, OklchColor> = {
+  success: { l: 0.58, c: 0.18, h: 150, alpha: 1 },
+  warning: { l: 0.72, c: 0.2, h: 75, alpha: 1 },
+  danger: { l: 0.52, c: 0.22, h: 25, alpha: 1 },
+  info: { l: 0.59, c: 0.19, h: 230, alpha: 1 },
+  help: { l: 0.56, c: 0.2, h: 290, alpha: 1 },
+};
+
+/** Fixed accessible feedback anchors (bounded hue/chroma/lightness ranges per role). */
+export function buildFeedbackColors(): Record<FeedbackRole, OklchColor> {
+  return Object.fromEntries(
+    Object.entries(FEEDBACK_ANCHORS).map(([role, color]) => [role, { ...color }]),
+  ) as Record<FeedbackRole, OklchColor>;
 }

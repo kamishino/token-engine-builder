@@ -1,6 +1,7 @@
 {
   "name": "Example Brand",
   "brandAnchor": { "l": 0.6, "c": 0.15, "h": 250, "alpha": 1 },
+  "harmony": "analogous",
   "neutralHue": 250,
   "neutralChroma": 0.012,
   "typography": { "fontFamily": "Inter, system-ui, sans-serif", "baseSizePx": 16, "ratio": 1.25 },

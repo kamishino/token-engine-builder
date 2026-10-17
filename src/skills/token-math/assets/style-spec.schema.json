@@ -23,6 +23,10 @@
       "$description": "Optional Kobayashi style cluster id (see token-style/references/style-clusters.md)."
     },
     "brandAnchor": { "$ref": "#/$defs/oklch" },
+    "harmony": {
+      "enum": ["triadic", "analogous", "complementary", "split-complementary", "tetradic", "monochromatic"],
+      "$description": "Optional harmony method; token-math derives secondary/accent ramps when set."
+    },
     "neutralHue": { "type": "number", "minimum": 0, "maximum": 360 },
     "neutralChroma": { "type": "number", "minimum": 0, "maximum": 0.05 },
     "typography": {

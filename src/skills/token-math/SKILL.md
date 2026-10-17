@@ -18,7 +18,7 @@ Deterministic: same spec in, same tokens out. The script does the math (OKLCH ra
    node ./scripts/generate.mjs --spec style-spec.json --out tokens
    ```
 
-   (`--force` overwrites an existing `tokens/`; ask before using it. Preview with `--dry-run` first.) It copies `templates/tokens/` then rewrites Tier-1 primitives from the spec — brand anchor lands exactly on `color.brand.500`.
+   (`--force` overwrites an existing `tokens/`; ask before using it. Preview with `--dry-run` first.) It copies `templates/tokens/` then rewrites Tier-1 primitives from the spec — brand anchor lands exactly on `color.brand.500`. Optional `harmony` in the spec derives secondary/accent ramps (see `references/color-architecture.md`); scale rules in `references/scales.md`.
    - Done when: exit 0 and `tokens/primitive/color.tokens.json` contains the spec anchor at `brand.500`.
 
 2. **Respect the tiers** in any manual edit afterwards: raw values only in `primitive/`; `semantic/` (one file per theme, same paths) and `component/` contain `{alias}` values only.
