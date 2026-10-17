@@ -1,11 +1,11 @@
 ---
-name: 4-token-build
-description: Compile audited 3-tier tokens to CSS variables and Tailwind v4 @theme via Style Dictionary. Use when audit passes and CSS/Tailwind output is needed.
+name: token-build
+description: Final stage of the pipeline: compile audited 3-tier tokens to CSS variables and Tailwind v4 @theme via Style Dictionary. Use when audit passes and CSS/Tailwind output is needed.
 ---
 
 # Token Build — Tokens → CSS + Tailwind v4
 
-Entry condition: `3-token-audit` exits 0 on this exact tree. Building unaudited tokens ships unmeasured contrast.
+Entry condition: `token-audit` exits 0 on this exact tree. Building unaudited tokens ships unmeasured contrast.
 
 ## Steps
 

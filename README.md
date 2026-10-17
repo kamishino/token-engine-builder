@@ -11,10 +11,10 @@ Built with TypeScript, Vite (SSR/Node lib mode), `colorjs.io/fn` partial imports
 ## Pipeline
 
 ```text
-1-design-style   Socratic interview            → style-spec.json
-2-token-math     generate.mjs --spec …         → tokens/ (1-primitive → 2-semantic → 3-component)
-3-token-audit    audit.mjs --tokens tokens     → WCAG 2.1 gate (exit 0/1)
-4-token-build    build.mjs --tokens tokens     → tokens.css + Tailwind v4 theme.css
+design-style      Socratic interview first          → style-spec.json
+token-math        generate.mjs --spec …             → tokens/ (1-primitive → 2-semantic → 3-component)
+token-audit       audit.mjs --tokens tokens         → WCAG 2.1 gate (exit 0/1)
+token-build       build.mjs --tokens tokens         → tokens.css + Tailwind v4 theme.css
 ```
 
 Raw values live only in `1-primitive/`; semantic (per-theme) and component tokens are `{alias}`-only. See `ARCHITECTURE.md` §3.
@@ -32,18 +32,18 @@ npm run build      # → dist/<skill>/ (SKILL.md + scripts/*.mjs + templates/ + 
 ## Use
 
 ```bash
-# 1. Record the anchor (interview in skill 1, or copy the example)
-cp dist/1-design-style/assets/style-spec.example.json style-spec.json
+# First, record the anchor (interview in the design-style skill, or copy the example)
+cp dist/design-style/assets/style-spec.example.json style-spec.json
 
-# 2. Generate the 3-tier tree
-node dist/2-token-math/scripts/generate.mjs --spec style-spec.json --out tokens
+# Next, generate the 3-tier tree
+node dist/token-math/scripts/generate.mjs --spec style-spec.json --out tokens
 
-# 3. Gate on contrast (exit 0 ships, exit 1 stops)
-node dist/3-token-audit/scripts/audit.mjs --tokens tokens --min-ratio 4.5
+# Then gate on contrast (exit 0 ships, exit 1 stops)
+node dist/token-audit/scripts/audit.mjs --tokens tokens --min-ratio 4.5
 
-# 4. Build one theme at a time, then deploy the skill folder
-node dist/4-token-build/scripts/build.mjs --tokens tokens --out build --theme light
-cp -r dist/4-token-build ~/agents/skills/4-token-build
+# Finally, build one theme at a time, then deploy the skill folder
+node dist/token-build/scripts/build.mjs --tokens tokens --out build --theme light
+cp -r dist/token-build ~/agents/skills/token-build
 ```
 
 Each `dist/<skill>/` also carries its own `SKILL.md` (agent instructions), `templates/`, and `assets/` — see `ARCHITECTURE.md` §1. Agents working in this repo should start at `AGENTS.md`.

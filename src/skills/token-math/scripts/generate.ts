@@ -1,6 +1,6 @@
 /**
  * generate — scaffold the 3-tier token tree from bundled templates and
- * populate Tier-1 primitives from a style-spec.json (skill 1-design-style output).
+ * populate Tier-1 primitives from a style-spec.json (skill design-style output).
  *
  * Usage: node ./scripts/generate.mjs --spec style-spec.json --out tokens [--force]
  */
@@ -23,7 +23,7 @@ const outDir = fromCwd(getArg(argv, '--out', 'tokens') as string);
 const force = hasFlag(argv, '--force');
 
 if (!existsSync(specPath)) {
-  console.error(`style-spec not found: ${specPath} (run skill 1-design-style first)`);
+  console.error(`style-spec not found: ${specPath} (run skill design-style first)`);
   process.exit(1);
 }
 if (existsSync(outDir) && !force) {
@@ -101,5 +101,5 @@ writeTokenFile(['1-primitive', 'radius.tokens.json'], {
 
 console.log(`generated 3-tier tokens for "${spec.name}" → ${outDir}`);
 console.log(
-  'next: node <3-token-audit>/scripts/audit.mjs --tokens ' + getArg(argv, '--out', 'tokens'),
+  'next: node <token-audit>/scripts/audit.mjs --tokens ' + getArg(argv, '--out', 'tokens'),
 );

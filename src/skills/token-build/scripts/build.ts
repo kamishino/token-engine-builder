@@ -28,7 +28,7 @@ if (theme !== 'light' && theme !== 'dark') {
 
 const tokensDir = fromCwd(tokensArg);
 if (!existsSync(tokensDir)) {
-  console.error(`tokens dir not found: ${tokensDir} (run 2-token-math generate first)`);
+  console.error(`tokens dir not found: ${tokensDir} (run token-math generate first)`);
   process.exit(1);
 }
 

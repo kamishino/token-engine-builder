@@ -1,6 +1,6 @@
 ---
-name: 3-token-audit
-description: Audit a 3-tier token tree as a WCAG gatekeeper. Use after generating or editing tokens, before building or shipping them; exit 1 blocks the build.
+name: token-audit
+description: Third in the pipeline: audit a 3-tier token tree as a WCAG gatekeeper. Use after generating or editing tokens, before building or shipping them; exit 1 blocks the build.
 ---
 
 # Token Audit — WCAG 2.1 Gatekeeper
@@ -19,7 +19,7 @@ Binary gate: exit 0 ships, exit 1 stops. Never soften a failure by lowering `--m
    - Done when: the report prints per-theme PASS/FAIL lines and an exit code.
 
 2. **Remediate failures** (no human needed, max 3 loops):
-   - Contrast shortfall → move the offending primitive step one step further from its background (e.g. semantic alias `neutral.700` → `neutral.800`), or shift the anchor `l` in `style-spec.json` ≥ 0.05 and re-run `2-token-math`.
+   - Contrast shortfall → move the offending primitive step one step further from its background (e.g. semantic alias `neutral.700` → `neutral.800`), or shift the anchor `l` in `style-spec.json` ≥ 0.05 and re-run `token-math`.
    - Unresolved alias → fix the target path; aliases are dotted from the merged tree root (`{color.brand.500}`).
    - Raw value above Tier 1 → move it into `1-primitive/` and alias it.
    - Done when: audit exits 0, or 3 loops elapsed → escalate with the failing pairs table.

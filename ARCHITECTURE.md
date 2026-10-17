@@ -7,8 +7,8 @@ Deep design: module contracts, token discipline, and the three load-bearing buil
 ```
 style-spec.json ──generate.mjs──▶ tokens/ (3-tier) ──audit.mjs──▶ gate (0/1) ──build.mjs──▶ tokens.css + theme.css
        ▲                              │                                                    │
- 1-design-style              2-token-math                                          4-token-build
- (interview)              (templates + math)            3-token-audit (WCAG 2.1 gatekeeper)
+ design-style                token-math                                            token-build
+ (interview first)      (templates + math)            token-audit (WCAG 2.1 gatekeeper)
 ```
 
 Skill packages are colocated (`src/skills/<skill>/`: `SKILL.md`, `scripts/*.ts`, `templates/`, `assets/`) and mirrored 1:1 into `dist/<skill>/` by the `sync-skill-packages` Vite plugin (`closeBundle`: copy `SKILL.md` + `templates/` + `assets/`, `chmod 0o755` on `scripts/*.mjs`). A `dist/<skill>/` folder runs standalone: `node scripts/<name>.mjs` with no install.
