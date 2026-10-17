@@ -1,8 +1,9 @@
 {
   "name": "Compact Brand",
+  "cluster": "botanical-fresh",
   "brandAnchor": {
-    "l": 0.55,
-    "c": 0.12,
+    "l": 0.7,
+    "c": 0.16,
     "h": 160,
     "alpha": 1
   },

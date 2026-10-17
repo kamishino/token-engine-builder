@@ -61,6 +61,8 @@ export type ColorRamp = Record<RampStep, OklchColor>;
 /** Output of skill `token-style`; input to `token-math/scripts/generate`. */
 export interface StyleSpec {
   name: string;
+  /** Kobayashi style cluster id the anchor was picked from, when resolved (see token-style/references/style-clusters.md). */
+  cluster?: string;
   brandAnchor: OklchColor;
   neutralHue: number;
   neutralChroma: number;

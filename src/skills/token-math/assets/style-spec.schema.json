@@ -17,6 +17,11 @@
   ],
   "properties": {
     "name": { "type": "string", "minLength": 1 },
+    "cluster": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "$description": "Optional Kobayashi style cluster id (see token-style/references/style-clusters.md)."
+    },
     "brandAnchor": { "$ref": "#/$defs/oklch" },
     "neutralHue": { "type": "number", "minimum": 0, "maximum": 360 },
     "neutralChroma": { "type": "number", "minimum": 0, "maximum": 0.05 },
