@@ -18,10 +18,10 @@ Binary gate: exit 0 ships, exit 1 stops. Never soften a failure by lowering `--m
    node ./scripts/audit.mjs --tokens tokens --min-ratio 4.5
    ```
 
-   Checks: every fg/bg role pair (body text, secondary text, action, button, card, input), every alias resolves, zero raw values above Tier 1.
+   Checks: every fg/bg role pair (body text, secondary text, action, button, card, input), every alias resolves, zero raw values above Tier 1. Role floors and marginal-pass reading: `references/contrast.md`.
    - Done when: the report prints per-theme PASS/FAIL lines and an exit code.
 
-2. **Remediate failures** (no human needed, max 3 loops):
+2. **Remediate failures** (no human needed, max 3 loops; ladder in `references/contrast.md`):
    - Contrast shortfall → move the offending primitive step one step further from its background (e.g. semantic alias `neutral.700` → `neutral.800`), or shift the anchor `l` in `style-spec.json` ≥ 0.05 and re-run `token-math`.
    - Unresolved alias → fix the target path; aliases are dotted from the merged tree root (`{color.brand.500}`).
    - Raw value above Tier 1 → move it into `primitive/` and alias it.
