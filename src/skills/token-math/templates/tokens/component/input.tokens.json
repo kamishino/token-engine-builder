@@ -6,9 +6,9 @@
       "text": { "$value": "{semantic.color.text.primary}", "$type": "color" },
       "border": { "$value": "{semantic.color.border.strong}", "$type": "color" },
       "radius": { "$value": "{radius.sm}", "$type": "dimension" },
-      "paddingX": { "$value": "{spacing.3}", "$type": "dimension" },
-      "paddingY": { "$value": "{spacing.2}", "$type": "dimension" },
-      "fontSize": { "$value": "{fontSize.base}", "$type": "dimension" }
+      "padding-x": { "$value": "{spacing.3}", "$type": "dimension" },
+      "padding-y": { "$value": "{spacing.2}", "$type": "dimension" },
+      "font-size": { "$value": "{font-size.base}", "$type": "dimension" }
     }
   }
 }

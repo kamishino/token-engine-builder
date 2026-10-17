@@ -76,8 +76,8 @@ function kebab(segment: string): string {
 
 /**
  * Tailwind v4 `@theme` property name: namespace prefix + kebab-cased path.
- * Redundant head segments are stripped (`fontFamily/sans` → `--font-sans`,
- * `spacing/1` → `--spacing-1`); `fontSize/*` lands in the `--text-*`
+ * Redundant head segments are stripped (`font-family/sans` → `--font-sans`,
+ * `spacing/1` → `--spacing-1`); `font-size/*` lands in the `--text-*`
  * namespace and `radius/*` in `--radius-*`, matching Tailwind v4.
  */
 function themeName(type: string, path: string[]): string {

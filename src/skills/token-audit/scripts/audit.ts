@@ -113,7 +113,7 @@ const PAIRS: ReadonlyArray<readonly [string, string]> = [
   ['semantic.color.text.primary', 'semantic.color.bg.canvas'],
   ['semantic.color.text.secondary', 'semantic.color.bg.canvas'],
   ['semantic.color.text.primary', 'semantic.color.bg.surface'],
-  ['semantic.color.action.primaryText', 'semantic.color.action.primary'],
+  ['semantic.color.action.primary-text', 'semantic.color.action.primary'],
   ['component.button.text', 'component.button.bg'],
   ['component.card.text', 'component.card.bg'],
   ['component.input.text', 'component.input.bg'],

@@ -29,7 +29,7 @@ const TYPE_STEPS: ReadonlyArray<readonly [string, number]> = [
   ['5xl', 6],
 ];
 
-/** DTCG `fontSize` primitive group from base size + modular ratio (1.25 default). */
+/** DTCG `font-size` primitive group from base size + modular ratio (1.25 default). */
 export function typographyScale(baseSizePx: number, ratio: number): TokenGroup {
   const group: TokenGroup = { $type: 'dimension' };
   for (const [name, step] of TYPE_STEPS) {

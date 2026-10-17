@@ -95,9 +95,9 @@ writeTokenFile(['primitive', 'color.tokens.json'], {
 
 writeTokenFile(['primitive', 'typography.tokens.json'], {
   $description: `Tier 1 — modular type scale (base ${spec.typography.baseSizePx}px, ratio ${spec.typography.ratio}). Generated.`,
-  fontFamily: { $type: 'fontFamily', sans: { $value: spec.typography.fontFamily } },
-  fontSize: typographyScale(spec.typography.baseSizePx, spec.typography.ratio),
-  fontWeight: {
+  'font-family': { $type: 'fontFamily', sans: { $value: spec.typography.fontFamily } },
+  'font-size': typographyScale(spec.typography.baseSizePx, spec.typography.ratio),
+  'font-weight': {
     $type: 'fontWeight',
     regular: { $value: 400 },
     medium: { $value: 500 },

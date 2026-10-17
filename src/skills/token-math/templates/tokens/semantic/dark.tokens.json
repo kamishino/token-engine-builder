@@ -15,8 +15,8 @@
       },
       "action": {
         "primary": { "$value": "{color.brand.400}" },
-        "primaryHover": { "$value": "{color.brand.300}" },
-        "primaryText": { "$value": "{color.neutral.950}" }
+        "primary-hover": { "$value": "{color.brand.300}" },
+        "primary-text": { "$value": "{color.neutral.950}" }
       },
       "border": {
         "default": { "$value": "{color.neutral.700}" },
