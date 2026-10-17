@@ -46,7 +46,7 @@ function syncSkillPackages(): Plugin {
         const skillMd = join(src, 'SKILL.md');
         if (existsSync(skillMd)) cpSync(skillMd, join(dest, 'SKILL.md'));
 
-        for (const dir of ['templates', 'assets', 'examples'] as const) {
+        for (const dir of ['templates', 'assets', 'examples', 'references'] as const) {
           const from = join(src, dir);
           if (existsSync(from)) cpSync(from, join(dest, dir), { recursive: true });
         }
