@@ -7,7 +7,7 @@ Deep design: module contracts, token discipline, and the three load-bearing buil
 ```
 style-spec.json ──generate.mjs──▶ tokens/ (3-tier) ──audit.mjs──▶ gate (0/1) ──build.mjs──▶ tokens.css + theme.css
        ▲                              │                                                    │
- design-style                token-math                                            token-build
+ token-style                token-math                                            token-build
  (interview first)      (templates + math)            token-audit (WCAG 2.1 gatekeeper)
 ```
 

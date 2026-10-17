@@ -11,7 +11,7 @@ Built with TypeScript, Vite (SSR/Node lib mode), `colorjs.io/fn` partial imports
 ## Pipeline
 
 ```text
-design-style      Socratic interview first          → style-spec.json
+token-style      Socratic interview first          → style-spec.json
 token-math        generate.mjs --spec …         → tokens/ (primitive → semantic → component)
 token-audit       audit.mjs --tokens tokens         → WCAG 2.1 gate (exit 0/1)
 token-build       build.mjs --tokens tokens         → tokens.css + Tailwind v4 theme.css
@@ -32,8 +32,8 @@ npm run build      # → dist/<skill>/ (SKILL.md + scripts/*.mjs + templates/ + 
 ## Use
 
 ```bash
-# First, record the anchor (interview in the design-style skill, or copy the example)
-cp dist/design-style/assets/style-spec.example.json style-spec.json
+# First, record the anchor (interview in the token-style skill, or copy the example)
+cp dist/token-style/assets/style-spec.example.json style-spec.json
 
 # Next, generate the 3-tier tree
 node dist/token-math/scripts/generate.mjs --spec style-spec.json --out tokens

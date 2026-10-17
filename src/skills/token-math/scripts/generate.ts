@@ -1,6 +1,6 @@
 /**
  * generate — scaffold the 3-tier token tree from bundled templates and
- * populate Tier-1 primitives from a style-spec.json (skill design-style output).
+ * populate Tier-1 primitives from a style-spec.json (skill token-style output).
  *
  * Usage: node ./scripts/generate.mjs --spec style-spec.json --out tokens [--force]
  */
@@ -26,7 +26,7 @@ const force = hasFlag(argv, '--force');
 const dryRun = hasFlag(argv, '--dry-run');
 
 if (!existsSync(specPath)) {
-  console.error(`style-spec not found: ${specPath} (run skill design-style first)`);
+  console.error(`style-spec not found: ${specPath} (run skill token-style first)`);
   process.exit(1);
 }
 if (existsSync(outDir) && !force) {

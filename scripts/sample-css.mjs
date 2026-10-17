@@ -26,7 +26,7 @@ function run(script, args) {
 try {
   run('dist/token-math/scripts/generate.mjs', [
     '--spec',
-    join(rootDir, 'dist/design-style/assets/style-spec.example.json').replaceAll('\\', '/'),
+    join(rootDir, 'dist/token-style/assets/style-spec.example.json').replaceAll('\\', '/'),
     '--out',
     'tokens',
   ]);

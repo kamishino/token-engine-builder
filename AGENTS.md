@@ -7,7 +7,7 @@
 TypeScript + Vite (SSR/Node lib mode) builder that packages colocated AI agent skills. `src/skills/<skill>/` → `dist/<skill>/`, 1:1. Each skill is standalone after copy to `~/agents/skills/<skill>/` (node only, no install).
 
 - `src/shared/` — bundled engine: `colors.ts` (OKLCH), `scales.ts` (type/spacing), `compiler.ts` (Style Dictionary v4), `paths.ts` (portable resolution), `types.ts` (DTCG types).
-- `src/skills/` — 4 pipeline skills in order: `design-style` (interview → `style-spec.json`), then `token-math` (`generate.mjs` → `tokens/`), then `token-audit` (`audit.mjs` → WCAG gate), finally `token-build` (`build.mjs` → CSS + Tailwind v4).
+- `src/skills/` — 4 pipeline skills in order: `token-style` (interview → `style-spec.json`), then `token-math` (`generate.mjs` → `tokens/`), then `token-audit` (`audit.mjs` → WCAG gate), finally `token-build` (`build.mjs` → CSS + Tailwind v4).
 - `scripts/build-all.mjs` — one Vite pass per skill so no shared chunk leaks between `dist/<skill>/`.
 - `vite.config.ts` — entry discovery, `sync-skill-packages` plugin (`SKILL.md` + `templates/` + `assets/` mirror, `chmod 0o755`).
 
