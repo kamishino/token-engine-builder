@@ -178,7 +178,14 @@ function auditTheme(themeName: string): AuditReport {
   };
 }
 
-const themes = theme === 'both' ? ['light', 'dark'] : [theme];
+const semanticDir = join(tokensDir, 'semantic');
+const discoveredThemes = existsSync(semanticDir)
+  ? readdirSync(semanticDir)
+      .filter((file) => file.endsWith('.tokens.json'))
+      .map((file) => file.replace(/\.tokens\.json$/, ''))
+      .sort()
+  : [];
+const themes = theme === 'both' ? discoveredThemes : [theme];
 const reports = new Map(themes.map((name) => [name, auditTheme(name)]));
 const overallPass = [...reports.values()].every((report) => report.pass);
 

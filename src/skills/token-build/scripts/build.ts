@@ -12,7 +12,7 @@ import { fromCwd, getArg, hasFlag, templatePath } from '../../../shared/paths.js
 const argv = process.argv.slice(2);
 
 if (hasFlag(argv, '--help')) {
-  console.log('Usage: build.mjs --tokens <dir> --out <dir> [--theme light|dark] [--prefix <name>]');
+  console.log('Usage: build.mjs --tokens <dir> --out <dir> [--theme <name>] [--prefix <name>]');
   process.exit(0);
 }
 
@@ -21,14 +21,16 @@ const outArg = getArg(argv, '--out', 'build') as string;
 const theme = getArg(argv, '--theme', 'light') as string;
 const prefix = getArg(argv, '--prefix');
 
-if (theme !== 'light' && theme !== 'dark') {
-  console.error(`--theme must be light|dark, got: ${theme}`);
-  process.exit(1);
-}
-
 const tokensDir = fromCwd(tokensArg);
 if (!existsSync(tokensDir)) {
   console.error(`tokens dir not found: ${tokensDir} (run token-math generate first)`);
+  process.exit(1);
+}
+
+// Any theme with a semantic/<theme>.tokens.json file is buildable.
+const semanticFile = `${tokensArg.replaceAll('\\', '/')}/semantic/${theme}.tokens.json`;
+if (!existsSync(fromCwd(semanticFile))) {
+  console.error(`theme not found: ${semanticFile}`);
   process.exit(1);
 }
 

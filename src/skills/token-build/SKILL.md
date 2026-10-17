@@ -12,11 +12,12 @@ Entry condition: `token-audit` exits 0 on this exact tree. Building unaudited to
 
 ## Steps
 
-1. **Build one theme at a time** (semantic light/dark share paths):
+1. **Build one theme at a time** (all semantic themes share paths; any `semantic/<name>.tokens.json` is buildable):
 
    ```bash
    node ./scripts/build.mjs --tokens tokens --out build --theme light
    node ./scripts/build.mjs --tokens tokens --out build/dark --theme dark
+   node ./scripts/build.mjs --tokens tokens --out build/high-contrast --theme high-contrast
    ```
 
    Outputs per build: `tokens.css` (`:root` custom properties, OKLCH colors, rem dimensions) and `theme.css` (Tailwind v4 `@theme`). Optional `--prefix <name>` namespaces the CSS variables.

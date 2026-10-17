@@ -3,62 +3,6 @@
   "minRatio": 4.5,
   "minApca": 60,
   "themes": {
-    "light": {
-      "pairs": [
-        {
-          "foreground": "semantic.color.text.primary",
-          "background": "semantic.color.bg.canvas",
-          "ratio": 13.77,
-          "apcaLc": 99.9,
-          "pass": true
-        },
-        {
-          "foreground": "semantic.color.text.secondary",
-          "background": "semantic.color.bg.canvas",
-          "ratio": 7.33,
-          "apcaLc": 87.3,
-          "pass": true
-        },
-        {
-          "foreground": "semantic.color.text.primary",
-          "background": "semantic.color.bg.surface",
-          "ratio": 12.99,
-          "apcaLc": 95.5,
-          "pass": true
-        },
-        {
-          "foreground": "semantic.color.action.primary-text",
-          "background": "semantic.color.action.primary",
-          "ratio": 7.32,
-          "apcaLc": 82.6,
-          "pass": true
-        },
-        {
-          "foreground": "component.button.text",
-          "background": "component.button.bg",
-          "ratio": 7.32,
-          "apcaLc": 82.6,
-          "pass": true
-        },
-        {
-          "foreground": "component.card.text",
-          "background": "component.card.bg",
-          "ratio": 12.99,
-          "apcaLc": 95.5,
-          "pass": true
-        },
-        {
-          "foreground": "component.input.text",
-          "background": "component.input.bg",
-          "ratio": 13.77,
-          "apcaLc": 99.9,
-          "pass": true
-        }
-      ],
-      "unresolvedAliases": [],
-      "rawValueViolations": [],
-      "pass": true
-    },
     "dark": {
       "pairs": [
         {
@@ -108,6 +52,118 @@
           "background": "component.input.bg",
           "ratio": 17.09,
           "apcaLc": 100.8,
+          "pass": true
+        }
+      ],
+      "unresolvedAliases": [],
+      "rawValueViolations": [],
+      "pass": true
+    },
+    "high-contrast": {
+      "pairs": [
+        {
+          "foreground": "semantic.color.text.primary",
+          "background": "semantic.color.bg.canvas",
+          "ratio": 17.09,
+          "apcaLc": 102.5,
+          "pass": true
+        },
+        {
+          "foreground": "semantic.color.text.secondary",
+          "background": "semantic.color.bg.canvas",
+          "ratio": 13.77,
+          "apcaLc": 99.9,
+          "pass": true
+        },
+        {
+          "foreground": "semantic.color.text.primary",
+          "background": "semantic.color.bg.surface",
+          "ratio": 17.09,
+          "apcaLc": 102.5,
+          "pass": true
+        },
+        {
+          "foreground": "semantic.color.action.primary-text",
+          "background": "semantic.color.action.primary",
+          "ratio": 10.23,
+          "apcaLc": 90.9,
+          "pass": true
+        },
+        {
+          "foreground": "component.button.text",
+          "background": "component.button.bg",
+          "ratio": 10.23,
+          "apcaLc": 90.9,
+          "pass": true
+        },
+        {
+          "foreground": "component.card.text",
+          "background": "component.card.bg",
+          "ratio": 17.09,
+          "apcaLc": 102.5,
+          "pass": true
+        },
+        {
+          "foreground": "component.input.text",
+          "background": "component.input.bg",
+          "ratio": 17.09,
+          "apcaLc": 102.5,
+          "pass": true
+        }
+      ],
+      "unresolvedAliases": [],
+      "rawValueViolations": [],
+      "pass": true
+    },
+    "light": {
+      "pairs": [
+        {
+          "foreground": "semantic.color.text.primary",
+          "background": "semantic.color.bg.canvas",
+          "ratio": 13.77,
+          "apcaLc": 99.9,
+          "pass": true
+        },
+        {
+          "foreground": "semantic.color.text.secondary",
+          "background": "semantic.color.bg.canvas",
+          "ratio": 7.33,
+          "apcaLc": 87.3,
+          "pass": true
+        },
+        {
+          "foreground": "semantic.color.text.primary",
+          "background": "semantic.color.bg.surface",
+          "ratio": 12.99,
+          "apcaLc": 95.5,
+          "pass": true
+        },
+        {
+          "foreground": "semantic.color.action.primary-text",
+          "background": "semantic.color.action.primary",
+          "ratio": 7.32,
+          "apcaLc": 82.6,
+          "pass": true
+        },
+        {
+          "foreground": "component.button.text",
+          "background": "component.button.bg",
+          "ratio": 7.32,
+          "apcaLc": 82.6,
+          "pass": true
+        },
+        {
+          "foreground": "component.card.text",
+          "background": "component.card.bg",
+          "ratio": 12.99,
+          "apcaLc": 95.5,
+          "pass": true
+        },
+        {
+          "foreground": "component.input.text",
+          "background": "component.input.bg",
+          "ratio": 13.77,
+          "apcaLc": 99.9,
           "pass": true
         }
       ],

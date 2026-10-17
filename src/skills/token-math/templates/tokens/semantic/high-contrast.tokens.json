@@ -1,0 +1,27 @@
+{
+  "$description": "Tier 2 — semantic roles, HIGH-CONTRAST theme. Same paths as light/dark; every role pushed to its strongest step. Load ONE theme per build.",
+  "semantic": {
+    "color": {
+      "$type": "color",
+      "bg": {
+        "canvas": { "$value": "{color.neutral.50}" },
+        "surface": { "$value": "{color.neutral.50}" },
+        "raised": { "$value": "{color.brand.100}" }
+      },
+      "text": {
+        "primary": { "$value": "{color.neutral.950}" },
+        "secondary": { "$value": "{color.neutral.900}" },
+        "inverse": { "$value": "{color.neutral.50}" }
+      },
+      "action": {
+        "primary": { "$value": "{color.brand.800}" },
+        "primary-hover": { "$value": "{color.brand.900}" },
+        "primary-text": { "$value": "{color.neutral.50}" }
+      },
+      "border": {
+        "default": { "$value": "{color.neutral.700}" },
+        "strong": { "$value": "{color.neutral.900}" }
+      }
+    }
+  }
+}

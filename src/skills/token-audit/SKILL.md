@@ -12,7 +12,7 @@ Binary dual gate: every pair must clear BOTH WCAG ratio (--min-ratio, default 4.
 
 ## Steps
 
-1. **Run the gate** (both themes by default):
+1. **Run the gate** (every theme under `semantic/` by default):
 
    ```bash
    node ./scripts/audit.mjs --tokens tokens --min-ratio 4.5
