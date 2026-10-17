@@ -58,10 +58,10 @@ export function dtcgToOklch(value: DtcgColorValue | string): OklchColor {
   };
 }
 
-/** `oklch(60% 0.15 250)` CSS serialization of OKLCH coords. */
+/** `oklch(60% 0.15 250deg)` CSS serialization of OKLCH coords (explicit hue unit). */
 export function formatOklch(color: OklchColor): string {
   ensureSpaces();
-  return serialize(plain(color));
+  return serialize(plain(color)).replace(/ ([0-9.]+)\)$/, ' $1deg)');
 }
 
 /** sRGB hex (`#rrggbb`) fallback for OKLCH coords, gamut-clipped by colorjs.io. */

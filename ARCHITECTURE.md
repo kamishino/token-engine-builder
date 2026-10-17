@@ -38,4 +38,4 @@ Skill packages are colocated (`src/skills/<skill>/`: `SKILL.md`, `scripts/*.ts`,
 
 ## 5. Verified behavior (smoke, not tests)
 
-Portable proof: `dist/*` copied outside the repo, run from a foreign cwd with no install. Generate lands the anchor exactly (`oklch(60% 0.15 250)` at `brand.500`); audit passes light+dark (ratios 5.21–17.09 across 7 pairs/theme); dark build emits 42 `oklch()` values per file, 0 `undefined`; rem dimensions (`--spacing-1: 0.25rem`); Tailwind `@theme` carries `--color-*`. There is no test suite — this smoke run is the verification gate.
+Portable proof: `dist/*` copied outside the repo, run from a foreign cwd with no install. Generate lands the anchor exactly (`oklch(60% 0.15 250deg)` at `brand.500`); audit passes light+dark (ratios 5.21–17.09 across 7 pairs/theme); dark build emits 42 `oklch()` values per file, 0 `undefined`; rem dimensions rounded to 4dp (`--spacing-1: 0.25rem`); Tailwind `@theme` carries kebab-case names in matching namespaces (`--color-*`, `--text-*`, `--radius-*`, `--font-*`). Sample emitted CSS passes stylelint (`npm run lint:css`). There is no test suite — this smoke run is the verification gate.

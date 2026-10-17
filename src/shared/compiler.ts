@@ -46,6 +46,12 @@ export const oklchTransform = {
   },
 };
 
+/** rem strings rounded to 4dp (stylelint `number-max-precision` + no float dust). */
+function toRem(px: number): string {
+  if (px === 0) return '0';
+  return `${Number((px / 16).toFixed(4))}rem`;
+}
+
 export const dimensionRemTransform = {
   name: 'dimension/rem',
   type: 'value' as const,
@@ -56,21 +62,53 @@ export const dimensionRemTransform = {
     if (value !== null && typeof value === 'object' && 'value' in value && 'unit' in value) {
       const dimension = value as { value: number; unit: string };
       if (dimension.unit === 'rem') return `${dimension.value}rem`;
-      return dimension.value === 0 ? '0' : `${dimension.value / 16}rem`;
+      return toRem(dimension.value);
     }
-    if (typeof value === 'number') return value === 0 ? '0' : `${value / 16}rem`;
+    if (typeof value === 'number') return toRem(value);
     return value;
   },
 };
 
-const TAILWIND_V4_PREFIX: Record<string, string> = {
-  color: '--color',
-  dimension: '--spacing',
-  fontFamily: '--font',
-  fontWeight: '--font-weight',
-};
+/** camelCase path segment → kebab-case (`bgHover` → `bg-hover`), digits untouched. */
+function kebab(segment: string): string {
+  return segment.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+}
 
-/** Tailwind v4 `@theme` format: every token becomes a `--<ns>-<path>` custom property. */
+/**
+ * Tailwind v4 `@theme` property name: namespace prefix + kebab-cased path.
+ * Redundant head segments are stripped (`fontFamily/sans` → `--font-sans`,
+ * `spacing/1` → `--spacing-1`); `fontSize/*` lands in the `--text-*`
+ * namespace and `radius/*` in `--radius-*`, matching Tailwind v4.
+ */
+function themeName(type: string, path: string[]): string {
+  const segments = path.map(kebab);
+  if (type === 'color') {
+    const rest = segments[0] === 'color' ? segments.slice(1) : segments;
+    return `--color-${rest.join('-')}`;
+  }
+  if (type === 'fontFamily') return `--font-${segments.slice(1).join('-')}`;
+  if (type === 'fontWeight') return `--font-weight-${segments.slice(1).join('-')}`;
+  if (type === 'dimension' && segments[0] === 'font-size') {
+    return `--text-${segments.slice(1).join('-')}`;
+  }
+  if (type === 'dimension' && segments[0] === 'radius') {
+    return `--radius-${segments.slice(1).join('-')}`;
+  }
+  if (type === 'dimension' && segments[0] === 'spacing') {
+    return `--spacing-${segments.slice(1).join('-')}`;
+  }
+  const prefix =
+    type === 'fontFamily'
+      ? '--font'
+      : type === 'fontWeight'
+        ? '--font-weight'
+        : type === 'color'
+          ? '--color'
+          : '--spacing';
+  return `${prefix}-${segments.join('-')}`;
+}
+
+/** Tailwind v4 `@theme` format: every token becomes a namespaced custom property. */
 export async function tailwindV4ThemeFormat(args: {
   dictionary: { allTokens: SdToken[] };
   file: { destination?: string };
@@ -79,12 +117,7 @@ export async function tailwindV4ThemeFormat(args: {
   const header = await fileHeader({ file: args.file as never, options: args.options as never });
   const lines = args.dictionary.allTokens.map((token) => {
     const type = token.$type ?? token.type ?? '';
-    const prefix = TAILWIND_V4_PREFIX[type] ?? '--token';
-    const name =
-      type === 'color' && token.path[0] === 'color'
-        ? `${prefix}-${token.path.slice(1).join('-')}`
-        : `${prefix}-${token.path.join('-')}`;
-    return `  ${name}: ${String(tokenValue(token))};`;
+    return `  ${themeName(type, token.path)}: ${String(tokenValue(token))};`;
   });
   return `${header}@theme {\n${lines.join('\n')}\n}\n`;
 }

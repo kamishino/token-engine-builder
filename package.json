@@ -12,9 +12,10 @@
     "build": "node scripts/build-all.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
+    "lint:css": "node scripts/sample-css.mjs",
     "format": "prettier --check .",
     "format:write": "prettier --write .",
-    "check": "npm run typecheck && npm run lint && npm run build"
+    "check": "npm run typecheck && npm run lint && npm run build && npm run lint:css"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
@@ -22,8 +23,11 @@
     "@types/node": "^22.0.0",
     "colorjs.io": "^0.7.1",
     "eslint": "^9.0.0",
+    "postcss-scss": "^4.0.9",
     "prettier": "^3.9.10",
     "style-dictionary": "^4.4.0",
+    "stylelint": "^17.16.0",
+    "stylelint-config-standard": "^40.0.0",
     "typescript": "^5.9.0",
     "typescript-eslint": "^8.71.2",
     "vite": "^6.3.0"

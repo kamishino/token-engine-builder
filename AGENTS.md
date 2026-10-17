@@ -19,11 +19,11 @@ One OKLCH anchor derives the whole token system; deterministic math downstream. 
 
 ```bash
 npm install        # all deps are devDependencies — Vite inlines them
-npm run check      # typecheck + lint + build (run before yielding)
+npm run check      # typecheck + lint + build + lint:css (run before yielding)
 npm run build      # → dist/<skill>/ via scripts/build-all.mjs
 ```
 
-Node `>=20`. No test suite — portable smoke (copied `dist/*`, foreign cwd: generate → audit → build) is the proof.
+Node `>=20`. No test suite — portable smoke (copied `dist/*`, foreign cwd: generate → audit → build) is the proof. `lint:css` builds sample CSS from the example spec and lints it with stylelint (standard + `postcss-scss` for SCSS sources).
 
 ## Hard invariants (never violate; ESLint enforces #1)
 
