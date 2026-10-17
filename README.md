@@ -1,12 +1,23 @@
 # token-engine-builder
 
+![check](https://github.com/kamishino/token-engine-builder/actions/workflows/check.yml/badge.svg) ![release](https://img.shields.io/github/v/release/kamishino/token-engine-builder) ![license](https://img.shields.io/github/license/kamishino/token-engine-builder)
+
 Builds and packages self-contained AI agent skills for 3-tier W3C DTCG design tokens. Each skill under `src/skills/<skill-name>/` builds 1:1 into `dist/<skill-name>/` — copy that folder to `~/agents/skills/<skill-name>/` and it runs standalone with plain `node`, no `npm install`.
+
+## Skills
+
+| Skill                                          | What it does                                                                                                    |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| [token-style](src/skills/token-style/SKILL.md) | Discovery scan + Socratic interview → one OKLCH anchor recorded as `style-spec.json` (Kobayashi style clusters) |
+| [token-math](src/skills/token-math/SKILL.md)   | Generates the 3-tier DTCG token tree from the spec (ramps, type, spacing, radius, shadow, z-index, animation)   |
+| [token-audit](src/skills/token-audit/SKILL.md) | Dual WCAG + APCA gatekeeper — exit 0 ships, exit 1 blocks                                                       |
+| [token-build](src/skills/token-build/SKILL.md) | Compiles audited tokens to CSS custom properties + Tailwind v4 `@theme` (light / dark / high-contrast)          |
 
 ## Why this exists
 
-Hand-authored design tokens drift: hex values leak into semantic layers, contrast goes unmeasured, and build configs depend on toolchain installs. This repo derives the whole system from one OKLCH anchor through deterministic math (ramps, modular type, 4px spacing), gates it on measured WCAG 2.1 contrast, and ships each pipeline stage as a portable skill with its dependencies inlined at build time.
+Hand-authored design tokens drift: hex values leak into semantic layers, contrast goes unmeasured, and build configs depend on toolchain installs. This repo derives the whole system from one OKLCH anchor through deterministic math (ramps, modular type, 4px spacing), gates it on measured WCAG 2.1 + APCA contrast, and ships each pipeline stage as a portable skill with its dependencies inlined at build time.
 
-Built with TypeScript, Vite (SSR/Node lib mode), `colorjs.io/fn` partial imports (only `sRGB` + `OKLCH` registered), and Style Dictionary v4 driven programmatically.
+Built with TypeScript, Vite (SSR/Node lib mode), `colorjs.io/fn` partial imports (only `sRGB` + `OKLCH` registered), and Style Dictionary v5 driven programmatically.
 
 ## Pipeline
 
@@ -19,14 +30,17 @@ token-build       build.mjs --tokens tokens         → tokens.css + Tailwind v4
 
 Raw values live only in `primitive/`; semantic (per-theme) and component tokens are `{alias}`-only. See `ARCHITECTURE.md` §3.
 
-## Install
+## Install the skills (release)
 
-Requires Node `>=20`.
+Download a per-skill zip (or the full bundle) from the [latest release](https://github.com/kamishino/token-engine-builder/releases/latest), extract into your agents skills directory — done. Requires Node `>=22.12`; no install step, dependencies are inlined in each `scripts/*.mjs`.
+
+## Build from source
 
 ```bash
 npm install        # everything is a devDependency — Vite inlines it at build time
-npm run check      # typecheck + lint + build (run before yielding)
+npm run check      # typecheck + lint + skill/style lints + build
 npm run build      # → dist/<skill>/ (SKILL.md + scripts/*.mjs + templates/ + assets/)
+npm run deploy     # junction-link dist/* into ~/.agents/skills (rebuilds stale, prunes dead)
 ```
 
 ## Use

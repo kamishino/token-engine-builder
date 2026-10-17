@@ -1,6 +1,6 @@
 /**
  * build — compile a 3-tier token tree to CSS custom properties + Tailwind v4 `@theme`
- * via Style Dictionary v4 (programmatic, bundled; see templates/sd.config.json for shape).
+ * via Style Dictionary v5 (programmatic, bundled; see templates/sd.config.json for shape).
  *
  * Usage: node ./scripts/build.mjs --tokens tokens --out build [--theme light|dark] [--prefix ds]
  */

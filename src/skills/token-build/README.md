@@ -1,6 +1,6 @@
 # token-build
 
-Final stage of the pipeline: compiles an audited 3-tier token tree into CSS custom properties plus a Tailwind v4 `@theme` block, via programmatic Style Dictionary v4 — no Style Dictionary install needed downstream.
+Final stage of the pipeline: compiles an audited 3-tier token tree into CSS custom properties plus a Tailwind v4 `@theme` block, via programmatic Style Dictionary v5 — no Style Dictionary install needed downstream.
 
 ## Install
 

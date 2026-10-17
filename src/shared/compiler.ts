@@ -1,5 +1,5 @@
 /**
- * Style Dictionary v4 ESM programmatic builder.
+ * Style Dictionary v5 ESM programmatic builder.
  *
  * Custom hooks (the v4 registration surface):
  * - `color/oklch` transform: DTCG color object → CSS `oklch()` string.
