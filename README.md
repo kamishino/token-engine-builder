@@ -6,12 +6,13 @@ Builds and packages self-contained AI agent skills for 3-tier W3C DTCG design to
 
 ## Skills
 
-| Skill                                          | What it does                                                                                                    |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| [token-style](src/skills/token-style/SKILL.md) | Discovery scan + Socratic interview → one OKLCH anchor recorded as `style-spec.json` (Kobayashi style clusters) |
-| [token-math](src/skills/token-math/SKILL.md)   | Generates the 3-tier DTCG token tree from the spec (ramps, type, spacing, radius, shadow, z-index, animation)   |
-| [token-audit](src/skills/token-audit/SKILL.md) | Dual WCAG + APCA gatekeeper — exit 0 ships, exit 1 blocks                                                       |
-| [token-build](src/skills/token-build/SKILL.md) | Compiles audited tokens to CSS custom properties + Tailwind v4 `@theme` (light / dark / high-contrast)          |
+| Skill                                              | What it does                                                                                                    |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| [token-extract](src/skills/token-extract/SKILL.md) | Alternative entry: scans an existing project (CSS/tokens/config) → candidate `style-spec.json` with evidence    |
+| [token-style](src/skills/token-style/SKILL.md)     | Discovery scan + Socratic interview → one OKLCH anchor recorded as `style-spec.json` (Kobayashi style clusters) |
+| [token-math](src/skills/token-math/SKILL.md)       | Generates the 3-tier DTCG token tree from the spec (ramps, type, spacing, radius, shadow, z-index, animation)   |
+| [token-audit](src/skills/token-audit/SKILL.md)     | Dual WCAG + APCA gatekeeper — exit 0 ships, exit 1 blocks                                                       |
+| [token-build](src/skills/token-build/SKILL.md)     | Compiles audited tokens to CSS custom properties + Tailwind v4 `@theme` (light / dark / high-contrast)          |
 
 ## Why this exists
 

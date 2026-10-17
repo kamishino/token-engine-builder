@@ -11,7 +11,7 @@ style-spec.json ──generate.mjs──▶ tokens/ (3-tier) ──audit.mjs─�
  (interview first)      (templates + math)            token-audit (WCAG 2.1 gatekeeper)
 ```
 
-Skill packages are colocated (`src/skills/<skill>/`: `SKILL.md`, `scripts/*.ts`, `templates/`, `assets/`) and mirrored 1:1 into `dist/<skill>/` by the `sync-skill-packages` Vite plugin (`closeBundle`: copy `SKILL.md` + `templates/` + `assets/` + `examples/`, `chmod 0o755` on `scripts/*.mjs`). Per-skill `README.md` files stay in `src/` — `dist/` is production-readiness. A `dist/<skill>/` folder runs standalone: `node scripts/<name>.mjs` with no install.
+Skill packages are colocated (`src/skills/<skill>/`: `SKILL.md`, `scripts/*.ts`, `templates/`, `assets/`) and mirrored 1:1 into `dist/<skill>/` by the `sync-skill-packages` Vite plugin (`closeBundle`: copy `SKILL.md` + `templates/` + `assets/` + `examples/`, `chmod 0o755` on `scripts/*.mjs`). Per-skill `README.md` files stay in `src/` — `dist/` is production-readiness. A `dist/<skill>/` folder runs standalone: `node scripts/<name>.mjs` with no install. `token-extract` is an alternative entry beside the interview: it scans an existing project read-only and writes a candidate `style-spec.json` (evidence-ranked anchor), which still passes through `token-style`'s read-back before `token-math` consumes it.
 
 ## 2. Module contracts (`src/shared/`)
 

@@ -1,0 +1,61 @@
+{
+  "spec": {
+    "name": "examples",
+    "brandAnchor": {
+      "l": 0.44,
+      "c": 0.0986,
+      "h": 250,
+      "alpha": 1
+    },
+    "neutralHue": 250,
+    "neutralChroma": 0.012,
+    "typography": {
+      "fontFamily": "Inter, system-ui, sans-serif",
+      "baseSizePx": 16,
+      "ratio": 1.25
+    },
+    "spacingBasePx": 4,
+    "density": "comfortable",
+    "radius": {
+      "sm": 4,
+      "md": 8,
+      "lg": 16,
+      "full": 9999
+    },
+    "targets": {
+      "minWcagRatio": 4.5
+    }
+  },
+  "evidence": [
+    {
+      "value": "oklch(44% 0.0986 250deg)",
+      "source": "theme.example.css",
+      "name": "--color-brand-700",
+      "score": 114
+    },
+    {
+      "value": "oklch(36% 0.0729 250deg)",
+      "source": "theme.example.css",
+      "name": "--color-brand-800",
+      "score": 111
+    },
+    {
+      "value": "oklch(60% 0.15 250deg)",
+      "source": "theme.example.css",
+      "name": "--color-brand-500",
+      "score": 103
+    },
+    {
+      "value": "oklch(60% 0.1275 215deg)",
+      "source": "theme.example.css",
+      "name": "--color-accent-500",
+      "score": 101
+    },
+    {
+      "value": "oklch(52% 0.1243 250deg)",
+      "source": "theme.example.css",
+      "name": "--color-brand-600",
+      "score": 100
+    }
+  ]
+}
