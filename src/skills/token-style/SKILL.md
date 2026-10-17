@@ -12,18 +12,20 @@ The leading word is **anchor**: one OKLCH color the whole system derives from. E
 
 ## Steps
 
-1. **Interview** (native `ask`, one batch, ≤5 questions; unanswered = recommended default, stated aloud):
+1. **Scan (existing projects only)**: follow `references/discovery-checklist.md` — bounded read-only scan, findings as evidence lines, report never migrate.
+   - Done when: every read group has a finding (absence counts), or the workspace is greenfield and this step is skipped aloud.
+2. **Interview** (native `ask`, one batch, ≤5 questions; unanswered = recommended default, stated aloud):
    - Brand personality in 3–5 adjectives? → resolve to one cluster via `references/style-clusters.md`; vague modifiers ("premium", "playful") → adjust via `references/design-mappings.md`.
    - Anchor color: named color, existing hex, or "you choose"? → convert to OKLCH `{ l, c, h }`; `l` 0.45–0.65 keeps both light/dark ramps viable.
    - Typography: font family + feel (compact ratio 1.2 / comfortable 1.25 / expressive 1.333)?
    - Density: `comfortable` or `compact`?
    - Corner character: sharp (2/4/8), soft (4/8/16), or round (8/16/24) radii?
    - Done when: every field of `assets/style-spec.example.json` has an answer or a stated default.
-2. **Read back**: state the pick before recording it — "Reading this as: `<cluster>`, anchor `oklch(<l> <c> <h>)` because <one-line reason>." A weak cluster match is named as weak.
+3. **Read back**: state the pick before recording it — "Reading this as: `<cluster>`, anchor `oklch(<l> <c> <h>)` because <one-line reason>." A weak cluster match is named as weak.
    - Done when: the user confirms, vetoes to another cluster, or overrides with an explicit color.
-3. **Record**: write `style-spec.json` matching `assets/style-spec.example.json` exactly (OKLCH numbers, no hex), including `cluster` when one resolved. Neutral hue = anchor hue; neutral chroma 0.008–0.015 so grays carry brand temperature.
+4. **Record**: write `style-spec.json` matching `assets/style-spec.example.json` exactly (OKLCH numbers, no hex), including `cluster` when one resolved. Neutral hue = anchor hue; neutral chroma 0.008–0.015 so grays carry brand temperature.
    - Done when: `style-spec.json` parses and `brandAnchor` is `{ l: 0–1, c: ≥0, h: 0–360 }`.
-4. **Hand off**: tell the user the next command is skill `token-math` (`generate.mjs --spec style-spec.json`).
+5. **Hand off**: tell the user the next command is skill `token-math` (`generate.mjs --spec style-spec.json`).
    - Done when: the user sees the anchor in OKLCH and the hand-off command.
 
 Judgement lives here; arithmetic does not. Ramp steps, contrast, and scales are generated downstream — a hand-guessed ramp here silently breaks the audit gate later.
