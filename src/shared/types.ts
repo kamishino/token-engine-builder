@@ -82,6 +82,8 @@ export interface ContrastResult {
   foreground: string;
   background: string;
   ratio: number;
+  /** Absolute APCA lightness contrast |Lc| (0–~108); polarity-independent floor value. */
+  apcaLc: number;
   pass: boolean;
 }
 

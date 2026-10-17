@@ -1,11 +1,20 @@
 /**
- * OKLCH + WCAG 2.1 color engine on tree-shaken `colorjs.io/fn` partial imports.
+ * OKLCH + WCAG 2.1 / APCA color engine on tree-shaken `colorjs.io/fn` partial imports.
  *
  * Only `sRGB` and `OKLCH` spaces are registered — every other space in
  * colorjs.io is stripped by Rollup (`treeshake.moduleSideEffects: false`).
  * Registration runs inside `ensureSpaces()` so tree-shaking cannot drop it.
  */
-import { ColorSpace, contrastWCAG21, OKLCH, parse, serialize, sRGB, to } from 'colorjs.io/fn';
+import {
+  ColorSpace,
+  contrastAPCA,
+  contrastWCAG21,
+  OKLCH,
+  parse,
+  serialize,
+  sRGB,
+  to,
+} from 'colorjs.io/fn';
 import type { ColorRamp, ContrastResult, DtcgColorValue, OklchColor, RampStep } from './types.js';
 
 let registered = false;
@@ -63,7 +72,10 @@ export function formatOklch(color: OklchColor): string {
   ensureSpaces();
   return serialize(plain(color))
     .replace(/ ([0-9.]+)(\)| \/)/, ' $1deg$2')
-    .replace(/\/ ([0-9.]+)\)/, (_match, alpha: string) => `/ ${Number((Number(alpha) * 100).toFixed(2))}%)`);
+    .replace(
+      /\/ ([0-9.]+)\)/,
+      (_match, alpha: string) => `/ ${Number((Number(alpha) * 100).toFixed(2))}%)`,
+    );
 }
 
 /** sRGB hex (`#rrggbb`) fallback for OKLCH coords, gamut-clipped by colorjs.io. */
@@ -92,19 +104,32 @@ export function contrastRatio(foreground: OklchColor, background: OklchColor): n
   return Number(contrastWCAG21(plain(foreground), plain(background)));
 }
 
+/**
+ * Absolute APCA lightness contrast |Lc| (real algorithm via colorjs.io, not a
+ * lightness-difference estimate). APCA is polarity-signed (dark text yields
+ * negative Lc); floors compare the absolute value.
+ */
+export function apcaContrast(foreground: OklchColor, background: OklchColor): number {
+  ensureSpaces();
+  return Math.abs(Number(contrastAPCA(plain(foreground), plain(background))));
+}
+
 export function checkContrast(
   foregroundName: string,
   foreground: OklchColor,
   backgroundName: string,
   background: OklchColor,
   minRatio: number,
+  minApcaLc = 60,
 ): ContrastResult {
   const ratio = contrastRatio(foreground, background);
+  const apcaLc = apcaContrast(foreground, background);
   return {
     foreground: foregroundName,
     background: backgroundName,
     ratio: Number(ratio.toFixed(2)),
-    pass: ratio >= minRatio,
+    apcaLc: Number(apcaLc.toFixed(1)),
+    pass: ratio >= minRatio && apcaLc >= minApcaLc,
   };
 }
 

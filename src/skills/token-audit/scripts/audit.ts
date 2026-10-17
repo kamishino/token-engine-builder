@@ -14,7 +14,7 @@ const argv = process.argv.slice(2);
 
 if (hasFlag(argv, '--help')) {
   console.log(
-    'Usage: audit.mjs --tokens <dir> [--theme light|dark|both] [--min-ratio 4.5] [--json]',
+    'Usage: audit.mjs --tokens <dir> [--theme light|dark|both] [--min-ratio 4.5] [--min-apca 60] [--json]',
   );
   process.exit(0);
 }
@@ -22,6 +22,7 @@ if (hasFlag(argv, '--help')) {
 const tokensDir = fromCwd(getArg(argv, '--tokens', 'tokens') as string);
 const theme = getArg(argv, '--theme', 'both') as string;
 const minRatio = Number(getArg(argv, '--min-ratio', '4.5'));
+const minApca = Number(getArg(argv, '--min-apca', '60'));
 const asJson = hasFlag(argv, '--json');
 
 if (!existsSync(tokensDir)) {
@@ -152,7 +153,7 @@ function auditTheme(themeName: string): AuditReport {
     const fgColor = resolveColor(fg, flat, unresolvedAliases);
     const bgColor = resolveColor(bg, flat, unresolvedAliases);
     if (fgColor === undefined || bgColor === undefined) return [];
-    return [checkContrast(fg, fgColor, bg, bgColor, minRatio)];
+    return [checkContrast(fg, fgColor, bg, bgColor, minRatio, minApca)];
   });
 
   // Every alias in the tree must resolve, not just audited pairs.
@@ -183,14 +184,18 @@ const overallPass = [...reports.values()].every((report) => report.pass);
 
 if (asJson) {
   console.log(
-    JSON.stringify({ pass: overallPass, minRatio, themes: Object.fromEntries(reports) }, null, 2),
+    JSON.stringify(
+      { pass: overallPass, minRatio, minApca, themes: Object.fromEntries(reports) },
+      null,
+      2,
+    ),
   );
 } else {
   for (const [name, report] of reports) {
     console.log(`\n[${name}] min WCAG ratio ${minRatio}:1`);
     for (const pair of report.pairs) {
       console.log(
-        `  ${pair.pass ? 'PASS' : 'FAIL'}  ${pair.ratio.toFixed(2)}:1  ${pair.foreground} on ${pair.background}`,
+        `  ${pair.pass ? 'PASS' : 'FAIL'}  ${pair.ratio.toFixed(2)}:1  Lc ${pair.apcaLc.toFixed(1)}  ${pair.foreground} on ${pair.background}`,
       );
     }
     for (const item of report.unresolvedAliases) console.log(`  FAIL  unresolved alias: ${item}`);

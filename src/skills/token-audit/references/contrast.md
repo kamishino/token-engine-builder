@@ -1,17 +1,17 @@
 # Contrast — role floors and remediation
 
-Read when interpreting an audit report or remediating a failure. Ratios are WCAG 2.1, computed in OKLCH space via `colorjs.io/fn` `contrastWCAG21` (see `src/shared/colors.ts` in the builder repo). APCA is **not** computed — if a consumer contract ever demands it, that's a new dual gate, not a reinterpretation of these numbers.
+Read when interpreting an audit report or remediating a failure. Dual gate: WCAG 2.1 ratio via `colorjs.io/fn` `contrastWCAG21` AND real APCA via `contrastAPCA` (absolute |Lc|; APCA is polarity-signed, floors compare the absolute value). Both computed in OKLCH space (see `src/shared/colors.ts` in the builder repo). The metrics diverge in the dark theme in particular — a pair can pass WCAG and fail APCA (dark text on a mid-light action surface is the canonical case).
 
-## Role floors (what the gate enforces at `--min-ratio 4.5`)
+## Role floors (what the gate enforces at `--min-ratio 4.5 --min-apca 60`)
 
-| Role           | Pairs audited                                     | Floor |
-| -------------- | ------------------------------------------------- | ----- |
-| Body text      | `text.primary` on `bg.canvas`, on `bg.surface`    | 4.5:1 |
-| Secondary text | `text.secondary` on `bg.canvas`                   | 4.5:1 |
-| Action         | `action.primary-text` on `action.primary`         | 4.5:1 |
-| Components     | `button.text/bg`, `card.text/bg`, `input.text/bg` | 4.5:1 |
+| Role           | Pairs audited                                     | WCAG floor | APCA floor |
+| -------------- | ------------------------------------------------- | ---------- | ---------- |
+| Body text      | `text.primary` on `bg.canvas`, on `bg.surface`    | 4.5:1      | Lc 60      |
+| Secondary text | `text.secondary` on `bg.canvas`                   | 4.5:1      | Lc 60      |
+| Action         | `action.primary-text` on `action.primary`         | 4.5:1      | Lc 60      |
+| Components     | `button.text/bg`, `card.text/bg`, `input.text/bg` | 4.5:1      | Lc 60      |
 
-Both themes (`light`, `dark`) must pass; a theme may not borrow margin from the other. Display/large text (≥24px bold) and non-text UI (borders, focus rings) have lower WCAG floors (3.0:1) but are **not** token pairs in this system — don't cite them to excuse a failing pair above.
+Every theme present under `semantic/` must pass; a theme may not borrow margin from another. Display/large text (≥24px bold) and non-text UI (borders, focus rings) have lower floors in both systems but are **not** token pairs here — don't cite them to excuse a failing pair above.
 
 ## Reading a marginal pass
 
@@ -21,4 +21,4 @@ Light-cluster systems (anchor lightness ≥ 0.65) land action pairs near ≈4.5:
 
 1. **Move the semantic alias one step** further from its background (`neutral.700` → `neutral.800`; `brand.700` → `brand.800`). Smallest change, preserves the anchor.
 2. **Shift the anchor** `l` by ≥ 0.05 in `style-spec.json` and re-run `token-math` — only when step moves can't fix it (whole ramp is misplaced).
-3. **Escalate** with the failing pairs table after 3 loops. Lowering `--min-ratio` is the user's call, never a remediation.
+3. **Escalate** with the failing pairs table after 3 loops. Lowering `--min-ratio` or `--min-apca` is the user's call, never a remediation.
