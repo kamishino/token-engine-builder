@@ -10,6 +10,7 @@
   },
   "scripts": {
     "build": "node scripts/build-all.mjs",
+    "deploy": "node scripts/link-skills.mjs",
     "changeset": "changeset",
     "release": "changeset version",
     "typecheck": "tsc --noEmit",

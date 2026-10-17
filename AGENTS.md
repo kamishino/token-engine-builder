@@ -20,10 +20,11 @@ Tiers: raw values only in `primitive/`; `semantic/` (per-theme, same paths) and 
 ```bash
 npm install        # all deps are devDependencies — Vite inlines them
 npm run check      # typecheck + lint + build + lint:css (run before yielding)
-npm run build      # → dist/<skill>/ via scripts/build-all.mjs
+npm run build      # → dist/<skill>/ via scripts/build-all.mjs (names as args build one skill)
+npm run deploy     # junction-link dist/* into ~/.agents/skills (rebuilds stale, prunes dead)
 ```
 
-Node `>=20`. No test suite — portable smoke (copied `dist/*`, foreign cwd: generate → audit → build) is the proof. `lint:css` builds sample CSS from the example spec and lints it with stylelint (standard + `postcss-scss` for SCSS sources).
+Node `>=22.12`. No test suite — portable smoke (copied `dist/*`, foreign cwd: generate → audit → build) is the proof. `lint:css` builds sample CSS from the example spec and lints it with stylelint (standard + `postcss-scss` for SCSS sources).
 
 ## Hard invariants (never violate; ESLint enforces #1)
 

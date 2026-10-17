@@ -41,9 +41,9 @@ node dist/token-math/scripts/generate.mjs --spec style-spec.json --out tokens
 # Then gate on contrast (exit 0 ships, exit 1 stops)
 node dist/token-audit/scripts/audit.mjs --tokens tokens --min-ratio 4.5
 
-# Finally, build one theme at a time, then deploy the skill folder
+# Finally, build one theme at a time, then deploy (or link all skills at once)
 node dist/token-build/scripts/build.mjs --tokens tokens --out build --theme light
-cp -r dist/token-build ~/agents/skills/token-build
+npm run deploy   # junction-link dist/* into ~/.agents/skills (rebuilds stale, prunes dead)
 ```
 
 Each `dist/<skill>/` also carries its own `SKILL.md` (agent instructions), `templates/`, and `assets/` — see `ARCHITECTURE.md` §1. Agents working in this repo should start at `AGENTS.md`.
