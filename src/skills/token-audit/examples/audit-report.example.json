@@ -2,6 +2,12 @@
   "pass": true,
   "minRatio": 4.5,
   "minApca": 60,
+  "provenance": {
+    "status": "clean",
+    "changed": [],
+    "missing": [],
+    "added": []
+  },
   "themes": {
     "dark": {
       "pairs": [

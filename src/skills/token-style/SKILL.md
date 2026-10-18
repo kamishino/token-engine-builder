@@ -23,7 +23,7 @@ The leading word is **anchor**: one OKLCH color the whole system derives from. E
    - Done when: every field of `assets/style-spec.example.json` has an answer or a stated default.
 3. **Read back**: state the pick before recording it — "Reading this as: `<cluster>`, anchor `oklch(<l> <c> <h>)` because <one-line reason>." A weak cluster match is named as weak.
    - Done when: the user confirms, vetoes to another cluster, or overrides with an explicit color.
-4. **Record**: write `style-spec.json` matching `assets/style-spec.example.json` exactly (OKLCH numbers, no hex), including `cluster` when one resolved. Neutral hue = anchor hue; neutral chroma 0.008–0.015 so grays carry brand temperature.
+4. **Record**: write `style-spec.json` matching `assets/style-spec.example.json` exactly (OKLCH numbers, no hex), including `cluster` when one resolved. If `style-spec.json` already exists, show the current anchor/cluster and ask before overwriting it. Neutral hue = anchor hue; neutral chroma 0.008–0.015 so grays carry brand temperature.
    - Done when: `style-spec.json` parses and `brandAnchor` is `{ l: 0–1, c: ≥0, h: 0–360 }`.
 5. **Hand off**: tell the user the next command is skill `token-math` (`generate.mjs --spec style-spec.json`).
    - Done when: the user sees the anchor in OKLCH and the hand-off command.

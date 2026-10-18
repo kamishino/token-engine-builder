@@ -76,6 +76,8 @@ gh release create v<version> release/* --title "v<version>"
 
 Artifacts: one zip per skill (`token-engine-<skill>-v<version>.zip`, extract into an agents skills dir and run) plus a full bundle zip. `release/` is gitignored; artifacts attach to the GitHub release.
 
+Verify downloads: keep `SHA256SUMS.txt` beside the zips, then run `sha256sum -c SHA256SUMS.txt` (macOS/Linux) or compare `Get-FileHash <zip>` output against the file (Windows). The sums are unsigned — verification proves the bytes match the release, not the publisher's identity.
+
 ## Contributing
 
 Small, colocated changes: edit `src/skills/<skill>/` or `src/shared/`, run `npm run check`, and update the owning doc in the same commit (`AGENTS.md` for rules, `ARCHITECTURE.md` for design moves). Conventional commits (`type(scope): description`, ≤72 chars, imperative). Never hand-edit `dist/`.
