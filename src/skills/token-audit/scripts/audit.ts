@@ -7,6 +7,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { checkContrast, dtcgToOklch } from '../../../shared/colors.js';
+import { checkTampered, type TamperReport } from '../../../shared/guard.js';
 import { fromCwd, getArg, hasFlag } from '../../../shared/paths.js';
 import type { AuditReport, DtcgColorValue, OklchColor } from '../../../shared/types.js';
 
@@ -187,12 +188,17 @@ const discoveredThemes = existsSync(semanticDir)
   : [];
 const themes = theme === 'both' ? discoveredThemes : [theme];
 const reports = new Map(themes.map((name) => [name, auditTheme(name)]));
-const overallPass = [...reports.values()].every((report) => report.pass);
+const MANIFEST_NAME = '.token-engine-tokens-manifest.json';
+const provenance: TamperReport = checkTampered(join(tokensDir, MANIFEST_NAME), tokensDir, [
+  MANIFEST_NAME,
+]);
+const provenanceFails = provenance.status === 'tampered' || provenance.status === 'unreadable';
+const overallPass = [...reports.values()].every((report) => report.pass) && !provenanceFails;
 
 if (asJson) {
   console.log(
     JSON.stringify(
-      { pass: overallPass, minRatio, minApca, themes: Object.fromEntries(reports) },
+      { pass: overallPass, minRatio, minApca, provenance, themes: Object.fromEntries(reports) },
       null,
       2,
     ),
@@ -207,6 +213,15 @@ if (asJson) {
     }
     for (const item of report.unresolvedAliases) console.log(`  FAIL  unresolved alias: ${item}`);
     for (const item of report.rawValueViolations) console.log(`  FAIL  ${item}`);
+  }
+  if (provenanceFails) {
+    const parts = [
+      ...provenance.changed.map((path) => `changed: ${path}`),
+      ...provenance.missing.map((path) => `missing: ${path}`),
+    ];
+    console.log(`  FAIL  provenance: ${parts.join('; ') || provenance.status}`);
+  } else if (provenance.status === 'absent') {
+    console.log('  note: no provenance manifest (tree predates the guard)');
   }
   console.log(`\naudit ${overallPass ? 'PASS' : 'FAIL'}`);
 }
