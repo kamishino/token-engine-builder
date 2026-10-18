@@ -9,6 +9,7 @@
  * scripts/build-all.mjs so bundles stay identical to `npm run build`.
  */
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import {
   cpSync,
   existsSync,
@@ -31,7 +32,7 @@ const distDir = join(rootDir, 'dist');
 
 const argv = process.argv.slice(2);
 if (argv.includes('--help')) {
-  console.log('Usage: link-skills.mjs [--dir <path>] [--copy] [--no-prune] [--unlink]');
+  console.log('Usage: link-skills.mjs [--dir <path>] [--copy] [--force] [--no-prune] [--unlink]');
   process.exit(0);
 }
 
@@ -42,6 +43,7 @@ function flagValue(flag) {
 
 const targetDir = resolve(flagValue('--dir') ?? join(homedir(), '.agents', 'skills'));
 const copyMode = argv.includes('--copy');
+const forceCopy = argv.includes('--force');
 const prune = !argv.includes('--no-prune');
 const unlinkOnly = argv.includes('--unlink');
 
@@ -79,16 +81,29 @@ const sharedNewest = Math.max(
 
 function readStamp(skill) {
   try {
-    const value = Number(readFileSync(join(distDir, skill, '.buildstamp'), 'utf8').trim());
-    return Number.isFinite(value) ? value : Number.NEGATIVE_INFINITY;
+    const parsed = JSON.parse(readFileSync(join(distDir, skill, '.buildstamp'), 'utf8'));
+    if (typeof parsed.builtAt !== 'number' || typeof parsed.bundleHash !== 'string') return null;
+    return { builtAt: parsed.builtAt, bundleHash: parsed.bundleHash };
   } catch {
-    return Number.NEGATIVE_INFINITY;
+    return null;
   }
 }
 
+function bundleHash(skill) {
+  const scriptsDir = join(distDir, skill, 'scripts');
+  if (!existsSync(scriptsDir)) return '';
+  const hash = createHash('sha256');
+  for (const file of readdirSync(scriptsDir).sort()) {
+    if (file.endsWith('.mjs')) hash.update(readFileSync(join(scriptsDir, file)));
+  }
+  return hash.digest('hex');
+}
+
 function isStale(skill) {
+  const stamp = readStamp(skill);
+  if (stamp === null) return true;
   const sources = Math.max(newestMtime(join(skillsDir, skill)), sharedNewest);
-  return sources > readStamp(skill);
+  return sources > stamp.builtAt || bundleHash(skill) !== stamp.bundleHash;
 }
 
 function isLink(path) {
@@ -143,6 +158,11 @@ for (const skill of skills) {
         `[deploy] SKIP ${skill}: ${dest} is a real directory, not a link (remove by hand)`,
       );
       continue;
+    } else if (!forceCopy) {
+      console.error(
+        `[deploy] refusing to delete real directory ${dest} in --copy mode (pass --force)`,
+      );
+      process.exit(1);
     } else rmSync(dest, { recursive: true, force: true });
   }
   if (copyMode) cpSync(from, dest, { recursive: true });

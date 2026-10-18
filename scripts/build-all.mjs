@@ -8,7 +8,8 @@
  * skills build (dist/ is wiped only for full builds, filtered builds append).
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -47,12 +48,25 @@ skillsWithScripts.forEach((skill, index) => {
 
 console.log(`\n[build] done: ${skillsWithScripts.length} skill(s) → dist/`);
 
-// Freshness stamps for link-skills.mjs: every src skill gets one, including
-// scriptless skills whose dist output is static files only. Compares against
-// src mtimes (plugin-copied statics keep their source mtimes, so dist file
-// mtimes cannot signal freshness).
+// Freshness/integrity stamps for link-skills.mjs: every src skill gets a JSON
+// stamp {builtAt, bundleHash}, including scriptless skills. link-skills
+// rebuilds when sources are newer than builtAt OR bundle bytes no longer
+// match bundleHash (post-build tampering).
+// (Dist file mtimes cannot signal freshness: copied statics keep source mtimes.)
 for (const entry of readdirSync(skillsDir, { withFileTypes: true })) {
-  if (entry.isDirectory()) {
-    writeFileSync(join(rootDir, 'dist', entry.name, '.buildstamp'), `${Date.now()}\n`, 'utf8');
+  if (!entry.isDirectory()) continue;
+  const scriptsDir = join(rootDir, 'dist', entry.name, 'scripts');
+  let bundleHash = '';
+  if (existsSync(scriptsDir)) {
+    const hash = createHash('sha256');
+    for (const file of readdirSync(scriptsDir).sort()) {
+      if (file.endsWith('.mjs')) hash.update(readFileSync(join(scriptsDir, file)));
+    }
+    bundleHash = hash.digest('hex');
   }
+  writeFileSync(
+    join(rootDir, 'dist', entry.name, '.buildstamp'),
+    `${JSON.stringify({ builtAt: Date.now(), bundleHash })}\n`,
+    'utf8',
+  );
 }
