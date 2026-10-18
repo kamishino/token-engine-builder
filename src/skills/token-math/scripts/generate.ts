@@ -12,6 +12,13 @@ import {
   buildRamp,
   dtcgColorValue,
 } from '../../../shared/colors.js';
+import {
+  assertSafeOutDir,
+  checkTampered,
+  collectHashes,
+  sha256Hex,
+  writeManifest,
+} from '../../../shared/guard.js';
 import { fromCwd, getArg, hasFlag, templatePath } from '../../../shared/paths.js';
 import {
   lineHeightScale,
@@ -39,10 +46,9 @@ if (!existsSync(specPath)) {
   console.error(`style-spec not found: ${specPath} (run skill token-style first)`);
   process.exit(1);
 }
-if (existsSync(outDir) && !force) {
-  console.error(`output exists: ${outDir} (pass --force to overwrite)`);
-  process.exit(1);
-}
+const MANIFEST_NAME = '.token-engine-tokens-manifest.json';
+const manifestPath = join(outDir, MANIFEST_NAME);
+const tamper = existsSync(outDir) ? checkTampered(manifestPath, outDir, [MANIFEST_NAME]) : null;
 
 const spec = JSON.parse(readFileSync(specPath, 'utf8')) as StyleSpec;
 const anchor = spec.brandAnchor;
@@ -87,8 +93,40 @@ if (dryRun) {
   ]) {
     console.log(`would write: ${file} (anchor lands on brand.500)`);
   }
+  if (tamper !== null && tamper.status !== 'absent') {
+    console.log(`provenance: ${tamper.status}`);
+    for (const path of tamper.changed) console.log(`  changed: ${path}`);
+    for (const path of tamper.missing) console.log(`  missing: ${path}`);
+  }
   process.exit(0);
 }
+
+const safeError = assertSafeOutDir(outDir, process.cwd());
+if (safeError !== null) {
+  console.error(safeError);
+  process.exit(1);
+}
+
+if (existsSync(outDir)) {
+  if (tamper !== null && (tamper.status === 'tampered' || tamper.status === 'unreadable')) {
+    if (!force) {
+      console.error(`refusing to overwrite hand-edited tokens in ${outDir}:`);
+      for (const path of tamper.changed) console.error(`  changed: ${path}`);
+      for (const path of tamper.missing) console.error(`  missing: ${path}`);
+      console.error('pass --force to overwrite deliberately');
+      process.exit(1);
+    }
+    console.log('overwriting hand-edited tokens (--force)');
+  } else if (tamper !== null && tamper.status === 'absent' && force) {
+    console.log('adopting existing tree: no manifest found, one will be created');
+  }
+  if (!force) {
+    console.error(`output exists: ${outDir} (pass --force to overwrite)`);
+    process.exit(1);
+  }
+}
+
+console.log(`writing tokens → ${outDir}`);
 
 // 1. Scaffold: copy bundled templates/tokens/** → --out (portable via import.meta.url).
 mkdirSync(outDir, { recursive: true });
@@ -154,6 +192,13 @@ writeTokenFile(['primitive', 'radius.tokens.json'], {
   radius: radiusScale(spec.radius),
 });
 
+writeManifest(manifestPath, {
+  version: 1,
+  kind: 'tokens',
+  generator: 'token-engine-builder',
+  inputHash: sha256Hex(readFileSync(specPath)),
+  files: collectHashes(outDir, [MANIFEST_NAME]),
+});
 console.log(`generated 3-tier tokens for "${spec.name}" → ${outDir}`);
 console.log(
   'next: node <token-audit>/scripts/audit.mjs --tokens ' + getArg(argv, '--out', 'tokens'),
