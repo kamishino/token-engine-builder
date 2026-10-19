@@ -2,7 +2,7 @@
 
 Read when interpreting an audit report or remediating a failure. Dual gate: WCAG 2.1 ratio via `colorjs.io/fn` `contrastWCAG21` AND real APCA via `contrastAPCA` (absolute |Lc|; APCA is polarity-signed, floors compare the absolute value). Both computed in OKLCH space (see `src/shared/colors.ts` in the builder repo). The metrics diverge in the dark theme in particular — a pair can pass WCAG and fail APCA (dark text on a mid-light action surface is the canonical case).
 
-## Role floors (24 pairs per theme)
+## Role floors (28 pairs per theme)
 
 Text pairs gate at `--min-ratio` (default 4.5) AND `--min-apca` (default Lc 60). Meaningful borders gate at fixed non-text floors WCAG 3.0 / Lc 30 (printed with a `(border)` suffix). Decorative hairlines are measured and printed with a `(border, decorative)` suffix but never gated — WCAG 1.4.11 contrast requirements cover boundaries needed to identify components, not decorative separators.
 
@@ -15,7 +15,7 @@ Text pairs gate at `--min-ratio` (default 4.5) AND `--min-apca` (default Lc 60).
 | Meaningful borders                | `border.strong`, `border.focus`, `card.border`, `input.border` on their surfaces | 3.0:1 + Lc 30       |
 | Decorative borders                | `border.default`, `border.subtle` on canvas/surface                              | measured, not gated |
 
-`text.disabled` is recorded in the semantic set but exempt from pairing (WCAG disability exemption). Every theme present under `semantic/` must pass; a theme may not borrow margin from another.
+`text.disabled` is recorded in the semantic set but exempt from pairing (WCAG disability exemption). Component disabled states (`button/input.disabled-bg`, `disabled-text`) are likewise tokenized and documented in the generated component specs, exempt from gating; hover, focus, and error state pairs ARE gated (text pairs at text floors, focus/error borders at border floors).
 
 ## Reading a marginal pass
 

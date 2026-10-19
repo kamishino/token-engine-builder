@@ -150,10 +150,14 @@ const PAIRS: readonly AuditPair[] = [
   decorative('semantic.color.border.subtle', 'semantic.color.bg.canvas'),
   // Components
   text('component.button.text', 'component.button.bg'),
+  text('component.button.text', 'component.button.bg-hover'),
   text('component.card.text', 'component.card.bg'),
+  text('component.card.text', 'component.card.bg-hover'),
   text('component.input.text', 'component.input.bg'),
   border('component.card.border', 'component.card.bg'),
   border('component.input.border', 'component.input.bg'),
+  border('component.input.focus-border', 'component.input.bg'),
+  border('component.input.error-border', 'component.input.bg'),
 ];
 
 const BORDER_KEYS = new Set(

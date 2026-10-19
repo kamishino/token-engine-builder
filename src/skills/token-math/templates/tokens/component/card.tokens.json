@@ -3,6 +3,7 @@
   "component": {
     "card": {
       "bg": { "$value": "{semantic.color.bg.surface}", "$type": "color" },
+      "bg-hover": { "$value": "{semantic.color.bg.raised}", "$type": "color" },
       "text": { "$value": "{semantic.color.text.primary}", "$type": "color" },
       "border": { "$value": "{semantic.color.border.strong}", "$type": "color" },
       "radius": { "$value": "{radius.lg}", "$type": "dimension" },
