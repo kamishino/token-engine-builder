@@ -30,6 +30,7 @@ try {
     '--out',
     'tokens',
   ]);
+  run('dist/token-audit/scripts/audit.mjs', ['--tokens', 'tokens']);
   run('dist/token-build/scripts/build.mjs', [
     '--tokens',
     'tokens',

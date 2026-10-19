@@ -8,7 +8,7 @@ allowed-tools: 'Bash Read Write'
 
 # Token Build — Tokens → CSS + Tailwind v4
 
-Entry condition: `token-audit` exits 0 on this exact tree. Building unaudited tokens ships unmeasured contrast.
+Entry condition: `token-audit` exits 0 on this exact tree — enforced technically: build recomputes the token-tree hash and refuses without a fresh passing audit stamp (`.token-engine-audit.json`). `--allow-unaudited` bypasses with a printed warning, for emergencies only. Building unaudited tokens ships unmeasured contrast.
 
 ## Steps
 

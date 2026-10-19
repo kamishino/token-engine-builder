@@ -4,10 +4,15 @@
  *
  * Usage: node ./scripts/audit.mjs --tokens tokens [--theme light|dark|both] [--min-ratio 4.5] [--json]
  */
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { checkContrast, dtcgToOklch } from '../../../shared/colors.js';
-import { checkTampered, type TamperReport } from '../../../shared/guard.js';
+import {
+  checkTampered,
+  collectHashes,
+  sha256Hex,
+  type TamperReport,
+} from '../../../shared/guard.js';
 import { fromCwd, getArg, hasFlag } from '../../../shared/paths.js';
 import type { AuditReport, DtcgColorValue, OklchColor } from '../../../shared/types.js';
 
@@ -15,14 +20,26 @@ const argv = process.argv.slice(2);
 
 if (hasFlag(argv, '--help')) {
   console.log(
-    'Usage: audit.mjs --tokens <dir> [--theme light|dark|both] [--min-ratio 4.5] [--min-apca 60] [--json]',
+    'Usage: audit.mjs --tokens <dir> [--theme light|dark|both] [--min-ratio 4.5] [--min-apca 60] [--spec <style-spec.json>] [--json]',
   );
   process.exit(0);
 }
 
 const tokensDir = fromCwd(getArg(argv, '--tokens', 'tokens') as string);
 const theme = getArg(argv, '--theme', 'both') as string;
-const minRatio = Number(getArg(argv, '--min-ratio', '4.5'));
+const specArg = getArg(argv, '--spec');
+let minRatio = Number(getArg(argv, '--min-ratio', '4.5'));
+if (!argv.includes('--min-ratio') && specArg !== undefined) {
+  try {
+    const spec = JSON.parse(readFileSync(fromCwd(specArg), 'utf8')) as {
+      targets?: { minWcagRatio?: number };
+    };
+    if (typeof spec.targets?.minWcagRatio === 'number') minRatio = spec.targets.minWcagRatio;
+  } catch {
+    console.error(`style-spec not readable: ${specArg}`);
+    process.exit(1);
+  }
+}
 const minApca = Number(getArg(argv, '--min-apca', '60'));
 const asJson = hasFlag(argv, '--json');
 
@@ -279,6 +296,25 @@ if (asJson) {
     console.log('  note: no provenance manifest (tree predates the guard)');
   }
   console.log(`\naudit ${overallPass ? 'PASS' : 'FAIL'}`);
+}
+
+// Audit stamp: token-build verifies this hash before building (verified gate).
+const STAMP_NAME = '.token-engine-audit.json';
+const stampPath = join(tokensDir, STAMP_NAME);
+if (overallPass) {
+  const hashes = collectHashes(tokensDir, [STAMP_NAME, '.token-engine-tokens-manifest.json']);
+  const treeHash = sha256Hex(
+    Object.entries(hashes)
+      .map(([path, hash]) => `${path}:${hash}`)
+      .join('\n'),
+  );
+  writeFileSync(
+    stampPath,
+    `${JSON.stringify({ version: 1, pass: true, at: Date.now(), treeHash, minRatio, minApca }, null, 2)}\n`,
+    'utf8',
+  );
+} else {
+  rmSync(stampPath, { force: true });
 }
 
 process.exit(overallPass ? 0 : 1);

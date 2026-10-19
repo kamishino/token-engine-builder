@@ -26,7 +26,7 @@ const argv = process.argv.slice(2);
 
 if (hasFlag(argv, '--help')) {
   console.log(
-    'Usage: build.mjs --tokens <dir> --out <dir> [--theme <name>] [--prefix <name>] [--spec <style-spec.json>] [--force] [--dry-run]',
+    'Usage: build.mjs --tokens <dir> --out <dir> [--theme <name>] [--prefix <name>] [--spec <style-spec.json>] [--profile <id>] [--allow-unaudited] [--force] [--dry-run]',
   );
   process.exit(0);
 }
@@ -126,6 +126,7 @@ if (dryRun) {
       : `would build profile ${profile} (light + dark) → ${outDir}`,
   );
   if (outputsExist) console.log(`provenance: ${tamper.status}`);
+  console.log(`audit stamp: ${auditStampStatus()}`);
   process.exit(0);
 }
 
@@ -148,6 +149,41 @@ if (outputsExist && !force) {
 }
 if (outputsExist && force && (tamper.status === 'tampered' || tamper.status === 'unreadable')) {
   console.log('overwriting hand-edited CSS (--force)');
+}
+
+/** Audit stamp status for this exact token tree: missing | fail | stale | pass. */
+function auditStampStatus(): string {
+  const stampPath = join(tokensDir, '.token-engine-audit.json');
+  try {
+    const stamp = JSON.parse(readFileSync(stampPath, 'utf8')) as {
+      pass?: unknown;
+      treeHash?: unknown;
+    };
+    if (stamp.pass !== true || typeof stamp.treeHash !== 'string') return 'fail';
+    const hashes = collectHashes(tokensDir, [
+      '.token-engine-audit.json',
+      '.token-engine-tokens-manifest.json',
+    ]);
+    const current = sha256Hex(
+      Object.entries(hashes)
+        .map(([path, hash]) => `${path}:${hash}`)
+        .join('\n'),
+    );
+    return current === stamp.treeHash ? 'pass' : 'stale';
+  } catch {
+    return 'missing';
+  }
+}
+
+// Verified gate: refuse to build a tree without a fresh passing audit stamp.
+const allowUnaudited = hasFlag(argv, '--allow-unaudited');
+if (allowUnaudited) {
+  console.log('warning: building without a fresh audit pass (--allow-unaudited)');
+} else if (auditStampStatus() !== 'pass') {
+  console.error(
+    `refusing to build: no fresh audit pass for this exact tree (stamp: ${auditStampStatus()}). Run token-audit first, or pass --allow-unaudited.`,
+  );
+  process.exit(1);
 }
 
 console.log(
