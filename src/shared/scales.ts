@@ -38,15 +38,35 @@ export function typographyScale(baseSizePx: number, ratio: number): TokenGroup {
   return group;
 }
 
-/** Unitless line-height steps (CSS `line-height` multipliers, not dimensions). */
-export function lineHeightScale(): TokenGroup {
-  return {
-    $type: 'number',
-    tight: { $value: 1.1, $type: 'number' },
-    snug: { $value: 1.25, $type: 'number' },
-    normal: { $value: 1.5, $type: 'number' },
-    relaxed: { $value: 1.75, $type: 'number' },
-  };
+/** Vertical-rhythm baseline: base font size × 1.5 rounded to a 4px multiple (16px → 24px). */
+export function baselinePx(baseSizePx: number): number {
+  return Math.round((baseSizePx * 1.5) / 4) * 4;
+}
+
+/**
+ * Paired line-heights, one per font-size step: each step's line height snaps
+ * UP to the 4px grid (`ceil(size × 1.2 / 4) × 4`), stored as a unitless
+ * multiplier so text sits on the vertical rhythm at any size.
+ */
+export function pairedLineHeights(baseSizePx: number, ratio: number): TokenGroup {
+  const group: TokenGroup = { $type: 'number' };
+  for (const [name, step] of TYPE_STEPS) {
+    const sizePx = baseSizePx * ratio ** step;
+    const lhPx = Math.ceil((sizePx * 1.2) / 4) * 4;
+    group[name] = { $value: Number((lhPx / sizePx).toFixed(3)), $type: 'number' };
+  }
+  return group;
+}
+
+/** Vertical rhythm scale: half-baseline plus baseline multiples 1–6, as dimensions. */
+export function rhythmScale(baseline: number): TokenGroup {
+  const group: TokenGroup = { $type: 'dimension' };
+  group['half'] = { $value: px(baseline / 2), $type: 'dimension' };
+  group['baseline'] = { $value: px(baseline), $type: 'dimension' };
+  for (let n = 1; n <= 6; n++) {
+    group[String(n)] = { $value: px(baseline * n), $type: 'dimension' };
+  }
+  return group;
 }
 
 /** Fluid `clamp()` between min/max viewport widths for one modular type step. */

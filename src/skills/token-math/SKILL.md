@@ -18,8 +18,8 @@ Deterministic: same spec in, same tokens out. The script does the math (OKLCH ra
    node ./scripts/generate.mjs --spec style-spec.json --out tokens
    ```
 
-   (`--force` overwrites an existing `tokens/`; ask before using it. Preview with `--dry-run` first.) It copies `templates/tokens/` then rewrites Tier-1 primitives from the spec — brand anchor lands exactly on `color.brand.500`. Optional `harmony` in the spec derives secondary/accent ramps (see `references/color-architecture.md`); scale rules in `references/scales.md`.
-   - Done when: exit 0 and `tokens/primitive/color.tokens.json` contains the spec anchor at `brand.500`.
+   (`--force` overwrites an existing `tokens/`; ask before using it. Preview with `--dry-run` first.) It copies `templates/tokens/` then rewrites primitives from the spec palette — every palette anchor lands exactly on its ramp's step 500 (sRGB-clamped, warning printed). See `references/color-architecture.md` for palette/harmony guidance and `references/scales.md` for scale rules. Layout roles, grid primitives, and rhythm scales are generated with the tree — components bind `layout.*` roles, not raw spacing steps.
+   - Done when: exit 0 and `tokens/primitive/color.tokens.json` contains each palette slug with its anchor at step 500.
 
 2. **Respect the tiers** in any manual edit afterwards: raw values only in `primitive/`; `semantic/` (one file per theme, same paths) and `component/` contain `{alias}` values only.
    - Done when: no `#hex`, `oklch(...)`, or px literal appears outside `primitive/`.

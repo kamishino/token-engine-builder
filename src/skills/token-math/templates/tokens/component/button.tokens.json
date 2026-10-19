@@ -6,8 +6,8 @@
       "bg-hover": { "$value": "{semantic.color.action.primary-hover}", "$type": "color" },
       "text": { "$value": "{semantic.color.action.primary-text}", "$type": "color" },
       "radius": { "$value": "{radius.md}", "$type": "dimension" },
-      "padding-x": { "$value": "{spacing.4}", "$type": "dimension" },
-      "padding-y": { "$value": "{spacing.2}", "$type": "dimension" },
+      "padding-x": { "$value": "{layout.inset.md}", "$type": "dimension" },
+      "padding-y": { "$value": "{layout.inset.sm}", "$type": "dimension" },
       "font-size": { "$value": "{font-size.base}", "$type": "dimension" }
     }
   }

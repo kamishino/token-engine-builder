@@ -23,5 +23,25 @@
         "strong": { "$value": "{color.neutral.900}" }
       }
     }
+  },
+  "layout": {
+    "$type": "dimension",
+    "inset": {
+      "none": { "$value": "{spacing.0}" },
+      "xs": { "$value": "{spacing.1}" },
+      "sm": { "$value": "{spacing.2}" },
+      "base": { "$value": "{spacing.3}" },
+      "md": { "$value": "{spacing.4}" },
+      "lg": { "$value": "{spacing.6}" },
+      "xl": { "$value": "{spacing.8}" }
+    },
+    "gap": {
+      "tight": { "$value": "{spacing.2}" },
+      "related": { "$value": "{spacing.3}" },
+      "default": { "$value": "{spacing.4}" },
+      "loose": { "$value": "{spacing.6}" }
+    },
+    "section": { "$value": "{rhythm.2}" },
+    "page": { "$value": "{spacing.16}" }
   }
 }

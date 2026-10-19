@@ -34,3 +34,7 @@ Fixed accessible anchors, each now expanded to a ramp at the chosen step count u
 | `help`    | 290° | 0.20   | 0.56      |
 
 Feedback remains primitive-only — semantic/component feedback roles need per-theme foreground pairs and are not generated yet.
+
+## Gamut (sRGB safety)
+
+Every generated color is chroma-clamped into the sRGB gamut at generation (`clampToSrgb` in the engine): hue and lightness are preserved exactly, chroma is binary-searched down until the color renders in sRGB. An out-of-gamut anchor is clamped with a warning at generate time, and ramp step 500 is the _clamped_ anchor. This keeps the CSS `oklch()` output and the hex fallback in agreement on every display. Wide-gamut (P3) output is a deliberate non-goal of this system — it would be a separate output profile, not a relaxation of the clamp.

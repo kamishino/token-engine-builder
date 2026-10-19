@@ -1,18 +1,38 @@
-# Scales — type, line-height, spacing, radius
+# Scales — atomic layout, vertical/horizontal rhythm, type, spacing
 
-Read when configuring typography/spacing in the style-spec or explaining generated values. Only implemented behavior is documented.
+Read when configuring the style-spec or explaining generated values. Only implemented behavior is documented.
 
-## Typography
+## Atomic layout (relationships, not raw steps)
 
-- **Modular scale**: `size = base × ratioⁿ`, steps −2…+6 (`xs…5xl`). Ratio guide: 1.2 compact/corporate, 1.25 balanced default, 1.333 editorial/expressive, 1.618 hero-only.
-- **Line heights**: unitless multipliers — `tight` 1.1, `snug` 1.25, `normal` 1.5, `relaxed` 1.75 (emitted as `--leading-*` in Tailwind output).
-- **Fluid clamps**: `fluidClamp` interpolates a size between 360px and 1280px viewports; available in the engine, not emitted by default.
+Components bind **layout roles**, never raw spacing steps. Layout tokens are generated into every semantic theme file:
 
-## Spacing
+| Token                                       | Relationship                                                | Aliases               |
+| ------------------------------------------- | ----------------------------------------------------------- | --------------------- |
+| `layout.inset.*` (none/xs/sm/base/md/lg/xl) | inside a component (padding), subcomponent → organism scale | spacing 0/1/2/3/4/6/8 |
+| `layout.gap.tight`                          | subcomponent ↔ subcomponent                                 | spacing 2             |
+| `layout.gap.related`                        | subcomponent ↔ component                                    | spacing 3             |
+| `layout.gap.default`                        | component ↔ component                                       | spacing 4             |
+| `layout.gap.loose`                          | organism internal separation                                | spacing 6             |
+| `layout.section`                            | template section separation                                 | rhythm 2              |
+| `layout.page`                               | page-level separation                                       | spacing 16            |
 
-- **4px base unit** (finer than an 8pt grid; 8pt values are the even steps). Multipliers: 0,1,2,3,4,5,6,8,10,12,16,20,24.
-- **Density**: `comfortable` ×1.0, `compact` ×0.875 across the whole scale.
+Atomic mapping: Atoms/ Molecules compose with `inset` + `gap.tight/related`; Organisms with `inset.lg/xl` + `gap.loose`; Templates with `section`; Pages with `page`. Density (comfortable/compact) is already baked into the spacing primitives these alias.
 
-## Radius
+## Vertical rhythm
 
-Spec-driven (`sm/md/lg/full`); `full` = 9999px pill convention. Character presets live in `token-style/references/design-mappings.md` (sharp 2/4/8, soft 4/8/16, round 8/16/24).
+- Baseline = `round(baseSize × 1.5 / 4) × 4` (16px base → 24px).
+- Every font-size step has a paired `line-height` (same key): line height snaps UP to the 4px grid (`ceil(size × 1.2 / 4) × 4` px), stored as a unitless multiplier — text stays on rhythm at any size.
+- `rhythm` scale: `half` (baseline/2), `baseline`, and multiples 1–6 for vertical margins/section spacing.
+
+## Horizontal rhythm (grid primitives)
+
+- `breakpoint` sm 640 / md 768 / lg 1024 / xl 1280 (px).
+- `container` sm 640 / md 768 / lg 1024 / xl 1280 / 2xl 1536 (px).
+- `grid.gutter` sm/md/lg alias spacing 4/6/8 — gutters breathe with density.
+
+## Typography & spacing (unchanged rules)
+
+- Modular scale: `size = base × ratioⁿ`, steps −2…+6 (`xs…5xl`). Ratio guide: 1.2 compact/corporate, 1.25 balanced default, 1.333 editorial/expressive, 1.618 hero-only.
+- Spacing primitives: 4px base unit, multipliers 0,1,2,3,4,5,6,8,10,12,16,20,24; density comfortable ×1.0 / compact ×0.875.
+- Radius: spec-driven (`sm/md/lg/full`); character presets in `token-style/references/design-mappings.md`.
+- Fluid clamps: `fluidClamp` interpolates a size between 360px and 1280px viewports; available in the engine, not emitted by default.

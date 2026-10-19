@@ -155,8 +155,23 @@ function themeName(type: string, path: string[]): string {
   if (type === 'number' && segments[0] === 'line-height') {
     return `--leading-${segments.slice(1).join('-')}`;
   }
+  if (type === 'dimension' && segments[0] === 'rhythm') {
+    return `--rhythm-${segments.slice(1).join('-')}`;
+  }
+  if (type === 'dimension' && segments[0] === 'breakpoint') {
+    return `--breakpoint-${segments.slice(1).join('-')}`;
+  }
+  if (type === 'dimension' && segments[0] === 'container') {
+    return `--container-${segments.slice(1).join('-')}`;
+  }
+  if (type === 'dimension' && segments[0] === 'grid') {
+    return `--grid-${segments.slice(1).join('-')}`;
+  }
   if (type === 'dimension' && segments[0] === 'radius') {
     return `--radius-${segments.slice(1).join('-')}`;
+  }
+  if (type === 'dimension' && segments[0] === 'layout') {
+    return `--layout-${segments.slice(1).join('-')}`;
   }
   if (type === 'dimension' && segments[0] === 'spacing') {
     return `--spacing-${segments.slice(1).join('-')}`;
