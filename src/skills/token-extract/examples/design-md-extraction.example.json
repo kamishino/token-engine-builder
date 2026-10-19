@@ -1,0 +1,64 @@
+{
+  "spec": {
+    "name": "fixdir",
+    "harmony": "analogous",
+    "palette": [
+      {
+        "role": "primary",
+        "name": "orange",
+        "anchor": {
+          "l": 0.5564,
+          "c": 0.1393,
+          "h": 46.23,
+          "alpha": 1
+        }
+      },
+      {
+        "role": "secondary",
+        "name": "cyan",
+        "anchor": {
+          "l": 0.4983,
+          "c": 0.0665,
+          "h": 188.4,
+          "alpha": 1
+        }
+      },
+      {
+        "role": "accent",
+        "name": "amber",
+        "anchor": {
+          "l": 0.5564,
+          "c": 0.1148,
+          "h": 81.23,
+          "alpha": 1
+        }
+      }
+    ],
+    "rampSteps": 11,
+    "neutralHue": 46.23,
+    "neutralChroma": 0.012,
+    "typography": {
+      "fontFamily": "Fraunces, Georgia, serif",
+      "baseSizePx": 16,
+      "ratio": 1.333
+    },
+    "spacingBasePx": 4,
+    "density": "comfortable",
+    "radius": {
+      "sm": 4,
+      "md": 10,
+      "lg": 20,
+      "full": 9999
+    },
+    "targets": {
+      "minWcagRatio": 4.5
+    }
+  },
+  "evidence": [],
+  "notes": [
+    "frontmatter: colors.primary (#b3541e) from DESIGN.md",
+    "frontmatter: colors.secondary (#2e6f6a)",
+    "frontmatter: components noted, not ingested (Button, Card, Input)",
+    "no cluster contains the anchor (creative departure to confirm at read-back)"
+  ]
+}

@@ -4,7 +4,11 @@ Read when interpreting extract output or questioning a candidate. Implemented in
 
 ## Scan scope
 
-Files: `.css .scss .json .ts .tsx .js .jsx .html`, recursive, sorted. Skipped directories: `node_modules`, `.git`, `dist`, `release`, `coverage`, `.next`. Unparseable colors are skipped silently (they are evidence of nothing).
+Files: `.css .scss .json .ts .tsx .js .jsx .html`, plus `.md` through the DESIGN.md path below. Recursive, sorted. Skipped directories: `node_modules`, `.git`, `dist`, `release`, `coverage`, `.next`. Unparseable colors are skipped silently (they are evidence of nothing).
+
+## DESIGN.md frontmatter (highest precedence)
+
+A Markdown file starting with a `---` frontmatter block is parsed as a Stitch DESIGN.md, not prose-scanned: `colors.primary`/`colors.secondary` are preserved as the recorded palette (never re-derived), `typography.fontSans`/`scale`, `rounded` (sm/md/lg), and `spacing.density` map to spec fields when present, and the `components` list is noted as evidence, not ingested. The palette is completed to 3 colors with analogous synthesis only for missing roles. After construction, the primary anchor is checked against the Kobayashi cluster bounds: exactly one containing cluster is recorded as `cluster`; otherwise the output says so (creative departure to confirm at read-back). Markdown without frontmatter falls through to the generic color scan below at lowest confidence.
 
 ## Color scoring (per distinct color, grouped by serialized OKLCH)
 

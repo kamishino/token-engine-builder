@@ -18,7 +18,7 @@ Extraction is evidence, not migration: the scan is read-only and the candidate i
    node ./scripts/extract.mjs --root . --out style-spec.json
    ```
 
-   (`--force` overwrites; preview with `--dry-run`.) Scoring rules: `references/heuristics.md`.
+   (`--force` overwrites; preview with `--dry-run`.) A `DESIGN.md` with Stitch frontmatter is parsed through its frontmatter (primary/secondary palette, typography scale, rounded, density preserved as recorded; components noted, not ingested); other Markdown falls through to prose color scanning at lowest confidence. Scoring rules: `references/heuristics.md`.
    - Done when: exit 0 and the top candidate + evidence lines are printed (exit 1 = no color signals → fall back to the `token-style` interview).
 
 2. **Read back via token-style**: present the top candidate and its evidence ("Reading this as: anchor … from `<file>`"), let the user confirm, veto to another candidate, or override. Resolve the Kobayashi cluster the anchor falls in (`token-style/references/style-clusters.md`) and record `cluster` in the spec.
