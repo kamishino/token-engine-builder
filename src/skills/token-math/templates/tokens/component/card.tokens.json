@@ -4,7 +4,7 @@
     "card": {
       "bg": { "$value": "{semantic.color.bg.surface}", "$type": "color" },
       "text": { "$value": "{semantic.color.text.primary}", "$type": "color" },
-      "border": { "$value": "{semantic.color.border.default}", "$type": "color" },
+      "border": { "$value": "{semantic.color.border.strong}", "$type": "color" },
       "radius": { "$value": "{radius.lg}", "$type": "dimension" },
       "padding": { "$value": "{layout.inset.lg}", "$type": "dimension" }
     }

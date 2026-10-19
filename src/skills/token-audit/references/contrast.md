@@ -2,16 +2,20 @@
 
 Read when interpreting an audit report or remediating a failure. Dual gate: WCAG 2.1 ratio via `colorjs.io/fn` `contrastWCAG21` AND real APCA via `contrastAPCA` (absolute |Lc|; APCA is polarity-signed, floors compare the absolute value). Both computed in OKLCH space (see `src/shared/colors.ts` in the builder repo). The metrics diverge in the dark theme in particular — a pair can pass WCAG and fail APCA (dark text on a mid-light action surface is the canonical case).
 
-## Role floors (what the gate enforces at `--min-ratio 4.5 --min-apca 60`)
+## Role floors (24 pairs per theme)
 
-| Role           | Pairs audited                                     | WCAG floor | APCA floor |
-| -------------- | ------------------------------------------------- | ---------- | ---------- |
-| Body text      | `text.primary` on `bg.canvas`, on `bg.surface`    | 4.5:1      | Lc 60      |
-| Secondary text | `text.secondary` on `bg.canvas`                   | 4.5:1      | Lc 60      |
-| Action         | `action.primary-text` on `action.primary`         | 4.5:1      | Lc 60      |
-| Components     | `button.text/bg`, `card.text/bg`, `input.text/bg` | 4.5:1      | Lc 60      |
+Text pairs gate at `--min-ratio` (default 4.5) AND `--min-apca` (default Lc 60). Meaningful borders gate at fixed non-text floors WCAG 3.0 / Lc 30 (printed with a `(border)` suffix). Decorative hairlines are measured and printed with a `(border, decorative)` suffix but never gated — WCAG 1.4.11 contrast requirements cover boundaries needed to identify components, not decorative separators.
 
-Every theme present under `semantic/` must pass; a theme may not borrow margin from another. Display/large text (≥24px bold) and non-text UI (borders, focus rings) have lower floors in both systems but are **not** token pairs here — don't cite them to excuse a failing pair above.
+| Role                              | Pairs audited                                                                    | Floors              |
+| --------------------------------- | -------------------------------------------------------------------------------- | ------------------- |
+| Body/secondary/tertiary/link text | text roles on `bg.canvas`/`surface`/`raised`                                     | 4.5:1 + Lc 60       |
+| Action                            | `action.primary-text` on `action.primary` and `action.primary-hover`             | 4.5:1 + Lc 60       |
+| Feedback                          | `feedback.<role>.text` on `feedback.<role>.bg` (×5)                              | 4.5:1 + Lc 60       |
+| Components (text)                 | `button/card/input.text` on their bg                                             | 4.5:1 + Lc 60       |
+| Meaningful borders                | `border.strong`, `border.focus`, `card.border`, `input.border` on their surfaces | 3.0:1 + Lc 30       |
+| Decorative borders                | `border.default`, `border.subtle` on canvas/surface                              | measured, not gated |
+
+`text.disabled` is recorded in the semantic set but exempt from pairing (WCAG disability exemption). Every theme present under `semantic/` must pass; a theme may not borrow margin from another.
 
 ## Reading a marginal pass
 

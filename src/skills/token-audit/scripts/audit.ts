@@ -111,15 +111,57 @@ function resolveColor(
   return undefined;
 }
 
-const PAIRS: ReadonlyArray<readonly [string, string]> = [
-  ['semantic.color.text.primary', 'semantic.color.bg.canvas'],
-  ['semantic.color.text.secondary', 'semantic.color.bg.canvas'],
-  ['semantic.color.text.primary', 'semantic.color.bg.surface'],
-  ['semantic.color.action.primary-text', 'semantic.color.action.primary'],
-  ['component.button.text', 'component.button.bg'],
-  ['component.card.text', 'component.card.bg'],
-  ['component.input.text', 'component.input.bg'],
+/** Non-text (border/UI) floors: WCAG 3.0 + APCA Lc 30. Text uses the CLI flags. */
+const BORDER_MIN_RATIO = 3;
+const BORDER_MIN_APCA = 30;
+
+interface AuditPair {
+  fg: string;
+  bg: string;
+  kind: 'text' | 'border' | 'decorative';
+}
+
+const text = (fg: string, bg: string): AuditPair => ({ fg, bg, kind: 'text' });
+const border = (fg: string, bg: string): AuditPair => ({ fg, bg, kind: 'border' });
+/** Decorative hairlines: measured and printed, never gated (WCAG 1.4.11 covers meaningful boundaries only). */
+const decorative = (fg: string, bg: string): AuditPair => ({ fg, bg, kind: 'decorative' });
+
+const PAIRS: readonly AuditPair[] = [
+  // Semantic text on surfaces
+  text('semantic.color.text.primary', 'semantic.color.bg.canvas'),
+  text('semantic.color.text.primary', 'semantic.color.bg.surface'),
+  text('semantic.color.text.primary', 'semantic.color.bg.raised'),
+  text('semantic.color.text.secondary', 'semantic.color.bg.canvas'),
+  text('semantic.color.text.secondary', 'semantic.color.bg.surface'),
+  text('semantic.color.text.tertiary', 'semantic.color.bg.canvas'),
+  text('semantic.color.text.link', 'semantic.color.bg.canvas'),
+  // Action (rest + hover)
+  text('semantic.color.action.primary-text', 'semantic.color.action.primary'),
+  text('semantic.color.action.primary-text', 'semantic.color.action.primary-hover'),
+  // Feedback text on feedback bg
+  ...(['success', 'warning', 'danger', 'info', 'help'] as const).map((role) =>
+    text(`semantic.color.feedback.${role}.text`, `semantic.color.feedback.${role}.bg`),
+  ),
+  // Borders: meaningful boundaries gated; decorative hairlines measured only
+  border('semantic.color.border.strong', 'semantic.color.bg.canvas'),
+  border('semantic.color.border.focus', 'semantic.color.bg.canvas'),
+  decorative('semantic.color.border.default', 'semantic.color.bg.canvas'),
+  decorative('semantic.color.border.default', 'semantic.color.bg.surface'),
+  decorative('semantic.color.border.subtle', 'semantic.color.bg.canvas'),
+  // Components
+  text('component.button.text', 'component.button.bg'),
+  text('component.card.text', 'component.card.bg'),
+  text('component.input.text', 'component.input.bg'),
+  border('component.card.border', 'component.card.bg'),
+  border('component.input.border', 'component.input.bg'),
 ];
+
+const BORDER_KEYS = new Set(
+  PAIRS.filter((pair) => pair.kind === 'border').map((pair) => `${pair.fg}|${pair.bg}`),
+);
+const DECORATIVE_KEYS = new Set(
+  PAIRS.filter((pair) => pair.kind === 'decorative').map((pair) => `${pair.fg}|${pair.bg}`),
+);
 
 function auditTheme(themeName: string): AuditReport {
   const files: Array<{ path: string; tier: string }> = [];
@@ -150,11 +192,20 @@ function auditTheme(themeName: string): AuditReport {
   }
 
   const unresolvedAliases: string[] = [];
-  const pairs = PAIRS.flatMap(([fg, bg]) => {
+  const pairs = PAIRS.flatMap(({ fg, bg, kind }) => {
     const fgColor = resolveColor(fg, flat, unresolvedAliases);
     const bgColor = resolveColor(bg, flat, unresolvedAliases);
     if (fgColor === undefined || bgColor === undefined) return [];
-    return [checkContrast(fg, fgColor, bg, bgColor, minRatio, minApca)];
+    return [
+      checkContrast(
+        fg,
+        fgColor,
+        bg,
+        bgColor,
+        kind === 'border' ? BORDER_MIN_RATIO : kind === 'decorative' ? 1 : minRatio,
+        kind === 'border' ? BORDER_MIN_APCA : kind === 'decorative' ? 0 : minApca,
+      ),
+    ];
   });
 
   // Every alias in the tree must resolve, not just audited pairs.
@@ -208,7 +259,7 @@ if (asJson) {
     console.log(`\n[${name}] min WCAG ratio ${minRatio}:1`);
     for (const pair of report.pairs) {
       console.log(
-        `  ${pair.pass ? 'PASS' : 'FAIL'}  ${pair.ratio.toFixed(2)}:1  Lc ${pair.apcaLc.toFixed(1)}  ${pair.foreground} on ${pair.background}`,
+        `  ${pair.pass ? 'PASS' : 'FAIL'}  ${pair.ratio.toFixed(2)}:1  Lc ${pair.apcaLc.toFixed(1)}  ${pair.foreground} on ${pair.background}${BORDER_KEYS.has(`${pair.foreground}|${pair.background}`) ? ' (border)' : DECORATIVE_KEYS.has(`${pair.foreground}|${pair.background}`) ? ' (border, decorative)' : ''}`,
       );
     }
     for (const item of report.unresolvedAliases) console.log(`  FAIL  unresolved alias: ${item}`);

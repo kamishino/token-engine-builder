@@ -6,12 +6,16 @@
       "bg": {
         "canvas": { "$value": "{color.neutral.50}" },
         "surface": { "$value": "{color.neutral.50}" },
+        "subtle": { "$value": "{color.neutral.100}" },
         "raised": { "$value": "{color.brand.100}" }
       },
       "text": {
         "primary": { "$value": "{color.neutral.950}" },
         "secondary": { "$value": "{color.neutral.900}" },
-        "inverse": { "$value": "{color.neutral.50}" }
+        "tertiary": { "$value": "{color.neutral.800}" },
+        "disabled": { "$value": "{color.neutral.600}" },
+        "inverse": { "$value": "{color.neutral.50}" },
+        "link": { "$value": "{color.brand.800}" }
       },
       "action": {
         "primary": { "$value": "{color.brand.800}" },
@@ -19,8 +23,32 @@
         "primary-text": { "$value": "{color.neutral.50}" }
       },
       "border": {
+        "subtle": { "$value": "{color.neutral.500}" },
         "default": { "$value": "{color.neutral.700}" },
-        "strong": { "$value": "{color.neutral.900}" }
+        "strong": { "$value": "{color.neutral.900}" },
+        "focus": { "$value": "{color.brand.800}" }
+      },
+      "feedback": {
+        "success": {
+          "bg": { "$value": "{color.feedback.success.100}" },
+          "text": { "$value": "{color.feedback.success.900}" }
+        },
+        "warning": {
+          "bg": { "$value": "{color.feedback.warning.100}" },
+          "text": { "$value": "{color.feedback.warning.900}" }
+        },
+        "danger": {
+          "bg": { "$value": "{color.feedback.danger.100}" },
+          "text": { "$value": "{color.feedback.danger.900}" }
+        },
+        "info": {
+          "bg": { "$value": "{color.feedback.info.100}" },
+          "text": { "$value": "{color.feedback.info.900}" }
+        },
+        "help": {
+          "bg": { "$value": "{color.feedback.help.100}" },
+          "text": { "$value": "{color.feedback.help.900}" }
+        }
       }
     }
   },

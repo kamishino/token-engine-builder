@@ -16,12 +16,10 @@ Components bind **layout roles**, never raw spacing steps. Layout tokens are gen
 | `layout.section`                            | template section separation                                 | rhythm 2              |
 | `layout.page`                               | page-level separation                                       | spacing 16            |
 
-Atomic mapping: Atoms/ Molecules compose with `inset` + `gap.tight/related`; Organisms with `inset.lg/xl` + `gap.loose`; Templates with `section`; Pages with `page`. Density (comfortable/compact) is already baked into the spacing primitives these alias.
-
 ## Vertical rhythm
 
-- Baseline = `round(baseSize × 1.5 / 4) × 4` (16px base → 24px).
-- Every font-size step has a paired `line-height` (same key): line height snaps UP to the 4px grid (`ceil(size × 1.2 / 4) × 4` px), stored as a unitless multiplier — text stays on rhythm at any size.
+- Baseline = `round(baseSize × baseLineHeight / 4) × 4`, where `baseLineHeight` is a style-spec choice (compact 1.25 / normal 1.5 / airy 1.75, default 1.5): 16px base → 20px (1.25), 24px (1.5), 28px (1.75).
+- Every font-size step has a paired `line-height` (same key): line height snaps UP to the baseline subdivision grid (baseline/6, ≥2px; `ceil(size × 1.2 / snapUnit) × snapUnit` px), stored as a unitless multiplier — text stays on rhythm at any size and any base line-height.
 - `rhythm` scale: `half` (baseline/2), `baseline`, and multiples 1–6 for vertical margins/section spacing.
 
 ## Horizontal rhythm (grid primitives)
