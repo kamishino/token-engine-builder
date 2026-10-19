@@ -17,4 +17,4 @@ node ~/agents/skills/token-build/scripts/build.mjs --tokens tokens --out build -
 node ~/agents/skills/token-build/scripts/build.mjs --tokens tokens --out build/dark --theme dark
 ```
 
-Entry condition: `token-audit` exits 0 on this exact tree. Each build emits `tokens.css` (`:root`, OKLCH colors, rem dimensions) and `theme.css` (Tailwind v4 `@theme`); gold standards live in `examples/`, and `templates/sd.config.json` documents the config shape. The full procedure is in [SKILL.md](SKILL.md).
+Entry condition: `token-audit` exits 0 on this exact tree. Each build emits `tokens.css` (`:root`, OKLCH colors, rem dimensions), `theme.css` (Tailwind v4 `@theme`), and `components.md` (component specifications with states); gold standards live in `examples/`, and `templates/sd.config.json` documents the config shape. The full procedure is in [SKILL.md](SKILL.md).

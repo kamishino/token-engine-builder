@@ -213,6 +213,41 @@ export async function tailwindV4ThemeFormat(args: {
   return `${header}@theme {\n${lines.join('\n')}\n}\n`;
 }
 
+/**
+ * Component-spec format: per-component Markdown tables of resolved token
+ * values (state → token → value), grouped by component in dictionary order.
+ */
+export async function componentSpecsFormat(args: {
+  dictionary: { allTokens: SdToken[] };
+  file: { destination?: string };
+  options?: Record<string, unknown> & { label?: string };
+}): Promise<string> {
+  const header = await fileHeader({ file: args.file as never, options: args.options as never });
+  const components = new Map<string, SdToken[]>();
+  for (const token of args.dictionary.allTokens) {
+    if (token.path[0] !== 'component') continue;
+    const name = token.path[1] as string;
+    const list = components.get(name) ?? [];
+    list.push(token);
+    components.set(name, list);
+  }
+  const sections: string[] = [
+    `${header}# Component specifications\n\nTheme: ${args.options?.label ?? 'tokens'}\n`,
+  ];
+  for (const [name, tokens] of components) {
+    const rows = tokens.map(
+      (token) => `| ${token.path.slice(2).join('-')} | ${String(tokenValue(token))} |`,
+    );
+    sections.push(`## ${name}\n\n| Token | Value |\n|---|---|\n${rows.join('\n')}\n`);
+  }
+  sections.push(
+    '## States\n\n' +
+      'Button carries enabled, hover, focus, and disabled states; input carries enabled, focus, error, and disabled; card carries enabled and hover. ' +
+      'Hover, focus, and error state pairs are contrast-gated by token-audit; disabled states are tokenized here but WCAG-exempt from the audit gate.\n',
+  );
+  return sections.join('\n');
+}
+
 export async function cssVariablesFormat(args: {
   dictionary: { allTokens: SdToken[] };
   file: { destination?: string };
@@ -325,6 +360,7 @@ export async function buildTokens(options: BuildTokensOptions): Promise<string[]
       formats: {
         'token-engine/css-variables': cssVariablesFormat as never,
         'tailwind/v4-theme': tailwindV4ThemeFormat as never,
+        'token-engine/component-specs': componentSpecsFormat as never,
       },
     },
     platforms: {
@@ -335,10 +371,15 @@ export async function buildTokens(options: BuildTokensOptions): Promise<string[]
         files: [
           { destination: 'tokens.css', format: 'token-engine/css-variables' },
           { destination: 'theme.css', format: 'tailwind/v4-theme' },
+          {
+            destination: 'components.md',
+            format: 'token-engine/component-specs',
+            options: { label: options.label ?? 'tokens' },
+          },
         ],
       },
     },
   });
   await sd.buildAllPlatforms();
-  return [`${buildPath}tokens.css`, `${buildPath}theme.css`];
+  return [`${buildPath}tokens.css`, `${buildPath}theme.css`, `${buildPath}components.md`];
 }

@@ -20,11 +20,11 @@ Entry condition: `token-audit` exits 0 on this exact tree. Building unaudited to
    node ./scripts/build.mjs --tokens tokens --out build/high-contrast --theme high-contrast
    ```
 
-   Outputs per build: `tokens.css` (`:root` custom properties, OKLCH colors, rem dimensions) and `theme.css` (Tailwind v4 `@theme`). Optional `--prefix <name>` namespaces the CSS variables.
-   - Done when: exit 0 and both output files exist and are non-empty.
+   Outputs per build: `tokens.css` (`:root` custom properties, OKLCH colors, rem dimensions), `theme.css` (Tailwind v4 `@theme`), and `components.md` (component specifications: state → token → resolved value per component). Optional `--prefix <name>` namespaces the CSS variables.
+   - Done when: exit 0 and all three output files exist and are non-empty.
 
-2. **Verify output**: spot-check that `tokens.css` contains `oklch(` values (not hex) and `theme.css` contains `--color-` entries inside `@theme`.
-   - Done when: both spot-checks pass; a hex value means the `color/oklch` transform was bypassed — stop and investigate.
+2. **Verify output**: spot-check that `tokens.css` contains `oklch(` values (not hex), `theme.css` contains `--color-` entries inside `@theme`, and `components.md` contains a `## button` section and a `focus-ring` row.
+   - Done when: all spot-checks pass; a hex value means the `color/oklch` transform was bypassed — stop and investigate.
 3. **Report** file paths + how the consumer imports them (`@import` the CSS; Tailwind v4 reads `@theme` automatically).
    - Done when: the user has copy-pasteable import lines for each built theme.
 

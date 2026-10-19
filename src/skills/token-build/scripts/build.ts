@@ -101,6 +101,7 @@ try {
   const outputs = await buildTokens({
     source,
     outDir: outArg.replaceAll('\\', '/'),
+    label: theme,
     ...(prefix === undefined ? {} : { prefix }),
   });
   const missing = outputs.filter((path) => !existsSync(fromCwd(path)));
@@ -121,6 +122,7 @@ try {
     generator: 'token-engine-builder',
     inputHash,
     files: {
+      'components.md': sha256Hex(readFileSync(fromCwd(outputs[2] as string))),
       'theme.css': sha256Hex(readFileSync(fromCwd(outputs[1] as string))),
       'tokens.css': sha256Hex(readFileSync(fromCwd(outputs[0] as string))),
     },

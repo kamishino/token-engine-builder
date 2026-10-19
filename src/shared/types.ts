@@ -121,4 +121,6 @@ export interface BuildTokensOptions {
   /** Output directory; trailing slash added. */
   outDir: string;
   prefix?: string;
+  /** Theme label written into the generated component specifications. */
+  label?: string;
 }

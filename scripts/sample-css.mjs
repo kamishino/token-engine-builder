@@ -55,6 +55,7 @@ try {
   for (const [built, gold] of [
     ['build/tokens.css', 'src/skills/token-build/examples/tokens.example.css'],
     ['build/theme.css', 'src/skills/token-build/examples/theme.example.css'],
+    ['build/components.md', 'src/skills/token-build/examples/components.example.md'],
   ]) {
     const actual = readFileSync(join(workDir, built), 'utf8').replaceAll('\r\n', '\n');
     const expected = readFileSync(join(rootDir, gold), 'utf8').replaceAll('\r\n', '\n');
