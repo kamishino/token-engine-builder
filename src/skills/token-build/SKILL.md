@@ -20,10 +20,10 @@ Entry condition: `token-audit` exits 0 on this exact tree. Building unaudited to
    node ./scripts/build.mjs --tokens tokens --out build/high-contrast --theme high-contrast
    ```
 
-   Outputs per build: `tokens.css` (`:root` custom properties, OKLCH colors, rem dimensions), `theme.css` (Tailwind v4 `@theme`), and `components.md` (component specifications: state → token → resolved value per component). Optional `--prefix <name>` namespaces the CSS variables.
-   - Done when: exit 0 and all three output files exist and are non-empty.
+   Outputs per build: `tokens.css` (`:root` custom properties, OKLCH colors, rem dimensions), `theme.css` (Tailwind v4 `@theme`), `components.md` (component specifications: state → token → resolved value per component), and `DESIGN.md` (Stitch-format guide; pass `--spec <style-spec.json>` to render frontmatter/prose from the recorded palette and guide block). Optional `--prefix <name>` namespaces the CSS variables. UI-library profiles: `--profile shadcn|bootstrap` emits one dual-theme CSS file instead (see `references/ui-library-profiles.md`).
+   - Done when: exit 0 and all four output files exist and are non-empty.
 
-2. **Verify output**: spot-check that `tokens.css` contains `oklch(` values (not hex), `theme.css` contains `--color-` entries inside `@theme`, and `components.md` contains a `## button` section and a `focus-ring` row.
+2. **Verify output**: spot-check that `tokens.css` contains `oklch(` values (not hex), `theme.css` contains `--color-` entries inside `@theme`, `components.md` contains a `## button` section and a `focus-ring` row, and `DESIGN.md` frontmatter `colors.primary` equals the hex of the spec's primary palette anchor (when `--spec` was passed).
    - Done when: all spot-checks pass; a hex value means the `color/oklch` transform was bypassed — stop and investigate.
 3. **Report** file paths + how the consumer imports them (`@import` the CSS; Tailwind v4 reads `@theme` automatically).
    - Done when: the user has copy-pasteable import lines for each built theme.

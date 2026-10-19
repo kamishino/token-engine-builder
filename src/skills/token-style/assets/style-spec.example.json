@@ -24,6 +24,17 @@
     "ratio": 1.25,
     "baseLineHeight": 1.5
   },
+  "guide": {
+    "overview": "Example Brand is a calm, trustworthy SaaS product. Its interface pairs a cerulean-led palette with generous spacing so dense data stays readable.",
+    "dos": [
+      "Bind semantic and layout roles in components",
+      "Keep action color for primary calls to action only"
+    ],
+    "donts": [
+      "Do not introduce raw hex values above the primitive tier",
+      "Do not use the accent color for body text"
+    ]
+  },
   "spacingBasePx": 4,
   "density": "comfortable",
   "radius": { "sm": 4, "md": 8, "lg": 16, "full": 9999 },

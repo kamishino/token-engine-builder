@@ -1,0 +1,48 @@
+/**
+ * Do not edit directly, this file was auto-generated.
+ */
+
+:root {
+  --background: oklch(98% 0.0012 250deg);
+  --foreground: oklch(28% 0.0038 250deg);
+  --card: oklch(96% 0.0027 250deg);
+  --card-foreground: oklch(28% 0.0038 250deg);
+  --popover: oklch(98% 0.0098 250deg);
+  --popover-foreground: oklch(28% 0.0038 250deg);
+  --primary: oklch(36% 0.0729 250deg);
+  --primary-foreground: oklch(98% 0.0012 250deg);
+  --secondary: oklch(88% 0.0048 250deg);
+  --secondary-foreground: oklch(28% 0.0038 250deg);
+  --muted: oklch(88% 0.0048 250deg);
+  --muted-foreground: oklch(44% 0.0079 250deg);
+  --accent: oklch(98% 0.0098 250deg);
+  --accent-foreground: oklch(28% 0.0038 250deg);
+  --destructive: oklch(28% 0.1069 25deg);
+  --destructive-foreground: oklch(88% 0.0503 25deg);
+  --border: oklch(78% 0.0074 250deg);
+  --input: oklch(60% 0.012 250deg);
+  --ring: oklch(44% 0.0986 250deg);
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: oklch(20% 0.0017 250deg);
+  --foreground: oklch(98% 0.0012 250deg);
+  --card: oklch(28% 0.0038 250deg);
+  --card-foreground: oklch(98% 0.0012 250deg);
+  --popover: oklch(20% 0.0214 250deg);
+  --popover-foreground: oklch(98% 0.0012 250deg);
+  --primary: oklch(96% 0.0197 250deg);
+  --primary-foreground: oklch(20% 0.0017 250deg);
+  --secondary: oklch(36% 0.0058 250deg);
+  --secondary-foreground: oklch(98% 0.0012 250deg);
+  --muted: oklch(36% 0.0058 250deg);
+  --muted-foreground: oklch(78% 0.0074 250deg);
+  --accent: oklch(20% 0.0214 250deg);
+  --accent-foreground: oklch(98% 0.0012 250deg);
+  --destructive: oklch(88% 0.0503 25deg);
+  --destructive-foreground: oklch(28% 0.1069 25deg);
+  --border: oklch(44% 0.0079 250deg);
+  --input: oklch(60% 0.012 250deg);
+  --ring: oklch(96% 0.0197 250deg);
+}

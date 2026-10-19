@@ -37,6 +37,8 @@ try {
     'build',
     '--theme',
     'light',
+    '--spec',
+    join(rootDir, 'dist/token-style/assets/style-spec.example.json').replaceAll('\\', '/'),
   ]);
   run('dist/token-build/scripts/build.mjs', [
     '--tokens',
@@ -45,6 +47,23 @@ try {
     'build/dark',
     '--theme',
     'dark',
+  ]);
+  run('dist/token-build/scripts/build.mjs', [
+    '--tokens',
+    'tokens',
+    '--out',
+    'build/profiles',
+    '--profile',
+    'shadcn',
+  ]);
+  run('dist/token-build/scripts/build.mjs', [
+    '--tokens',
+    'tokens',
+    '--out',
+    'build/profiles',
+    '--profile',
+    'bootstrap',
+    '--force',
   ]);
   execFileSync(
     process.execPath,
@@ -56,6 +75,9 @@ try {
     ['build/tokens.css', 'src/skills/token-build/examples/tokens.example.css'],
     ['build/theme.css', 'src/skills/token-build/examples/theme.example.css'],
     ['build/components.md', 'src/skills/token-build/examples/components.example.md'],
+    ['build/DESIGN.md', 'src/skills/token-build/examples/design.example.md'],
+    ['build/profiles/shadcn.css', 'src/skills/token-build/examples/shadcn.example.css'],
+    ['build/profiles/bootstrap.css', 'src/skills/token-build/examples/bootstrap.example.css'],
   ]) {
     const actual = readFileSync(join(workDir, built), 'utf8').replaceAll('\r\n', '\n');
     const expected = readFileSync(join(rootDir, gold), 'utf8').replaceAll('\r\n', '\n');

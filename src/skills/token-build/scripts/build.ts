@@ -6,7 +6,13 @@
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { buildTokens } from '../../../shared/compiler.js';
+import { oklchToHex } from '../../../shared/colors.js';
+import {
+  buildTokens,
+  buildUiProfile,
+  UI_PROFILE_IDS,
+  type UiProfileId,
+} from '../../../shared/compiler.js';
 import {
   assertSafeOutDir,
   checkTampered,
@@ -20,7 +26,7 @@ const argv = process.argv.slice(2);
 
 if (hasFlag(argv, '--help')) {
   console.log(
-    'Usage: build.mjs --tokens <dir> --out <dir> [--theme <name>] [--prefix <name>] [--force] [--dry-run]',
+    'Usage: build.mjs --tokens <dir> --out <dir> [--theme <name>] [--prefix <name>] [--spec <style-spec.json>] [--force] [--dry-run]',
   );
   process.exit(0);
 }
@@ -31,7 +37,46 @@ const theme = getArg(argv, '--theme', 'light') as string;
 const prefix = getArg(argv, '--prefix');
 const force = hasFlag(argv, '--force');
 const dryRun = hasFlag(argv, '--dry-run');
+const specArg = getArg(argv, '--spec');
 
+interface SpecGuide {
+  name: string;
+  overview?: string;
+  dos?: string[];
+  donts?: string[];
+  primaryHex?: string;
+  secondaryHex?: string;
+  scale?: number;
+  density?: string;
+}
+
+let guide: SpecGuide | undefined;
+if (specArg !== undefined) {
+  const specPath = fromCwd(specArg);
+  if (!existsSync(specPath)) {
+    console.error(`style-spec not found: ${specPath}`);
+    process.exit(1);
+  }
+  const spec = JSON.parse(readFileSync(specPath, 'utf8')) as {
+    name: string;
+    density?: string;
+    typography?: { ratio?: number };
+    palette?: Array<{ role: string; anchor: { l: number; c: number; h: number; alpha?: number } }>;
+    guide?: { overview?: string; dos?: string[]; donts?: string[] };
+  };
+  const primary = spec.palette?.find((entry) => entry.role === 'primary');
+  const secondary = spec.palette?.find((entry) => entry.role === 'secondary');
+  guide = {
+    name: spec.name,
+    ...(spec.guide?.overview === undefined ? {} : { overview: spec.guide.overview }),
+    ...(spec.guide?.dos === undefined ? {} : { dos: spec.guide.dos }),
+    ...(spec.guide?.donts === undefined ? {} : { donts: spec.guide.donts }),
+    ...(primary === undefined ? {} : { primaryHex: oklchToHex(primary.anchor) }),
+    ...(secondary === undefined ? {} : { secondaryHex: oklchToHex(secondary.anchor) }),
+    ...(spec.typography?.ratio === undefined ? {} : { scale: spec.typography.ratio }),
+    ...(spec.density === undefined ? {} : { density: spec.density }),
+  };
+}
 const tokensDir = fromCwd(tokensArg);
 if (!existsSync(tokensDir)) {
   console.error(`tokens dir not found: ${tokensDir} (run token-math generate first)`);
@@ -52,15 +97,34 @@ if (!existsSync(baseConfig)) {
   process.exit(1);
 }
 
+const profileArg = getArg(argv, '--profile');
+if (profileArg !== undefined && !(UI_PROFILE_IDS as readonly string[]).includes(profileArg)) {
+  console.error(`unknown profile "${profileArg}" (valid: ${UI_PROFILE_IDS.join(', ')})`);
+  process.exit(1);
+}
+const profile = profileArg as UiProfileId | undefined;
+
 const MANIFEST_NAME = '.token-engine-css-manifest.json';
 const outDir = fromCwd(outArg);
 const manifestPath = join(outDir, MANIFEST_NAME);
-const outputPaths = [join(outDir, 'tokens.css'), join(outDir, 'theme.css')];
+const outputPaths =
+  profile === undefined
+    ? [
+        join(outDir, 'tokens.css'),
+        join(outDir, 'theme.css'),
+        join(outDir, 'components.md'),
+        join(outDir, 'DESIGN.md'),
+      ]
+    : [join(outDir, `${profile}.css`)];
 const outputsExist = outputPaths.some((path) => existsSync(path));
 const tamper = checkTampered(manifestPath, outDir, [MANIFEST_NAME]);
 
 if (dryRun) {
-  console.log(`would build (${theme}) → ${outDir}`);
+  console.log(
+    profile === undefined
+      ? `would build (${theme}) → ${outDir}`
+      : `would build profile ${profile} (light + dark) → ${outDir}`,
+  );
   if (outputsExist) console.log(`provenance: ${tamper.status}`);
   process.exit(0);
 }
@@ -86,7 +150,11 @@ if (outputsExist && force && (tamper.status === 'tampered' || tamper.status === 
   console.log('overwriting hand-edited CSS (--force)');
 }
 
-console.log(`writing CSS → ${outDir}`);
+console.log(
+  profile === undefined
+    ? `writing CSS → ${outDir}`
+    : `writing ${profile} profile → ${outDir} (theme flag ignored: profiles build light + dark)`,
+);
 
 // Style Dictionary globs: forward slashes on every platform, and cwd-relative
 // patterns (bundled glob engines mishandle absolute Windows drive paths).
@@ -98,12 +166,16 @@ const source = [
 ];
 
 try {
-  const outputs = await buildTokens({
-    source,
-    outDir: outArg.replaceAll('\\', '/'),
-    label: theme,
-    ...(prefix === undefined ? {} : { prefix }),
-  });
+  const outputs =
+    profile === undefined
+      ? await buildTokens({
+          source,
+          outDir: outArg.replaceAll('\\', '/'),
+          label: theme,
+          ...(guide === undefined ? {} : { guide }),
+          ...(prefix === undefined ? {} : { prefix }),
+        })
+      : await buildUiProfile(profile, tokensDir, outArg.replaceAll('\\', '/'));
   const missing = outputs.filter((path) => !existsSync(fromCwd(path)));
   if (missing.length > 0) {
     console.error(`build failed: Style Dictionary produced no tokens for ${missing.join(', ')}`);
@@ -121,13 +193,21 @@ try {
     kind: 'css',
     generator: 'token-engine-builder',
     inputHash,
-    files: {
-      'components.md': sha256Hex(readFileSync(fromCwd(outputs[2] as string))),
-      'theme.css': sha256Hex(readFileSync(fromCwd(outputs[1] as string))),
-      'tokens.css': sha256Hex(readFileSync(fromCwd(outputs[0] as string))),
-    },
+    files:
+      profile === undefined
+        ? {
+            'DESIGN.md': sha256Hex(readFileSync(fromCwd(outputs[3] as string))),
+            'components.md': sha256Hex(readFileSync(fromCwd(outputs[2] as string))),
+            'theme.css': sha256Hex(readFileSync(fromCwd(outputs[1] as string))),
+            'tokens.css': sha256Hex(readFileSync(fromCwd(outputs[0] as string))),
+          }
+        : { [`${profile}.css`]: sha256Hex(readFileSync(fromCwd(outputs[0] as string))) },
   });
-  console.log(`built (${theme}) → ${outputs.join(', ')}`);
+  console.log(
+    profile === undefined
+      ? `built (${theme}) → ${outputs.join(', ')}`
+      : `built profile ${profile} → ${outputs.join(', ')}`,
+  );
 } catch (error) {
   console.error(`build failed: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);

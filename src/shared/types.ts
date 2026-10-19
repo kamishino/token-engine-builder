@@ -93,6 +93,12 @@ export interface StyleSpec {
     /** Base line-height multiplier the vertical-rhythm baseline derives from. Default 1.5. */
     baseLineHeight?: number;
   };
+  /** Optional guide prose recorded at token-style time, rendered into DESIGN.md. */
+  guide?: {
+    overview?: string;
+    dos?: string[];
+    donts?: string[];
+  };
   spacingBasePx: number;
   density: 'comfortable' | 'compact';
   radius: { sm: number; md: number; lg: number; full: number };
@@ -123,4 +129,15 @@ export interface BuildTokensOptions {
   prefix?: string;
   /** Theme label written into the generated component specifications. */
   label?: string;
+  /** Guide data for the DESIGN.md output (name/prose/brand hexes from the style-spec). */
+  guide?: {
+    name: string;
+    overview?: string;
+    dos?: string[];
+    donts?: string[];
+    primaryHex?: string;
+    secondaryHex?: string;
+    scale?: number;
+    density?: string;
+  };
 }

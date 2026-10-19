@@ -1,0 +1,24 @@
+/**
+ * Do not edit directly, this file was auto-generated.
+ */
+
+:root {
+  --bs-body-bg: oklch(98% 0.0012 250deg);
+  --bs-body-color: oklch(28% 0.0038 250deg);
+  --bs-primary: oklch(36% 0.0729 250deg);
+  --bs-secondary-color: oklch(44% 0.0079 250deg);
+  --bs-tertiary-bg: oklch(88% 0.0048 250deg);
+  --bs-border-color: oklch(78% 0.0074 250deg);
+  --bs-link-color: oklch(36% 0.0729 250deg);
+  --bs-border-radius: 0.5rem;
+}
+
+[data-bs-theme="dark"] {
+  --bs-body-bg: oklch(20% 0.0017 250deg);
+  --bs-body-color: oklch(98% 0.0012 250deg);
+  --bs-primary: oklch(96% 0.0197 250deg);
+  --bs-secondary-color: oklch(78% 0.0074 250deg);
+  --bs-tertiary-bg: oklch(36% 0.0058 250deg);
+  --bs-border-color: oklch(44% 0.0079 250deg);
+  --bs-link-color: oklch(96% 0.0197 250deg);
+}

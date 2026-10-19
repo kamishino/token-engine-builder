@@ -63,6 +63,15 @@
         "baseLineHeight": { "type": "number", "exclusiveMinimum": 0, "maximum": 2.5 }
       }
     },
+    "guide": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "overview": { "type": "string" },
+        "dos": { "type": "array", "items": { "type": "string" } },
+        "donts": { "type": "array", "items": { "type": "string" } }
+      }
+    },
     "spacingBasePx": { "type": "number", "exclusiveMinimum": 0 },
     "density": { "enum": ["comfortable", "compact"] },
     "radius": {
