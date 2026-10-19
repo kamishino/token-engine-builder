@@ -9,6 +9,7 @@ import {
   ColorSpace,
   contrastAPCA,
   contrastWCAG21,
+  inGamut,
   OKLCH,
   parse,
   serialize,
@@ -153,10 +154,40 @@ const RAMP_SETS: Record<RampStepCount, { steps: readonly number[]; offsets: read
   },
 };
 
+/** True when the color renders inside the sRGB gamut without clipping. */
+export function isInSrgb(color: OklchColor): boolean {
+  ensureSpaces();
+  return Boolean(inGamut(plain(color), sRGB));
+}
+
+/**
+ * Clamp a color into the sRGB gamut by reducing chroma only (binary search,
+ * 24 iterations): hue and lightness are preserved exactly, so the CSS oklch()
+ * output and the hex fallback agree on every display.
+ */
+export function clampToSrgb(color: OklchColor): OklchColor {
+  if (isInSrgb(color)) return color;
+  let lo = 0;
+  let hi = color.c;
+  for (let i = 0; i < 24; i++) {
+    const mid = (lo + hi) / 2;
+    if (isInSrgb({ ...color, c: mid })) lo = mid;
+    else hi = mid;
+  }
+  return {
+    l: Number(color.l.toFixed(4)),
+    // Floor (not round) so 4dp serialization cannot push the color back out of gamut.
+    c: Number((Math.floor(lo * 10000) / 10000).toFixed(4)),
+    h: Number(color.h.toFixed(2)),
+    alpha: color.alpha ?? 1,
+  };
+}
+
 /**
  * Build a ramp landing exactly on `anchor` at step 500, at the chosen step
  * count (5, 9, or 11). Chroma tapers toward both ends so near-white and
  * near-black steps stay in gamut; step 500 keeps the exact anchor chroma.
+ * Every step is chroma-clamped into the sRGB gamut (step 500 = clamped anchor).
  */
 export function buildRamp(anchor: OklchColor, stepCount: RampStepCount = 11): ColorRamp {
   const set = RAMP_SETS[stepCount];
@@ -167,12 +198,7 @@ export function buildRamp(anchor: OklchColor, stepCount: RampStepCount = 11): Co
     const l = Math.min(0.98, Math.max(0.05, anchor.l + offset));
     const taper = 1 - (Math.abs(offset) / maxPositiveOffset) * 0.9;
     const c = step === 500 ? anchor.c : anchor.c * Math.max(0.1, taper);
-    ramp[step] = {
-      l: Number(l.toFixed(4)),
-      c: Number(c.toFixed(4)),
-      h: anchor.h,
-      alpha: 1,
-    };
+    ramp[step] = clampToSrgb({ l, c, h: anchor.h, alpha: 1 });
   });
   return ramp;
 }
@@ -193,12 +219,14 @@ const HARMONY_RULES: Record<HarmonyMethod, { offsets: readonly number[]; chromaF
  */
 export function buildHarmony(anchor: OklchColor, method: HarmonyMethod): OklchColor[] {
   const rule = HARMONY_RULES[method];
-  return rule.offsets.map((offset) => ({
-    l: Number(Math.min(0.68, Math.max(0.42, anchor.l)).toFixed(4)),
-    c: Number(Math.min(0.3, Math.max(0.02, anchor.c * rule.chromaFactor)).toFixed(4)),
-    h: Number(((((anchor.h + offset) % 360) + 360) % 360).toFixed(2)),
-    alpha: anchor.alpha ?? 1,
-  }));
+  return rule.offsets.map((offset) =>
+    clampToSrgb({
+      l: Number(Math.min(0.68, Math.max(0.42, anchor.l)).toFixed(4)),
+      c: Number(Math.min(0.3, Math.max(0.02, anchor.c * rule.chromaFactor)).toFixed(4)),
+      h: Number(((((anchor.h + offset) % 360) + 360) % 360).toFixed(2)),
+      alpha: anchor.alpha ?? 1,
+    }),
+  );
 }
 
 const FEEDBACK_ANCHORS: Record<FeedbackRole, OklchColor> = {

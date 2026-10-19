@@ -6,7 +6,12 @@
  */
 import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { buildFeedbackColors, buildRamp, dtcgColorValue } from '../../../shared/colors.js';
+import {
+  buildFeedbackColors,
+  buildRamp,
+  clampToSrgb,
+  dtcgColorValue,
+} from '../../../shared/colors.js';
 import {
   assertSafeOutDir,
   checkTampered,
@@ -16,8 +21,10 @@ import {
 } from '../../../shared/guard.js';
 import { fromCwd, getArg, hasFlag, templatePath } from '../../../shared/paths.js';
 import {
-  lineHeightScale,
+  baselinePx,
+  pairedLineHeights,
   radiusScale,
+  rhythmScale,
   spacingScale,
   typographyScale,
 } from '../../../shared/scales.js';
@@ -85,6 +92,14 @@ if (spec.rampSteps !== undefined && ![5, 9, 11].includes(spec.rampSteps)) {
   process.exit(1);
 }
 const stepCount = spec.rampSteps ?? 11;
+for (const entry of spec.palette) {
+  const clamped = clampToSrgb(entry.anchor);
+  if (clamped.c !== entry.anchor.c) {
+    console.log(
+      `warning: anchor for ${entry.name} clamped to sRGB (chroma ${entry.anchor.c} → ${clamped.c})`,
+    );
+  }
+}
 if (!spec.typography || !(spec.typography.ratio > 1) || !(spec.typography.baseSizePx > 0)) {
   console.error('invalid style-spec: typography.baseSizePx > 0 and typography.ratio > 1 required');
   process.exit(1);
@@ -285,6 +300,26 @@ for (const [theme, targets] of Object.entries(SEMANTIC_TARGETS)) {
         },
       },
     },
+    layout: {
+      $type: 'dimension',
+      inset: {
+        none: { $value: '{spacing.0}', $type: 'dimension' },
+        xs: { $value: '{spacing.1}', $type: 'dimension' },
+        sm: { $value: '{spacing.2}', $type: 'dimension' },
+        base: { $value: '{spacing.3}', $type: 'dimension' },
+        md: { $value: '{spacing.4}', $type: 'dimension' },
+        lg: { $value: '{spacing.6}', $type: 'dimension' },
+        xl: { $value: '{spacing.8}', $type: 'dimension' },
+      },
+      gap: {
+        tight: { $value: '{spacing.2}', $type: 'dimension' },
+        related: { $value: '{spacing.3}', $type: 'dimension' },
+        default: { $value: '{spacing.4}', $type: 'dimension' },
+        loose: { $value: '{spacing.6}', $type: 'dimension' },
+      },
+      section: { $value: '{rhythm.2}', $type: 'dimension' },
+      page: { $value: '{spacing.16}', $type: 'dimension' },
+    },
   });
 }
 
@@ -299,7 +334,8 @@ writeTokenFile(['primitive', 'typography.tokens.json'], {
     semibold: { $value: 600 },
     bold: { $value: 700 },
   },
-  'line-height': lineHeightScale(),
+  'line-height': pairedLineHeights(spec.typography.baseSizePx, spec.typography.ratio),
+  rhythm: rhythmScale(baselinePx(spec.typography.baseSizePx)),
 });
 
 writeTokenFile(['primitive', 'spacing.tokens.json'], {
