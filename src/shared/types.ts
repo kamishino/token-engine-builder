@@ -90,6 +90,8 @@ export interface StyleSpec {
     fontFamily: string;
     baseSizePx: number;
     ratio: number;
+    /** Base line-height multiplier the vertical-rhythm baseline derives from. Default 1.5. */
+    baseLineHeight?: number;
   };
   spacingBasePx: number;
   density: 'comfortable' | 'compact';

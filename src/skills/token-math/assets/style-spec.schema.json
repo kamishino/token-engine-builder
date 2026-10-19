@@ -59,7 +59,8 @@
       "properties": {
         "fontFamily": { "type": "string", "minLength": 1 },
         "baseSizePx": { "type": "number", "exclusiveMinimum": 0 },
-        "ratio": { "type": "number", "exclusiveMinimum": 1 }
+        "ratio": { "type": "number", "exclusiveMinimum": 1 },
+        "baseLineHeight": { "type": "number", "exclusiveMinimum": 0, "maximum": 2.5 }
       }
     },
     "spacingBasePx": { "type": "number", "exclusiveMinimum": 0 },

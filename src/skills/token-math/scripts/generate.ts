@@ -104,6 +104,11 @@ if (!spec.typography || !(spec.typography.ratio > 1) || !(spec.typography.baseSi
   console.error('invalid style-spec: typography.baseSizePx > 0 and typography.ratio > 1 required');
   process.exit(1);
 }
+const baseLineHeight = spec.typography.baseLineHeight ?? 1.5;
+if (baseLineHeight < 1 || baseLineHeight > 2.5) {
+  console.error('invalid style-spec: typography.baseLineHeight must be 1–2.5');
+  process.exit(1);
+}
 
 const HARMONY_METHODS: readonly HarmonyMethod[] = [
   'triadic',
@@ -231,43 +236,68 @@ const SEMANTIC_TARGETS: Record<string, Record<string, readonly [string, number]>
   light: {
     canvas: ['neutral', 50],
     surface: ['neutral', 100],
+    subtle: ['neutral', 200],
     raised: ['primary', 50],
     textPrimary: ['neutral', 900],
     textSecondary: ['neutral', 700],
+    textTertiary: ['neutral', 600],
+    textDisabled: ['neutral', 400],
     textInverse: ['neutral', 50],
-    action: ['primary', 700],
-    actionHover: ['primary', 800],
+    textLink: ['primary', 800],
+    action: ['primary', 800],
+    actionHover: ['primary', 900],
     actionText: ['neutral', 50],
+    borderSubtle: ['neutral', 200],
     borderDefault: ['neutral', 300],
     borderStrong: ['neutral', 500],
+    borderFocus: ['primary', 700],
   },
   dark: {
     canvas: ['neutral', 950],
     surface: ['neutral', 900],
+    subtle: ['neutral', 800],
     raised: ['primary', 950],
     textPrimary: ['neutral', 50],
     textSecondary: ['neutral', 300],
+    textTertiary: ['neutral', 300],
+    textDisabled: ['neutral', 500],
     textInverse: ['neutral', 900],
+    textLink: ['primary', 100],
     action: ['primary', 100],
     actionHover: ['primary', 50],
     actionText: ['neutral', 950],
+    borderSubtle: ['neutral', 800],
     borderDefault: ['neutral', 700],
     borderStrong: ['neutral', 500],
+    borderFocus: ['primary', 100],
   },
   'high-contrast': {
     canvas: ['neutral', 50],
     surface: ['neutral', 50],
+    subtle: ['neutral', 100],
     raised: ['primary', 100],
     textPrimary: ['neutral', 950],
     textSecondary: ['neutral', 900],
+    textTertiary: ['neutral', 800],
+    textDisabled: ['neutral', 600],
     textInverse: ['neutral', 50],
+    textLink: ['primary', 800],
     action: ['primary', 800],
     actionHover: ['primary', 900],
     actionText: ['neutral', 50],
+    borderSubtle: ['neutral', 500],
     borderDefault: ['neutral', 700],
     borderStrong: ['neutral', 900],
+    borderFocus: ['primary', 800],
   },
 };
+
+const FEEDBACK_TARGETS: Record<string, readonly [number, number]> = {
+  light: [100, 800],
+  dark: [800, 100],
+  'high-contrast': [100, 900],
+};
+const FEEDBACK_ROLES = ['success', 'warning', 'danger', 'info', 'help'] as const;
 
 for (const [theme, targets] of Object.entries(SEMANTIC_TARGETS)) {
   const resolveTarget = (key: string): { $value: string; $type: 'color' } => {
@@ -282,12 +312,16 @@ for (const [theme, targets] of Object.entries(SEMANTIC_TARGETS)) {
         bg: {
           canvas: resolveTarget('canvas'),
           surface: resolveTarget('surface'),
+          subtle: resolveTarget('subtle'),
           raised: resolveTarget('raised'),
         },
         text: {
           primary: resolveTarget('textPrimary'),
           secondary: resolveTarget('textSecondary'),
+          tertiary: resolveTarget('textTertiary'),
+          disabled: resolveTarget('textDisabled'),
           inverse: resolveTarget('textInverse'),
+          link: resolveTarget('textLink'),
         },
         action: {
           primary: resolveTarget('action'),
@@ -295,9 +329,23 @@ for (const [theme, targets] of Object.entries(SEMANTIC_TARGETS)) {
           'primary-text': resolveTarget('actionText'),
         },
         border: {
+          subtle: resolveTarget('borderSubtle'),
           default: resolveTarget('borderDefault'),
           strong: resolveTarget('borderStrong'),
+          focus: resolveTarget('borderFocus'),
         },
+        feedback: Object.fromEntries(
+          FEEDBACK_ROLES.map((role) => {
+            const fb = FEEDBACK_TARGETS[theme] as readonly [number, number];
+            return [
+              role,
+              {
+                bg: colorAlias(`feedback.${role}`, fb[0]),
+                text: colorAlias(`feedback.${role}`, fb[1]),
+              },
+            ];
+          }),
+        ),
       },
     },
     layout: {
@@ -334,8 +382,12 @@ writeTokenFile(['primitive', 'typography.tokens.json'], {
     semibold: { $value: 600 },
     bold: { $value: 700 },
   },
-  'line-height': pairedLineHeights(spec.typography.baseSizePx, spec.typography.ratio),
-  rhythm: rhythmScale(baselinePx(spec.typography.baseSizePx)),
+  'line-height': pairedLineHeights(
+    spec.typography.baseSizePx,
+    spec.typography.ratio,
+    baseLineHeight,
+  ),
+  rhythm: rhythmScale(baselinePx(spec.typography.baseSizePx, baseLineHeight)),
 });
 
 writeTokenFile(['primitive', 'spacing.tokens.json'], {

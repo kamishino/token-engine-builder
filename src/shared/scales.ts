@@ -38,21 +38,29 @@ export function typographyScale(baseSizePx: number, ratio: number): TokenGroup {
   return group;
 }
 
-/** Vertical-rhythm baseline: base font size × 1.5 rounded to a 4px multiple (16px → 24px). */
-export function baselinePx(baseSizePx: number): number {
-  return Math.round((baseSizePx * 1.5) / 4) * 4;
+/**
+ * Vertical-rhythm baseline: base font size × the chosen base line-height,
+ * rounded to a 4px multiple (16px × 1.5 → 24px; × 1.75 → 28px).
+ */
+export function baselinePx(baseSizePx: number, baseLineHeight = 1.5): number {
+  return Math.round((baseSizePx * baseLineHeight) / 4) * 4;
 }
 
 /**
  * Paired line-heights, one per font-size step: each step's line height snaps
- * UP to the 4px grid (`ceil(size × 1.2 / 4) × 4`), stored as a unitless
- * multiplier so text sits on the vertical rhythm at any size.
+ * UP to the baseline subdivision grid (baseline/6, ≥2px; 24px baseline → 4px),
+ * stored as a unitless multiplier so text sits on the vertical rhythm.
  */
-export function pairedLineHeights(baseSizePx: number, ratio: number): TokenGroup {
+export function pairedLineHeights(
+  baseSizePx: number,
+  ratio: number,
+  baseLineHeight = 1.5,
+): TokenGroup {
+  const snapUnit = Math.max(2, Math.round(baselinePx(baseSizePx, baseLineHeight) / 6));
   const group: TokenGroup = { $type: 'number' };
   for (const [name, step] of TYPE_STEPS) {
     const sizePx = baseSizePx * ratio ** step;
-    const lhPx = Math.ceil((sizePx * 1.2) / 4) * 4;
+    const lhPx = Math.ceil((sizePx * 1.2) / snapUnit) * snapUnit;
     group[name] = { $value: Number((lhPx / sizePx).toFixed(3)), $type: 'number' };
   }
   return group;

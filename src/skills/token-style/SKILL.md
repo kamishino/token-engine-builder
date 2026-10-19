@@ -18,7 +18,7 @@ The leading word is **palette**: 3–5 named colors the whole system derives fro
    - Brand personality in 3–5 adjectives? → resolve to one cluster via `references/style-clusters.md`; vague modifiers ("premium", "playful") → adjust via `references/design-mappings.md`.
    - Anchor color for the primary: named color, existing hex, or "you choose"? → convert to OKLCH `{ l, c, h }`; `l` 0.45–0.65 keeps both light/dark ramps viable.
    - Steps per color ramp: 5, 9, or 11? (default 11; ask only when the user cares) → `rampSteps`.
-   - Typography: font family + feel (compact ratio 1.2 / comfortable 1.25 / expressive 1.333)?
+   - Typography: font family + feel (compact ratio 1.2 / comfortable 1.25 / expressive 1.333) and base line-height (compact 1.25 / normal 1.5 / airy 1.75, default 1.5 — it sets the vertical-rhythm baseline)?
    - Density: `comfortable` or `compact`?
    - Corner character: sharp (2/4/8), soft (4/8/16), or round (8/16/24) radii?
    - Done when: every field of `assets/style-spec.example.json` has an answer or a stated default.
