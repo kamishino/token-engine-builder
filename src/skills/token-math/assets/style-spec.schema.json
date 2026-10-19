@@ -39,6 +39,16 @@
       }
     },
     "rampSteps": { "enum": [5, 9, 11], "$description": "Ramp steps per color. Absent = 11." },
+    "clusterBounds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["h", "c", "l"],
+      "properties": {
+        "h": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+        "c": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+        "l": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
+      }
+    },
     "harmony": {
       "enum": [
         "triadic",
@@ -70,6 +80,14 @@
         "overview": { "type": "string" },
         "dos": { "type": "array", "items": { "type": "string" } },
         "donts": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "overrides": {
+      "type": "object",
+      "$description": "Durable remediation: theme → semantic dotted path → alias string, applied by generate.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": { "type": "string", "pattern": "^\\{[a-z0-9.-]+\\}$" }
       }
     },
     "spacingBasePx": { "type": "number", "exclusiveMinimum": 0 },

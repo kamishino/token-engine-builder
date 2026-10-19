@@ -92,12 +92,45 @@ if (spec.rampSteps !== undefined && ![5, 9, 11].includes(spec.rampSteps)) {
   process.exit(1);
 }
 const stepCount = spec.rampSteps ?? 11;
+
+const GENERATED_THEMES = ['light', 'dark', 'high-contrast'] as const;
+const ALIAS_PATTERN = /^\{[a-z0-9.-]+\}$/;
+if (spec.overrides !== undefined) {
+  for (const [theme, paths] of Object.entries(spec.overrides)) {
+    if (!(GENERATED_THEMES as readonly string[]).includes(theme)) {
+      console.error(`invalid style-spec: overrides theme "${theme}" is not a generated theme`);
+      process.exit(1);
+    }
+    for (const [path, alias] of Object.entries(paths)) {
+      if (!path.startsWith('semantic.') || !ALIAS_PATTERN.test(alias)) {
+        console.error(
+          `invalid style-spec: override "${path}" must start semantic. with an alias value like {color.neutral.300}`,
+        );
+        process.exit(1);
+      }
+    }
+  }
+}
 for (const entry of spec.palette) {
   const clamped = clampToSrgb(entry.anchor);
   if (clamped.c !== entry.anchor.c) {
     console.log(
       `warning: anchor for ${entry.name} clamped to sRGB (chroma ${entry.anchor.c} → ${clamped.c})`,
     );
+  }
+}
+
+if (spec.clusterBounds !== undefined) {
+  const bounds = spec.clusterBounds;
+  const inRange = (value: number, [min, max]: [number, number]): boolean =>
+    min <= max ? value >= min && value <= max : value >= min || value <= max;
+  for (const entry of spec.palette) {
+    const a = entry.anchor;
+    if (!inRange(a.h, bounds.h) || !inRange(a.c, bounds.c) || !inRange(a.l, bounds.l)) {
+      console.log(
+        `warning: ${entry.name} anchor outside cluster ${spec.cluster ?? 'recorded'} bounds (creative departure?)`,
+      );
+    }
   }
 }
 if (!spec.typography || !(spec.typography.ratio > 1) || !(spec.typography.baseSizePx > 0)) {
@@ -369,6 +402,27 @@ for (const [theme, targets] of Object.entries(SEMANTIC_TARGETS)) {
       page: { $value: '{spacing.16}', $type: 'dimension' },
     },
   });
+}
+
+// Durable remediation: spec overrides are applied into the generated semantic
+// files (before the provenance manifest is hashed, so they survive regeneration).
+if (spec.overrides !== undefined) {
+  for (const [theme, paths] of Object.entries(spec.overrides)) {
+    const filePath = join(outDir, 'semantic', `${theme}.tokens.json`);
+    const json = JSON.parse(readFileSync(filePath, 'utf8')) as Record<string, unknown>;
+    for (const [path, alias] of Object.entries(paths)) {
+      const segments = path.split('.');
+      let node = json as Record<string, unknown>;
+      for (const segment of segments.slice(0, -1)) {
+        const next = node[segment];
+        if (next === null || typeof next !== 'object') node[segment] = {};
+        node = node[segment] as Record<string, unknown>;
+      }
+      node[segments[segments.length - 1] as string] = { $value: alias };
+    }
+    writeFileSync(filePath, `${JSON.stringify(json, null, 2)}\n`, 'utf8');
+    console.log(`applied ${Object.keys(paths).length} override(s) to semantic/${theme}`);
+  }
 }
 
 writeTokenFile(['primitive', 'typography.tokens.json'], {

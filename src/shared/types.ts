@@ -82,6 +82,8 @@ export interface StyleSpec {
   harmony?: HarmonyMethod;
   /** Creative palette (3–5 colors); token-math expands each anchor to a ramp. */
   palette: PaletteColor[];
+  /** Kobayashi bounds the palette was picked inside (copied from the cluster table at record time). */
+  clusterBounds?: { h: [number, number]; c: [number, number]; l: [number, number] };
   /** Ramp steps per color (5, 9, or 11). Absent = 11. */
   rampSteps?: RampStepCount;
   neutralHue: number;
@@ -99,6 +101,8 @@ export interface StyleSpec {
     dos?: string[];
     donts?: string[];
   };
+  /** Durable remediation: theme → semantic dotted path → alias, applied by generate after semantic writes. */
+  overrides?: Record<string, Record<string, string>>;
   spacingBasePx: number;
   density: 'comfortable' | 'compact';
   radius: { sm: number; md: number; lg: number; full: number };
