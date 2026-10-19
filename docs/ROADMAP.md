@@ -15,21 +15,23 @@ token-engine-builder is an agent-skill pipeline that turns a recorded brand pale
 - No reference doc without its engine.
 - Clean cutovers over compatibility shims.
 
-## Now — target v0.3.0
+## Now — next item unselected
 
-### N1. Component specifications with states (lead bet)
+The v0.3.0 Now items shipped (below); the next Now item is unselected — promote from Next/Later by editing this file with the reason.
+
+### N1. Component specifications with states — ✅ shipped in v0.3.0
 
 - **Why**: The NN/g mapping (`docs/research/design-systems-vs-style-guides.md`) shows the component-library child is missing: we ship component _tokens_ (button/card/input) but no per-component specification with states and usage.
 - **Scope** (epic sketch; gets its own grill + plan before code): generated per-component spec documents binding semantic/component tokens across states — enabled, hover, focus, disabled — for all themes, with audit coverage for state contrast pairs (disabled exempt, documented).
 - **Exit criteria**: specs generate for 3 components × 3 themes from the example spec; the audit matrix covers the state pairs; specs ship inside the skill packages.
 
-### N2. Restore CI trust
+### N2. Restore CI trust (still open)
 
 - **Why**: Every GitHub Actions run since 2026-10-18 fails in 0 seconds with no jobs started (platform/account signature; local `npm run check` is green and the workflow is unchanged since its last success).
 - **Scope**: owner checks Actions billing/settings, re-runs the check workflow; if it turns out to be a workflow defect, the fix is recorded here.
 - **Exit criteria**: `check` workflow conclusion = success on `main`.
 
-### N3. Ship v0.3.0
+### N3. Ship v0.3.0 — ✅ shipped (tag `v0.3.0`)
 
 - **Why**: The changeset flow is the single versioning mechanism; N1 deserves a tagged, packaged release.
 - **Scope**: changeset → `npm run release` → `npm run package` → GitHub release with per-skill zips + SHA256SUMS.
