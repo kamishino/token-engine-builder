@@ -1,12 +1,40 @@
 {
   "spec": {
     "name": "examples",
-    "brandAnchor": {
-      "l": 0.44,
-      "c": 0.0986,
-      "h": 250,
-      "alpha": 1
-    },
+    "harmony": "analogous",
+    "palette": [
+      {
+        "role": "primary",
+        "name": "indigo",
+        "anchor": {
+          "l": 0.44,
+          "c": 0.0986,
+          "h": 250,
+          "alpha": 1
+        }
+      },
+      {
+        "role": "secondary",
+        "name": "violet",
+        "anchor": {
+          "l": 0.44,
+          "c": 0.0838,
+          "h": 285,
+          "alpha": 1
+        }
+      },
+      {
+        "role": "accent",
+        "name": "blue",
+        "anchor": {
+          "l": 0.44,
+          "c": 0.0838,
+          "h": 215,
+          "alpha": 1
+        }
+      }
+    ],
+    "rampSteps": 11,
     "neutralHue": 250,
     "neutralChroma": 0.012,
     "typography": {
@@ -30,32 +58,32 @@
     {
       "value": "oklch(44% 0.0986 250deg)",
       "source": "theme.example.css",
-      "name": "--color-brand-700",
+      "name": "--color-cerulean-700",
       "score": 114
     },
     {
       "value": "oklch(36% 0.0729 250deg)",
       "source": "theme.example.css",
-      "name": "--color-brand-800",
+      "name": "--color-cerulean-800",
       "score": 111
     },
     {
-      "value": "oklch(60% 0.15 250deg)",
+      "value": "oklch(52% 0.22 25deg)",
       "source": "theme.example.css",
-      "name": "--color-brand-500",
-      "score": 103
+      "name": "--color-feedback-danger-500",
+      "score": 50
     },
     {
-      "value": "oklch(60% 0.1275 215deg)",
+      "value": "oklch(72% 0.2 75deg)",
       "source": "theme.example.css",
-      "name": "--color-accent-500",
-      "score": 101
+      "name": "--color-feedback-warning-500",
+      "score": 48
     },
     {
-      "value": "oklch(52% 0.1243 250deg)",
+      "value": "oklch(56% 0.2 290deg)",
       "source": "theme.example.css",
-      "name": "--color-brand-600",
-      "score": 100
+      "name": "--color-feedback-help-500",
+      "score": 48
     }
   ]
 }

@@ -9,7 +9,7 @@
  */
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, extname, join, relative } from 'node:path';
-import { formatOklch, parseToOklch } from '../../../shared/colors.js';
+import { buildHarmony, formatOklch, parseToOklch } from '../../../shared/colors.js';
 import { fromCwd, getArg, hasFlag } from '../../../shared/paths.js';
 import type { OklchColor, StyleSpec } from '../../../shared/types.js';
 
@@ -155,9 +155,47 @@ const anchor: OklchColor = {
   alpha: 1,
 };
 
+const HUE_FAMILIES = [
+  'red',
+  'orange',
+  'amber',
+  'yellow',
+  'green',
+  'teal',
+  'cyan',
+  'blue',
+  'indigo',
+  'violet',
+  'magenta',
+  'pink',
+] as const;
+
+function hueFamily(h: number): string {
+  return HUE_FAMILIES[Math.floor((((h % 360) + 360) % 360) / 30) % 12] as string;
+}
+
+const usedNames = new Set<string>();
+function uniqueName(h: number): string {
+  const base = hueFamily(h);
+  const name = usedNames.has(base) ? `${base}-2` : base;
+  usedNames.add(name);
+  return name;
+}
+
+const derived = buildHarmony(anchor, 'analogous');
 const spec: StyleSpec = {
   name: projectName,
-  brandAnchor: anchor,
+  harmony: 'analogous',
+  palette: [
+    { role: 'primary', name: uniqueName(anchor.h), anchor },
+    ...(derived[0] === undefined
+      ? []
+      : [{ role: 'secondary' as const, name: uniqueName(derived[0].h), anchor: derived[0] }]),
+    ...(derived[1] === undefined
+      ? []
+      : [{ role: 'accent' as const, name: uniqueName(derived[1].h), anchor: derived[1] }]),
+  ],
+  rampSteps: 11,
   neutralHue: anchor.h,
   neutralChroma: 0.012,
   typography: {
