@@ -22,7 +22,7 @@ import type {
   FeedbackRole,
   HarmonyMethod,
   OklchColor,
-  RampStep,
+  RampStepCount,
 } from './types.js';
 
 let registered = false;
@@ -141,24 +141,31 @@ export function checkContrast(
   };
 }
 
-const RAMP_STEPS: readonly RampStep[] = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
-
-/** Lightness offsets from the anchor (step 500), ascending step order. */
-const LIGHTNESS_OFFSETS: readonly number[] = [
-  0.42, 0.36, 0.28, 0.18, 0.09, 0, -0.08, -0.16, -0.24, -0.32, -0.4,
-];
+const RAMP_SETS: Record<RampStepCount, { steps: readonly number[]; offsets: readonly number[] }> = {
+  5: { steps: [100, 300, 500, 700, 900], offsets: [0.36, 0.18, 0, -0.16, -0.32] },
+  9: {
+    steps: [100, 200, 300, 400, 500, 600, 700, 800, 900],
+    offsets: [0.36, 0.28, 0.18, 0.09, 0, -0.08, -0.16, -0.24, -0.32],
+  },
+  11: {
+    steps: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
+    offsets: [0.42, 0.36, 0.28, 0.18, 0.09, 0, -0.08, -0.16, -0.24, -0.32, -0.4],
+  },
+};
 
 /**
- * Build an 11-step OKLCH ramp landing exactly on `anchor` at step 500.
- * Chroma tapers toward both ends so near-white/near-black steps stay in gamut.
+ * Build a ramp landing exactly on `anchor` at step 500, at the chosen step
+ * count (5, 9, or 11). Chroma tapers toward both ends so near-white and
+ * near-black steps stay in gamut; step 500 keeps the exact anchor chroma.
  */
-export function buildRamp(anchor: OklchColor): ColorRamp {
-  const ramp = {} as ColorRamp;
-  RAMP_STEPS.forEach((step, index) => {
-    const offset = LIGHTNESS_OFFSETS[index] ?? 0;
+export function buildRamp(anchor: OklchColor, stepCount: RampStepCount = 11): ColorRamp {
+  const set = RAMP_SETS[stepCount];
+  const maxPositiveOffset = set.offsets[0] ?? 0.42;
+  const ramp: ColorRamp = {};
+  set.steps.forEach((step, index) => {
+    const offset = set.offsets[index] ?? 0;
     const l = Math.min(0.98, Math.max(0.05, anchor.l + offset));
-    // Chroma tapers linearly with distance from the anchor step: 100% at 500 → 10% at the far ends.
-    const taper = 1 - (Math.abs(offset) / 0.42) * 0.9;
+    const taper = 1 - (Math.abs(offset) / maxPositiveOffset) * 0.9;
     const c = step === 500 ? anchor.c : anchor.c * Math.max(0.1, taper);
     ramp[step] = {
       l: Number(l.toFixed(4)),

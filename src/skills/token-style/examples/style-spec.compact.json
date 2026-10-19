@@ -1,12 +1,17 @@
 {
   "name": "Compact Brand",
   "cluster": "botanical-fresh",
-  "brandAnchor": {
-    "l": 0.7,
-    "c": 0.16,
-    "h": 160,
-    "alpha": 1
-  },
+  "harmony": "analogous",
+  "palette": [
+    { "role": "primary", "name": "fern", "anchor": { "l": 0.7, "c": 0.16, "h": 160, "alpha": 1 } },
+    {
+      "role": "secondary",
+      "name": "lagoon",
+      "anchor": { "l": 0.7, "c": 0.136, "h": 195, "alpha": 1 }
+    },
+    { "role": "accent", "name": "moss", "anchor": { "l": 0.7, "c": 0.136, "h": 125, "alpha": 1 } }
+  ],
+  "rampSteps": 9,
   "neutralHue": 160,
   "neutralChroma": 0.012,
   "typography": {

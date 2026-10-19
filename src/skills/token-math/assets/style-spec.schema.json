@@ -6,7 +6,7 @@
   "additionalProperties": false,
   "required": [
     "name",
-    "brandAnchor",
+    "palette",
     "neutralHue",
     "neutralChroma",
     "typography",
@@ -22,7 +22,23 @@
       "pattern": "^[a-z0-9-]+$",
       "$description": "Optional Kobayashi style cluster id (see token-style/references/style-clusters.md)."
     },
-    "brandAnchor": { "$ref": "#/$defs/oklch" },
+    "palette": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 5,
+      "$description": "Creative palette (exactly one primary). token-math expands each anchor to a ramp keyed by name.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "name", "anchor"],
+        "properties": {
+          "role": { "enum": ["primary", "secondary", "accent", "other"] },
+          "name": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+          "anchor": { "$ref": "#/$defs/oklch" }
+        }
+      }
+    },
+    "rampSteps": { "enum": [5, 9, 11], "$description": "Ramp steps per color. Absent = 11." },
     "harmony": {
       "enum": [
         "triadic",
@@ -32,7 +48,7 @@
         "tetradic",
         "monochromatic"
       ],
-      "$description": "Optional harmony method; token-math derives secondary/accent ramps when set."
+      "$description": "Provenance only: guidance method used when picking the palette."
     },
     "neutralHue": { "type": "number", "minimum": 0, "maximum": 360 },
     "neutralChroma": { "type": "number", "minimum": 0, "maximum": 0.05 },

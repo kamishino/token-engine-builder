@@ -6,12 +6,7 @@
  */
 import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import {
-  buildFeedbackColors,
-  buildHarmony,
-  buildRamp,
-  dtcgColorValue,
-} from '../../../shared/colors.js';
+import { buildFeedbackColors, buildRamp, dtcgColorValue } from '../../../shared/colors.js';
 import {
   assertSafeOutDir,
   checkTampered,
@@ -51,19 +46,45 @@ const manifestPath = join(outDir, MANIFEST_NAME);
 const tamper = existsSync(outDir) ? checkTampered(manifestPath, outDir, [MANIFEST_NAME]) : null;
 
 const spec = JSON.parse(readFileSync(specPath, 'utf8')) as StyleSpec;
-const anchor = spec.brandAnchor;
-if (
-  typeof anchor?.l !== 'number' ||
-  anchor.l < 0 ||
-  anchor.l > 1 ||
-  typeof anchor.c !== 'number' ||
-  typeof anchor.h !== 'number' ||
-  anchor.h < 0 ||
-  anchor.h > 360
-) {
-  console.error('invalid style-spec: brandAnchor must be OKLCH { l: 0–1, c: ≥0, h: 0–360 }');
+const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+if (!Array.isArray(spec.palette) || spec.palette.length < 3 || spec.palette.length > 5) {
+  console.error('invalid style-spec: palette must contain 3–5 colors');
   process.exit(1);
 }
+if (spec.palette.filter((entry) => entry.role === 'primary').length !== 1) {
+  console.error('invalid style-spec: palette must contain exactly one primary color');
+  process.exit(1);
+}
+const paletteNames = new Set<string>();
+for (const entry of spec.palette) {
+  if (!SLUG_PATTERN.test(entry.name) || paletteNames.has(entry.name)) {
+    console.error(
+      `invalid style-spec: palette name "${entry.name}" must be a unique kebab-case slug`,
+    );
+    process.exit(1);
+  }
+  paletteNames.add(entry.name);
+  const a = entry.anchor;
+  if (
+    typeof a?.l !== 'number' ||
+    a.l < 0 ||
+    a.l > 1 ||
+    typeof a.c !== 'number' ||
+    typeof a.h !== 'number' ||
+    a.h < 0 ||
+    a.h > 360
+  ) {
+    console.error(
+      `invalid style-spec: palette "${entry.name}" anchor must be OKLCH { l: 0–1, c: ≥0, h: 0–360 }`,
+    );
+    process.exit(1);
+  }
+}
+if (spec.rampSteps !== undefined && ![5, 9, 11].includes(spec.rampSteps)) {
+  console.error('invalid style-spec: rampSteps must be 5, 9, or 11');
+  process.exit(1);
+}
+const stepCount = spec.rampSteps ?? 11;
 if (!spec.typography || !(spec.typography.ratio > 1) || !(spec.typography.baseSizePx > 0)) {
   console.error('invalid style-spec: typography.baseSizePx > 0 and typography.ratio > 1 required');
   process.exit(1);
@@ -133,12 +154,31 @@ mkdirSync(outDir, { recursive: true });
 cpSync(templatePath(import.meta.url, 'tokens'), outDir, { recursive: true, force: true });
 
 // 2. Populate Tier-1 primitives from the spec; tiers 2–3 stay alias-only templates.
-function rampGroup(ramp: ColorRamp): TokenGroup {
+function rampGroup(ramp: ColorRamp, description?: string): TokenGroup {
   const group: TokenGroup = {};
   for (const [step, color] of Object.entries(ramp)) {
-    group[step] = { $value: dtcgColorValue(color), $type: 'color' };
+    group[step] = {
+      $value: dtcgColorValue(color),
+      $type: 'color',
+      ...(description === undefined ? {} : { $description: description }),
+    };
   }
   return group;
+}
+
+const primaryEntry = spec.palette.find(
+  (entry) => entry.role === 'primary',
+) as (typeof spec.palette)[number];
+const rampSteps = Object.keys(buildRamp(primaryEntry.anchor, stepCount)).map(Number);
+
+/** Nearest available ramp step to a semantic target; ties choose the larger (darker) step. */
+function pickStep(target: number): number {
+  return rampSteps.reduce((best, step) =>
+    Math.abs(step - target) < Math.abs(best - target) ||
+    (Math.abs(step - target) === Math.abs(best - target) && step > best)
+      ? step
+      : best,
+  );
 }
 
 function writeTokenFile(segments: string[], data: unknown): void {
@@ -146,27 +186,107 @@ function writeTokenFile(segments: string[], data: unknown): void {
 }
 
 writeTokenFile(['primitive', 'color.tokens.json'], {
-  $description: `Tier 1 — OKLCH ramps for "${spec.name}". Anchor lands on brand.500. Generated; do not hand-edit hex.`,
+  $description: `Tier 1 — palette ramps for "${spec.name}" (${stepCount} steps, anchors on step 500). Generated; do not hand-edit hex.`,
   color: {
     $type: 'color',
-    brand: rampGroup(buildRamp(anchor)),
-    neutral: rampGroup(buildRamp({ l: 0.6, c: spec.neutralChroma, h: spec.neutralHue })),
-    ...(spec.harmony === undefined
-      ? {}
-      : Object.fromEntries(
-          buildHarmony(anchor, spec.harmony).map((color, index) => [
-            index === 0 ? 'secondary' : 'accent',
-            rampGroup(buildRamp(color)),
-          ]),
-        )),
+    white: { $value: dtcgColorValue({ l: 1, c: 0, h: 0, alpha: 1 }), $type: 'color' },
+    black: { $value: dtcgColorValue({ l: 0, c: 0, h: 0, alpha: 1 }), $type: 'color' },
+    ...Object.fromEntries(
+      spec.palette.map((entry) => [
+        entry.name,
+        rampGroup(buildRamp(entry.anchor, stepCount), `${entry.role} — ${entry.name}`),
+      ]),
+    ),
+    neutral: rampGroup(buildRamp({ l: 0.6, c: spec.neutralChroma, h: spec.neutralHue }, stepCount)),
     feedback: Object.fromEntries(
       Object.entries(buildFeedbackColors()).map(([role, color]) => [
         role,
-        { $value: dtcgColorValue(color), $type: 'color' },
+        rampGroup(buildRamp(color, stepCount)),
       ]),
     ),
   },
 });
+
+// 3. Semantic themes are generated from the palette role→slug mapping.
+function colorAlias(family: string, targetStep: number): { $value: string; $type: 'color' } {
+  return { $value: `{color.${family}.${pickStep(targetStep)}}`, $type: 'color' };
+}
+
+const SEMANTIC_TARGETS: Record<string, Record<string, readonly [string, number]>> = {
+  light: {
+    canvas: ['neutral', 50],
+    surface: ['neutral', 100],
+    raised: ['primary', 50],
+    textPrimary: ['neutral', 900],
+    textSecondary: ['neutral', 700],
+    textInverse: ['neutral', 50],
+    action: ['primary', 700],
+    actionHover: ['primary', 800],
+    actionText: ['neutral', 50],
+    borderDefault: ['neutral', 300],
+    borderStrong: ['neutral', 500],
+  },
+  dark: {
+    canvas: ['neutral', 950],
+    surface: ['neutral', 900],
+    raised: ['primary', 950],
+    textPrimary: ['neutral', 50],
+    textSecondary: ['neutral', 300],
+    textInverse: ['neutral', 900],
+    action: ['primary', 100],
+    actionHover: ['primary', 50],
+    actionText: ['neutral', 950],
+    borderDefault: ['neutral', 700],
+    borderStrong: ['neutral', 500],
+  },
+  'high-contrast': {
+    canvas: ['neutral', 50],
+    surface: ['neutral', 50],
+    raised: ['primary', 100],
+    textPrimary: ['neutral', 950],
+    textSecondary: ['neutral', 900],
+    textInverse: ['neutral', 50],
+    action: ['primary', 800],
+    actionHover: ['primary', 900],
+    actionText: ['neutral', 50],
+    borderDefault: ['neutral', 700],
+    borderStrong: ['neutral', 900],
+  },
+};
+
+for (const [theme, targets] of Object.entries(SEMANTIC_TARGETS)) {
+  const resolveTarget = (key: string): { $value: string; $type: 'color' } => {
+    const target = targets[key] as readonly [string, number];
+    return colorAlias(target[0] === 'primary' ? primaryEntry.name : target[0], target[1]);
+  };
+  writeTokenFile(['semantic', `${theme}.tokens.json`], {
+    $description: `Tier 2 — semantic roles, ${theme.toUpperCase()} theme. Generated from the spec palette; aliases only.`,
+    semantic: {
+      color: {
+        $type: 'color',
+        bg: {
+          canvas: resolveTarget('canvas'),
+          surface: resolveTarget('surface'),
+          raised: resolveTarget('raised'),
+        },
+        text: {
+          primary: resolveTarget('textPrimary'),
+          secondary: resolveTarget('textSecondary'),
+          inverse: resolveTarget('textInverse'),
+        },
+        action: {
+          primary: resolveTarget('action'),
+          'primary-hover': resolveTarget('actionHover'),
+          'primary-text': resolveTarget('actionText'),
+        },
+        border: {
+          default: resolveTarget('borderDefault'),
+          strong: resolveTarget('borderStrong'),
+        },
+      },
+    },
+  });
+}
 
 writeTokenFile(['primitive', 'typography.tokens.json'], {
   $description: `Tier 1 — modular type scale (base ${spec.typography.baseSizePx}px, ratio ${spec.typography.ratio}). Generated.`,

@@ -55,13 +55,22 @@ export interface OklchColor {
   alpha?: number;
 }
 
-export type RampStep = 50 | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900 | 950;
+/** Ramp step label (numeric, e.g. 500); the anchor always lands on 500. */
+export type RampStep = number;
 
-export type ColorRamp = Record<RampStep, OklchColor>;
+export type ColorRamp = Record<number, OklchColor>;
+
+export interface PaletteColor {
+  role: 'primary' | 'secondary' | 'accent' | 'other';
+  /** Color-name slug (meodai/color-names mapping), kebab-case, unique in the palette. */
+  name: string;
+  anchor: OklchColor;
+}
+
+export type RampStepCount = 5 | 9 | 11;
 
 export type HarmonyMethod =
   'triadic' | 'analogous' | 'complementary' | 'split-complementary' | 'tetradic' | 'monochromatic';
-
 export type FeedbackRole = 'success' | 'warning' | 'danger' | 'info' | 'help';
 
 /** Output of skill `token-style`; input to `token-math/scripts/generate`. */
@@ -69,9 +78,12 @@ export interface StyleSpec {
   name: string;
   /** Kobayashi style cluster id the anchor was picked from, when resolved (see token-style/references/style-clusters.md). */
   cluster?: string;
-  /** Optional harmony method; when set, token-math derives secondary/accent ramps. */
+  /** Provenance only: guidance method the agent used when picking the palette. Generate does not derive colors from it. */
   harmony?: HarmonyMethod;
-  brandAnchor: OklchColor;
+  /** Creative palette (3–5 colors); token-math expands each anchor to a ramp. */
+  palette: PaletteColor[];
+  /** Ramp steps per color (5, 9, or 11). Absent = 11. */
+  rampSteps?: RampStepCount;
   neutralHue: number;
   neutralChroma: number;
   typography: {
