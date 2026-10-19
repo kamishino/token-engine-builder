@@ -39,11 +39,11 @@ The v0.3.0 Now items shipped (below); the next Now item is unselected — promot
 
 ## Next — target v0.4.0
 
-### X1. Human style-guide surface
+### X1. Human style-guide surface (DESIGN.md, Stitch format)
 
-- **Why**: The NN/g front-end style-guide child exists only in agent-facing form (SKILL.md, references); the deferred DESIGN.md work (ADR-0001) generates a human usage guide — token usage, do/don't, contrast and layout rules — from tokens + spec.
+- **Why**: The NN/g front-end style-guide child exists only in agent-facing form (SKILL.md, references); the deferred DESIGN.md work (ADR-0001) generates a human usage guide — token usage, do/don't, contrast and layout rules — from tokens + spec. The generated guide adopts the Google Stitch DESIGN.md format (frontmatter + 8 normative sections) because it is the format design AIs already read, while remaining a derived view of the token system, never a source of truth (see `docs/research/design-md-vs-design-system.md`).
 - **Depends on**: N1 (component specs feed the guide).
-- **Exit sketch**: a generated guide document passes a completeness checklist (every semantic role documented with usage).
+- **Exit sketch**: a generated guide document passes a completeness checklist (every semantic role documented with usage); frontmatter colors/typography/rounded/spacing are rendered from the generated token tree (never hand-written), the 8 sections are complete with zero unreplaced slots, and a consistency check proves frontmatter colors equal the corresponding token values — the guide can never drift from the gate.
 
 ### X2. shadcn output profile
 
@@ -72,7 +72,7 @@ The v0.3.0 Now items shipped (below); the next Now item is unselected — promot
 
 | Item (source)                                                     | Roadmap home                                                                                              |
 | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| DESIGN.md contract generation (ADR-0001, not ported)              | X1                                                                                                        |
+| DESIGN.md contract generation (ADR-0001, not ported)              | X1 (format pinned: Google Stitch, as a derived view)                                                      |
 | Gate B visualizer approval (ADR-0001, not ported)                 | Later — promotes when a human approval step before build is wanted by a real workflow; no trigger met yet |
 | Exemplar-matching style detection (ADR-0001, not ported)          | Not planned — replaces derivation with selection, abandoning the product's differentiator                 |
 | shadcn output profile (ADR-0001, not ported)                      | X2                                                                                                        |

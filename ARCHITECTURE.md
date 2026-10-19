@@ -13,6 +13,8 @@ style-spec.json ──generate.mjs──▶ tokens/ (3-tier) ──audit.mjs─�
 
 Skill packages are colocated (`src/skills/<skill>/`: `SKILL.md`, `scripts/*.ts`, `templates/`, `assets/`) and mirrored 1:1 into `dist/<skill>/` by the `sync-skill-packages` Vite plugin (`closeBundle`: copy `SKILL.md` + `templates/` + `assets/` + `examples/`, `chmod 0o755` on `scripts/*.mjs`). Per-skill `README.md` files stay in `src/` — `dist/` is production-readiness. A `dist/<skill>/` folder runs standalone: `node scripts/<name>.mjs` with no install. `token-extract` is an alternative entry beside the interview: it scans an existing project read-only and writes a candidate `style-spec.json` (evidence-ranked anchor), which still passes through `token-style`'s read-back before `token-math` consumes it.
 
+External design-AI contracts (Stitch-format `DESIGN.md`, roadmap X1) are downstream views of this system: generated from tokens + spec, never consumed as input. The token tree and the audit gate are the only sources of truth a generated document may render; position and evidence in `docs/research/design-md-vs-design-system.md`.
+
 ## 2. Module contracts (`src/shared/`)
 
 | Module        | Owns                                                                                                                                                                                   | Key exports                                                                                                                                                                                               |
