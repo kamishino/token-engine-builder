@@ -1,14 +1,14 @@
-# Color architecture — harmonies and feedback roles
+# Color architecture — palette, harmonies, feedback
 
-Read when the style-spec sets `harmony`, or the user asks for secondary/accent/status colors. This file describes only what `generate.mjs` implements.
+Read when the style-spec palette is being picked (`token-style`), set (`harmony`), or the user asks for secondary/accent/status colors. This file describes only what the pipeline implements.
 
-## Three pillars
+## Foundation: the recorded palette
 
-1. **Brand**: the interview anchor → 11-step ramp (anchor exactly on step 500).
-2. **Harmony** (opt-in): derived anchors rotated from the brand hue. First derived color becomes `color.secondary`, second `color.accent`, each expanded to its own ramp. No `harmony` in the spec → no derived ramps.
-3. **Feedback**: fixed accessible anchors under `color.feedback.*` (single tokens, not ramps). They are primitives only — semantic/component feedback roles need per-theme foreground pairs and are not generated yet.
+The spec's `palette` (3–5 entries: exactly one `primary`, plus `secondary`/`accent`/`other`) is the color system. The agent picks each anchor creatively — cluster bounds and the harmony table below are guidance, and deliberate departures are stated at read-back. `token-math` is deterministic: every palette anchor expands to a ramp at the spec's `rampSteps` (5, 9, or 11; anchor exactly on step 500), keyed by the color's name slug (`color.<slug>.<step>`). Semantic theme files are generated from the role→slug mapping (action roles bind the primary slug; steps chosen by nearest available step). Two constants always exist beside the ramps: `color.white` (oklch 1 0 0) and `color.black` (oklch 0 0 0). The `neutral` ramp stays a functional key (temperature-tinted system gray), as do `white`/`black`/`feedback.*`.
 
-## Harmony methods
+## Harmony methods (creative guidance + extract fallback)
+
+Guidance for proposing secondary/accent anchors; also the exact math `token-extract` uses to synthesize a full palette from one extracted candidate, and the engine fallback (`buildHarmony`) if derivation is ever requested.
 
 | Method                | Hue offsets  | Chroma factor | Character                              |
 | --------------------- | ------------ | ------------- | -------------------------------------- |
@@ -19,9 +19,11 @@ Read when the style-spec sets `harmony`, or the user asks for secondary/accent/s
 | `tetradic`            | +90°, +180°  | 0.80          | Rich multi-domain                      |
 | `monochromatic`       | 0°           | 0.60          | Restraint, luxury (secondary only)     |
 
-Derived lightness preserves the anchor inside 0.42–0.68; derived chroma is capped at 0.30. Hue wraps modulo 360°.
+Derived lightness preserves the anchor inside 0.42–0.68; derived chroma is capped at 0.30. Hue wraps modulo 360°. Recording a method in the spec's `harmony` field is provenance only — generate does not derive from it.
 
-## Feedback anchors
+## Feedback anchors → ramps
+
+Fixed accessible anchors, each now expanded to a ramp at the chosen step count under `color.feedback.<role>.*`:
 
 | Role      | Hue  | Chroma | Lightness |
 | --------- | ---- | ------ | --------- |
@@ -31,4 +33,4 @@ Derived lightness preserves the anchor inside 0.42–0.68; derived chroma is cap
 | `info`    | 230° | 0.19   | 0.59      |
 | `help`    | 290° | 0.20   | 0.56      |
 
-Ported from the kamiflow color-architecture reference; harmony chroma multipliers and the hue-blind flat gamut cap were corrected to a single rule (factor × anchor chroma, capped at 0.30).
+Feedback remains primitive-only — semantic/component feedback roles need per-theme foreground pairs and are not generated yet.

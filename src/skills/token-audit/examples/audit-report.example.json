@@ -35,15 +35,15 @@
         {
           "foreground": "semantic.color.action.primary-text",
           "background": "semantic.color.action.primary",
-          "ratio": 12.67,
-          "apcaLc": 81.9,
+          "ratio": 16.16,
+          "apcaLc": 98.4,
           "pass": true
         },
         {
           "foreground": "component.button.text",
           "background": "component.button.bg",
-          "ratio": 12.67,
-          "apcaLc": 81.9,
+          "ratio": 16.16,
+          "apcaLc": 98.4,
           "pass": true
         },
         {
