@@ -80,7 +80,7 @@ Verify downloads: keep `SHA256SUMS.txt` beside the zips, then run `sha256sum -c 
 
 ## Contributing
 
-Small, colocated changes: edit `src/skills/<skill>/` or `src/shared/`, run `npm run check`, and update the owning doc in the same commit (`AGENTS.md` for rules, `ARCHITECTURE.md` for design moves). Conventional commits (`type(scope): description`, ≤72 chars, imperative). Never hand-edit `dist/`.
+Small, colocated changes: edit `src/skills/<skill>/` or `src/shared/`, run `npm run check`, and update the owning doc in the same commit (`AGENTS.md` for rules, `ARCHITECTURE.md` for design moves). Conventional commits (`type(scope): description`, ≤72 chars, imperative). Never hand-edit `dist/`. Planning: see [the roadmap](docs/ROADMAP.md).
 
 ## License
 

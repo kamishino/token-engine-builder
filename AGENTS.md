@@ -56,3 +56,4 @@ Node `>=22.12`. No test suite — portable smoke (copied `dist/*`, foreign cwd: 
 - Token tier + alias rules: `ARCHITECTURE.md` §3.
 - Skill runtime contract (entry conditions, exit codes): each `src/skills/<skill>/SKILL.md`.
 - Token input schema: `src/skills/token-math/assets/style-spec.schema.json`.
+- Product priorities and deferred register: `docs/ROADMAP.md`.
