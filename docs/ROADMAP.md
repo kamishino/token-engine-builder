@@ -30,6 +30,7 @@ The v0.3.0 Now items shipped (below); the next Now item is unselected — promot
 - **Why**: Every GitHub Actions run since 2026-10-18 fails in 0 seconds with no jobs started (platform/account signature; local `npm run check` is green and the workflow is unchanged since its last success).
 - **Scope**: owner checks Actions billing/settings, re-runs the check workflow; if it turns out to be a workflow defect, the fix is recorded here.
 - **Exit criteria**: `check` workflow conclusion = success on `main`.
+- **Status (2026-10-19)**: diagnosed account-side — Dependabot's own dynamic workflow fails with the same signature, Actions is enabled with the workflow active, and this workflow is unchanged since its last successful run. Owner action: check GitHub billing/Actions settings; then re-run.
 
 ### N3. Ship v0.3.0 — ✅ shipped (tag `v0.3.0`)
 
@@ -37,18 +38,18 @@ The v0.3.0 Now items shipped (below); the next Now item is unselected — promot
 - **Scope**: changeset → `npm run release` → `npm run package` → GitHub release with per-skill zips + SHA256SUMS.
 - **Exit criteria**: `v0.3.0` tag and release published; artifacts verified against `SHA256SUMS.txt`.
 
-## Next — target v0.4.0
+## Next — target v0.5.0 (unselected)
 
-### X1. Human style-guide surface (DESIGN.md, Stitch format)
+### X1. Human style-guide surface (DESIGN.md, Stitch format) — ✅ shipped in v0.4.0
 
 - **Why**: The NN/g front-end style-guide child exists only in agent-facing form (SKILL.md, references); the deferred DESIGN.md work (ADR-0001) generates a human usage guide — token usage, do/don't, contrast and layout rules — from tokens + spec. The generated guide adopts the Google Stitch DESIGN.md format (frontmatter + 8 normative sections) because it is the format design AIs already read, while remaining a derived view of the token system, never a source of truth (see `docs/research/design-md-vs-design-system.md`).
 - **Depends on**: N1 (component specs feed the guide).
 - **Exit sketch**: a generated guide document passes a completeness checklist (every semantic role documented with usage); frontmatter colors/typography/rounded/spacing are rendered from the generated token tree (never hand-written), the 8 sections are complete with zero unreplaced slots, and a consistency check proves frontmatter colors equal the corresponding token values — the guide can never drift from the gate.
 
-### X2. shadcn output profile
+### X2. UI-library output profiles — ✅ shipped in v0.4.0
 
-- **Why**: The npm ecosystem consumes the flat semantic OKLCH variable shape; a `token-build` profile emitting it beside the DTCG tree widens installability.
-- **Pull-forward trigger**: a concrete shadcn consumer appears — then it jumps to Now.
+- **Why**: The npm ecosystem consumes library-native variable shapes; `token-build --profile` maps the library-neutral semantic roles onto them (see `src/skills/token-build/references/ui-library-profiles.md` for the full list and selection rule).
+- **Shipped**: `shadcn` (CSS vars, `:root`/`.dark`) and `bootstrap` (`--bs-*`, `[data-bs-theme="dark"]`). **Deferred by the selection rule**: PrimeVue/PrimeReact (next, same renderer family), Material UI / Ant Design / Chakra (need object-theme renderers), Radix Themes (needs a 12-step mapping decision), Fluent UI (enterprise priority).
 
 ## Later — trigger-gated
 
