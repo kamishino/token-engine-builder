@@ -87,7 +87,7 @@ The v0.3.0 Now items shipped (below); the next Now item is unselected — promot
 | --- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | L1  | Rendered-product extraction (DOM/screenshot → candidate spec) | Promoted and shipped as X6 in v0.12.0                                                                                        |
 | L2  | Plugin manifests & marketplace distribution                   | Promoted and shipped as X7 in v0.13.0                                                                                        |
-| L3  | TypeScript 7 migration                                        | `typescript-eslint` peer range admits TypeScript ≥7 (re-checked 2026-10-20: latest peer is `>=4.8.4 <6.1.0` — still blocked) |
+| L3  | TypeScript 7 migration                                        | `typescript-eslint` peer range admits TypeScript ≥7 (re-verified live 2026-10-20: `typescript-eslint@8.72.0` hard-crashes with "typescript-eslint does not support TS 7.0", peer `<6.1.0` remains strict blocker) |
 | L5  | Skill grouping (buckets/plugins)                              | Promoted and shipped as X8 in v0.14.0                                                                                        |
 | L6  | Vendored color-names subset                                   | Promoted and shipped as X4 in v0.10.0                                                                                        |
 | L7  | Signed releases + SBOM                                        | Promoted and shipped as X5 in v0.11.0                                                                                        |
