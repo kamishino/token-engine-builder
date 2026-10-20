@@ -10,6 +10,7 @@ import { oklchToHex } from '../../../shared/colors.js';
 import {
   buildTokens,
   buildUiProfile,
+  profileFileName,
   UI_PROFILE_IDS,
   type UiProfileId,
 } from '../../../shared/compiler.js';
@@ -115,7 +116,7 @@ const outputPaths =
         join(outDir, 'components.md'),
         join(outDir, 'DESIGN.md'),
       ]
-    : [join(outDir, `${profile}.css`)];
+    : [join(outDir, profileFileName(profile))];
 const outputsExist = outputPaths.some((path) => existsSync(path));
 const tamper = checkTampered(manifestPath, outDir, [MANIFEST_NAME]);
 
@@ -237,7 +238,7 @@ try {
             'theme.css': sha256Hex(readFileSync(fromCwd(outputs[1] as string))),
             'tokens.css': sha256Hex(readFileSync(fromCwd(outputs[0] as string))),
           }
-        : { [`${profile}.css`]: sha256Hex(readFileSync(fromCwd(outputs[0] as string))) },
+        : { [profileFileName(profile)]: sha256Hex(readFileSync(fromCwd(outputs[0] as string))) },
   });
   console.log(
     profile === undefined

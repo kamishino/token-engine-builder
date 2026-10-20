@@ -526,9 +526,14 @@ export async function loadThemeDictionary(
   return values;
 }
 
-export type UiProfileId = 'shadcn' | 'bootstrap';
+export type UiProfileId = 'shadcn' | 'bootstrap' | 'primevue' | 'antd';
 
-export const UI_PROFILE_IDS: readonly UiProfileId[] = ['shadcn', 'bootstrap'];
+export const UI_PROFILE_IDS: readonly UiProfileId[] = ['shadcn', 'bootstrap', 'primevue', 'antd'];
+
+/** Output filename per profile (Ant Design is a JSON theme, not CSS). */
+export function profileFileName(profile: UiProfileId): string {
+  return profile === 'antd' ? 'antd-theme.json' : `${profile}.css`;
+}
 
 interface ProfileMapping {
   variable: string;
@@ -536,7 +541,10 @@ interface ProfileMapping {
   lightOnly?: boolean;
 }
 
-const PROFILE_MAPPINGS: Record<UiProfileId, { darkSelector: string; mapping: ProfileMapping[] }> = {
+const PROFILE_MAPPINGS: Record<
+  Exclude<UiProfileId, 'antd'>,
+  { darkSelector: string; mapping: ProfileMapping[] }
+> = {
   shadcn: {
     darkSelector: '.dark',
     mapping: [
@@ -575,6 +583,22 @@ const PROFILE_MAPPINGS: Record<UiProfileId, { darkSelector: string; mapping: Pro
       { variable: '--bs-border-radius', source: 'radius.md', lightOnly: true },
     ],
   },
+  primevue: {
+    darkSelector: '.p-dark',
+    mapping: [
+      { variable: '--p-primary-color', source: 'semantic.color.action.primary' },
+      { variable: '--p-primary-contrast-color', source: 'semantic.color.action.primary-text' },
+      { variable: '--p-surface-ground', source: 'semantic.color.bg.canvas' },
+      { variable: '--p-surface-section', source: 'semantic.color.bg.subtle' },
+      { variable: '--p-surface-card', source: 'semantic.color.bg.surface' },
+      { variable: '--p-surface-overlay', source: 'semantic.color.bg.raised' },
+      { variable: '--p-surface-border', source: 'semantic.color.border.default' },
+      { variable: '--p-text-color', source: 'semantic.color.text.primary' },
+      { variable: '--p-text-muted-color', source: 'semantic.color.text.secondary' },
+      { variable: '--p-highlight-background', source: 'semantic.color.bg.raised' },
+      { variable: '--p-border-radius', source: 'radius.md', lightOnly: true },
+    ],
+  },
 };
 
 /**
@@ -587,9 +611,64 @@ export async function buildUiProfile(
   tokensDir: string,
   outDir: string,
 ): Promise<string[]> {
-  const { darkSelector, mapping } = PROFILE_MAPPINGS[profile];
   const light = await loadThemeDictionary(tokensDir, 'light');
   const dark = await loadThemeDictionary(tokensDir, 'dark');
+  const buildPath = outDir.endsWith('/') ? outDir : `${outDir}/`;
+  mkdirSync(buildPath, { recursive: true });
+  const destination = `${buildPath}${profileFileName(profile)}`;
+
+  if (profile === 'antd') {
+    const sources = [
+      'semantic.color.action.primary',
+      'semantic.color.feedback.success.text',
+      'semantic.color.feedback.warning.text',
+      'semantic.color.feedback.danger.text',
+      'semantic.color.feedback.info.text',
+      'semantic.color.text.primary',
+      'semantic.color.text.secondary',
+      'semantic.color.bg.canvas',
+      'semantic.color.bg.surface',
+      'semantic.color.bg.raised',
+      'semantic.color.border.default',
+      'semantic.color.border.subtle',
+      'semantic.color.text.link',
+      'radius.md',
+      'font-family.sans',
+      'font-size.base',
+    ];
+    for (const source of sources) {
+      if (!light.has(source) || !dark.has(source)) {
+        throw new Error(`profile antd: missing token role ${source}`);
+      }
+    }
+    const hex = (values: Map<string, string>, path: string): string =>
+      oklchToHex(parseToOklch(values.get(path) as string));
+    const remToPx = (values: Map<string, string>, path: string): number =>
+      Math.round(Number.parseFloat(values.get(path) as string) * 16);
+    const antdTokens = (values: Map<string, string>): Record<string, string | number> => ({
+      colorPrimary: hex(values, 'semantic.color.action.primary'),
+      colorSuccess: hex(values, 'semantic.color.feedback.success.text'),
+      colorWarning: hex(values, 'semantic.color.feedback.warning.text'),
+      colorError: hex(values, 'semantic.color.feedback.danger.text'),
+      colorInfo: hex(values, 'semantic.color.feedback.info.text'),
+      colorText: hex(values, 'semantic.color.text.primary'),
+      colorTextSecondary: hex(values, 'semantic.color.text.secondary'),
+      colorBgLayout: hex(values, 'semantic.color.bg.canvas'),
+      colorBgContainer: hex(values, 'semantic.color.bg.surface'),
+      colorBgElevated: hex(values, 'semantic.color.bg.raised'),
+      colorBorder: hex(values, 'semantic.color.border.default'),
+      colorBorderSecondary: hex(values, 'semantic.color.border.subtle'),
+      colorLink: hex(values, 'semantic.color.text.link'),
+      borderRadius: remToPx(values, 'radius.md'),
+      fontFamily: values.get('font-family.sans') as string,
+      fontSize: remToPx(values, 'font-size.base'),
+    });
+    const content = `${JSON.stringify({ light: { token: antdTokens(light) }, dark: { token: antdTokens(dark) } }, null, 2)}\n`;
+    writeFileSync(destination, content, 'utf8');
+    return [destination];
+  }
+
+  const { darkSelector, mapping } = PROFILE_MAPPINGS[profile];
   for (const entry of mapping) {
     if (!light.has(entry.source) || (!entry.lightOnly && !dark.has(entry.source))) {
       throw new Error(`profile ${profile}: missing token role ${entry.source}`);
@@ -603,9 +682,6 @@ export async function buildUiProfile(
   const content =
     `/**\n * Do not edit directly, this file was auto-generated.\n */\n\n` +
     `:root {\n${renderBlock(light, true)}\n}\n\n${darkSelector} {\n${renderBlock(dark, false)}\n}\n`;
-  const buildPath = outDir.endsWith('/') ? outDir : `${outDir}/`;
-  mkdirSync(buildPath, { recursive: true });
-  const destination = `${buildPath}${profile}.css`;
   writeFileSync(destination, content, 'utf8');
   return [destination];
 }

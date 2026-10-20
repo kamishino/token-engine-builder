@@ -1,0 +1,42 @@
+{
+  "light": {
+    "token": {
+      "colorPrimary": "#1c3f62",
+      "colorSuccess": "#08441e",
+      "colorWarning": "#7d540b",
+      "colorError": "#52050a",
+      "colorInfo": "#004158",
+      "colorText": "#27292b",
+      "colorTextSecondary": "#4f5357",
+      "colorBgLayout": "#f8f8f9",
+      "colorBgContainer": "#f0f2f3",
+      "colorBgElevated": "#f4f9ff",
+      "colorBorder": "#b4b8bc",
+      "colorBorderSecondary": "#d5d8da",
+      "colorLink": "#1c3f62",
+      "borderRadius": 8,
+      "fontFamily": "Inter, system-ui, sans-serif",
+      "fontSize": 16
+    }
+  },
+  "dark": {
+    "token": {
+      "colorPrimary": "#e8f3ff",
+      "colorSuccess": "#d9f3dd",
+      "colorWarning": "#fff7ed",
+      "colorError": "#f7cbc7",
+      "colorInfo": "#dbf3ff",
+      "colorText": "#f8f8f9",
+      "colorTextSecondary": "#b4b8bc",
+      "colorBgLayout": "#151617",
+      "colorBgContainer": "#27292b",
+      "colorBgElevated": "#0f171f",
+      "colorBorder": "#4f5357",
+      "colorBorderSecondary": "#3b3d40",
+      "colorLink": "#e8f3ff",
+      "borderRadius": 8,
+      "fontFamily": "Inter, system-ui, sans-serif",
+      "fontSize": 16
+    }
+  }
+}
