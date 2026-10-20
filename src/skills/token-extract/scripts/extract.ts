@@ -15,6 +15,184 @@ import { fromCwd, getArg, hasFlag, isMainModule } from '../../../shared/paths.js
 import { validateStyleSpec } from '../../../shared/spec.js';
 import type { OklchColor, StyleSpec } from '../../../shared/types.js';
 
+export interface DesignFrontmatter {
+  primary?: string;
+  secondary?: string;
+  fontSans?: string;
+  scale?: number;
+  rounded?: { sm: number; md: number; lg: number };
+  density?: string;
+  components: string[];
+  source: string;
+}
+
+export interface ColorCandidate {
+  color: OklchColor;
+  score: number;
+  count: number;
+  source: string;
+  name: string;
+}
+
+export interface ExtractionEvidence {
+  candidates: ColorCandidate[];
+  tailwindColors: Map<string, { role: string; color: OklchColor }>;
+  fontFamily?: string;
+  radiusCounts: Map<number, number>;
+  frontmatter?: DesignFrontmatter;
+  projectName: string;
+}
+
+export interface ComposedSpec {
+  spec: StyleSpec;
+  notes: string[];
+}
+
+function rememberRole(
+  role: 'primary' | 'secondary' | 'accent',
+  color: OklchColor,
+  map: Map<string, { role: string; color: OklchColor }>,
+): void {
+  if (!map.has(role)) map.set(role, { role, color });
+}
+
+export function composeStyleSpec(evidence: ExtractionEvidence): ComposedSpec | null {
+  const ranked = [...evidence.candidates].sort(
+    (a, b) => b.score + b.count * 2 - (a.score + a.count * 2),
+  );
+  const top = ranked[0];
+  const designFrontmatter = evidence.frontmatter;
+  if (top === undefined && designFrontmatter?.primary === undefined) {
+    return null;
+  }
+
+  function toAnchor(color: OklchColor): OklchColor {
+    return {
+      l: Number(color.l.toFixed(4)),
+      c: Number(color.c.toFixed(4)),
+      h: Number(color.h.toFixed(2)),
+      alpha: 1,
+    };
+  }
+
+  const notes: string[] = [];
+  let fmPrimary: OklchColor | undefined;
+  let fmSecondary: OklchColor | undefined;
+  if (designFrontmatter !== undefined) {
+    try {
+      if (designFrontmatter.primary !== undefined)
+        fmPrimary = toAnchor(parseToOklch(designFrontmatter.primary));
+      if (designFrontmatter.secondary !== undefined)
+        fmSecondary = toAnchor(parseToOklch(designFrontmatter.secondary));
+    } catch {
+      fmPrimary = undefined;
+      fmSecondary = undefined;
+    }
+    if (fmPrimary !== undefined) {
+      notes.push(
+        `frontmatter: colors.primary (${designFrontmatter.primary}) from ${designFrontmatter.source}`,
+      );
+      if (fmSecondary !== undefined)
+        notes.push(`frontmatter: colors.secondary (${designFrontmatter.secondary})`);
+      if (designFrontmatter.components.length > 0)
+        notes.push(
+          `frontmatter: components noted, not ingested (${designFrontmatter.components.join(', ')})`,
+        );
+    }
+  }
+
+  const radiusMd = [...evidence.radiusCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 8;
+  const primaryCand = evidence.tailwindColors.get('primary')?.color;
+  const secondaryCand = evidence.tailwindColors.get('secondary')?.color;
+  const accentCand = evidence.tailwindColors.get('accent')?.color;
+  const anchor: OklchColor =
+    fmPrimary ?? (primaryCand ? toAnchor(primaryCand) : toAnchor((top as ColorCandidate).color));
+  const resolvedSecondary: OklchColor | undefined =
+    fmSecondary ?? (secondaryCand ? toAnchor(secondaryCand) : undefined);
+  const resolvedAccent: OklchColor | undefined = accentCand ? toAnchor(accentCand) : undefined;
+  const usedNames = new Set<string>();
+  const PREFIXES = ['deep', 'soft', 'vibrant', 'rich', 'pale', 'bright', 'dark', 'pure'] as const;
+  function uniqueName(color: OklchColor): string {
+    const base = nearestColorName(color);
+    if (!usedNames.has(base)) {
+      usedNames.add(base);
+      return base;
+    }
+    for (const prefix of PREFIXES) {
+      const candidate = `${prefix}-${base}`;
+      if (!usedNames.has(candidate)) {
+        usedNames.add(candidate);
+        return candidate;
+      }
+    }
+    let counter = 2;
+    while (usedNames.has(`${base}-${counter}`)) {
+      counter++;
+    }
+    const fallback = `${base}-${counter}`;
+    usedNames.add(fallback);
+    return fallback;
+  }
+
+  type PaletteEntry = StyleSpec['palette'][number];
+  const palette: PaletteEntry[] = [{ role: 'primary', name: uniqueName(anchor), anchor }];
+  if (resolvedSecondary !== undefined)
+    palette.push({
+      role: 'secondary',
+      name: uniqueName(resolvedSecondary),
+      anchor: resolvedSecondary,
+    });
+  if (resolvedAccent !== undefined && palette.length < 3) {
+    palette.push({
+      role: 'accent',
+      name: uniqueName(resolvedAccent),
+      anchor: resolvedAccent,
+    });
+  }
+  for (const derivedColor of buildHarmony(anchor, 'analogous')) {
+    if (palette.length >= 3) break;
+    palette.push({
+      role: palette.length === 1 ? 'secondary' : 'accent',
+      name: uniqueName(derivedColor),
+      anchor: derivedColor,
+    });
+  }
+
+  const spec: StyleSpec = {
+    name: evidence.projectName,
+    harmony: 'analogous',
+    palette,
+    rampSteps: 11,
+    neutralHue: anchor.h,
+    neutralChroma: 0.012,
+    typography: {
+      fontFamily:
+        designFrontmatter?.fontSans ?? evidence.fontFamily ?? 'Inter, system-ui, sans-serif',
+      baseSizePx: 16,
+      ratio: designFrontmatter?.scale ?? 1.25,
+    },
+    spacingBasePx: 4,
+    density:
+      designFrontmatter?.density === 'compact' || designFrontmatter?.density === 'comfortable'
+        ? designFrontmatter.density
+        : 'comfortable',
+    radius:
+      designFrontmatter?.rounded === undefined
+        ? {
+            sm: Math.max(0, Math.round(radiusMd / 2)),
+            md: Math.round(radiusMd),
+            lg: Math.round(radiusMd * 2),
+            full: 9999,
+          }
+        : { ...designFrontmatter.rounded, full: 9999 },
+    targets: { minWcagRatio: 4.5 },
+  };
+
+  return { spec, notes };
+}
+
+type Candidate = ColorCandidate;
+
 export async function runExtract(argv = process.argv.slice(2)): Promise<number> {
   if (hasFlag(argv, '--help')) {
     console.log(
@@ -70,14 +248,6 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
       });
   }
 
-  interface Candidate {
-    color: OklchColor;
-    score: number;
-    count: number;
-    source: string;
-    name: string;
-  }
-
   const NAMED_COLOR =
     /([A-Za-z0-9_-]+)["']?\s*:\s*["']?(#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b|oklch\([^)]*\)|rgba?\([^)]*\))/g;
   const BARE_COLOR = /(#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b|oklch\([^)]*\))/g;
@@ -102,13 +272,10 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
           try {
             const col = parseToOklch(direct);
             record(direct, roleOrName, relSource);
-            if (['primary', 'brand'].includes(roleOrName) && !tailwindColors.has('primary')) {
-              tailwindColors.set('primary', { role: 'primary', color: col });
-            } else if (
-              ['secondary', 'accent'].includes(roleOrName) &&
-              !tailwindColors.has('secondary')
-            ) {
-              tailwindColors.set('secondary', { role: 'secondary', color: col });
+            if (['primary', 'brand'].includes(roleOrName)) {
+              rememberRole('primary', col, tailwindColors);
+            } else if (['secondary', 'accent'].includes(roleOrName)) {
+              rememberRole('secondary', col, tailwindColors);
             }
           } catch {
             /* skip */
@@ -122,13 +289,10 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
             try {
               const col = parseToOklch(target);
               record(target, roleOrName, relSource);
-              if (['primary', 'brand'].includes(roleOrName) && !tailwindColors.has('primary')) {
-                tailwindColors.set('primary', { role: 'primary', color: col });
-              } else if (
-                ['secondary', 'accent'].includes(roleOrName) &&
-                !tailwindColors.has('secondary')
-              ) {
-                tailwindColors.set('secondary', { role: 'secondary', color: col });
+              if (['primary', 'brand'].includes(roleOrName)) {
+                rememberRole('primary', col, tailwindColors);
+              } else if (['secondary', 'accent'].includes(roleOrName)) {
+                rememberRole('secondary', col, tailwindColors);
               }
             } catch {
               /* skip */
@@ -150,21 +314,12 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
         try {
           const col = parseToOklch(val);
           record(val, varName, relSource);
-          if (
-            (varName === 'primary' || varName.startsWith('primary-500') || varName === 'brand') &&
-            !tailwindColors.has('primary')
-          ) {
-            tailwindColors.set('primary', { role: 'primary', color: col });
-          } else if (
-            (varName === 'secondary' || varName.startsWith('secondary-500')) &&
-            !tailwindColors.has('secondary')
-          ) {
-            tailwindColors.set('secondary', { role: 'secondary', color: col });
-          } else if (
-            (varName === 'accent' || varName.startsWith('accent-500')) &&
-            !tailwindColors.has('accent')
-          ) {
-            tailwindColors.set('accent', { role: 'accent', color: col });
+          if (varName === 'primary' || varName.startsWith('primary-500') || varName === 'brand') {
+            rememberRole('primary', col, tailwindColors);
+          } else if (varName === 'secondary' || varName.startsWith('secondary-500')) {
+            rememberRole('secondary', col, tailwindColors);
+          } else if (varName === 'accent' || varName.startsWith('accent-500')) {
+            rememberRole('accent', col, tailwindColors);
           }
         } catch {
           /* skip */
@@ -201,19 +356,7 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
     }
   }
 
-  interface DesignFrontmatter {
-    primary?: string;
-    secondary?: string;
-    fontSans?: string;
-    scale?: number;
-    rounded?: { sm: number; md: number; lg: number };
-    density?: string;
-    components: string[];
-    source: string;
-  }
-
   let designFrontmatter: DesignFrontmatter | undefined;
-  const frontmatterNotes: string[] = [];
 
   function parseDesignFrontmatter(text: string, rel: string): DesignFrontmatter | undefined {
     const block = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
@@ -397,13 +540,7 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
   const ranked = [...candidates.values()].sort(
     (a, b) => b.score + b.count * 2 - (a.score + a.count * 2),
   );
-  const top = ranked[0];
-  if (top === undefined && designFrontmatter?.primary === undefined) {
-    console.error('no color signals found — fall back to the token-style interview');
-    return 1;
-  }
-
-  const evidence = ranked.slice(0, 5).map((candidate) => ({
+  const evidenceSummary = ranked.slice(0, 5).map((candidate) => ({
     value: formatOklch(candidate.color),
     source: candidate.source,
     name: candidate.name,
@@ -421,125 +558,20 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
     // basename fallback already set
   }
 
-  function toAnchor(color: OklchColor): OklchColor {
-    return {
-      l: Number(color.l.toFixed(4)),
-      c: Number(color.c.toFixed(4)),
-      h: Number(color.h.toFixed(2)),
-      alpha: 1,
-    };
+  const composed = composeStyleSpec({
+    candidates: [...candidates.values()],
+    tailwindColors,
+    ...(fontFamily === undefined ? {} : { fontFamily }),
+    radiusCounts,
+    ...(designFrontmatter === undefined ? {} : { frontmatter: designFrontmatter }),
+    projectName,
+  });
+  if (composed === null) {
+    console.error('no color signals found — fall back to the token-style interview');
+    return 1;
   }
-
-  let fmPrimary: OklchColor | undefined;
-  let fmSecondary: OklchColor | undefined;
-  if (designFrontmatter !== undefined) {
-    try {
-      if (designFrontmatter.primary !== undefined)
-        fmPrimary = toAnchor(parseToOklch(designFrontmatter.primary));
-      if (designFrontmatter.secondary !== undefined)
-        fmSecondary = toAnchor(parseToOklch(designFrontmatter.secondary));
-    } catch {
-      fmPrimary = undefined;
-      fmSecondary = undefined;
-    }
-    if (fmPrimary !== undefined) {
-      frontmatterNotes.push(
-        `frontmatter: colors.primary (${designFrontmatter.primary}) from ${designFrontmatter.source}`,
-      );
-      if (fmSecondary !== undefined)
-        frontmatterNotes.push(`frontmatter: colors.secondary (${designFrontmatter.secondary})`);
-      if (designFrontmatter.components.length > 0)
-        frontmatterNotes.push(
-          `frontmatter: components noted, not ingested (${designFrontmatter.components.join(', ')})`,
-        );
-    }
-  }
-
-  const radiusMd = [...radiusCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 8;
-  const primaryCand = tailwindColors.get('primary')?.color;
-  const secondaryCand = tailwindColors.get('secondary')?.color;
-  const accentCand = tailwindColors.get('accent')?.color;
-  const anchor: OklchColor =
-    fmPrimary ?? (primaryCand ? toAnchor(primaryCand) : toAnchor((top as Candidate).color));
-  const resolvedSecondary: OklchColor | undefined =
-    fmSecondary ?? (secondaryCand ? toAnchor(secondaryCand) : undefined);
-  const resolvedAccent: OklchColor | undefined = accentCand ? toAnchor(accentCand) : undefined;
-  const usedNames = new Set<string>();
-  const PREFIXES = ['deep', 'soft', 'vibrant', 'rich', 'pale', 'bright', 'dark', 'pure'] as const;
-  function uniqueName(color: OklchColor): string {
-    const base = nearestColorName(color);
-    if (!usedNames.has(base)) {
-      usedNames.add(base);
-      return base;
-    }
-    for (const prefix of PREFIXES) {
-      const candidate = `${prefix}-${base}`;
-      if (!usedNames.has(candidate)) {
-        usedNames.add(candidate);
-        return candidate;
-      }
-    }
-    let counter = 2;
-    while (usedNames.has(`${base}-${counter}`)) {
-      counter++;
-    }
-    const fallback = `${base}-${counter}`;
-    usedNames.add(fallback);
-    return fallback;
-  }
-
-  type PaletteEntry = StyleSpec['palette'][number];
-  const palette: PaletteEntry[] = [{ role: 'primary', name: uniqueName(anchor), anchor }];
-  if (resolvedSecondary !== undefined)
-    palette.push({
-      role: 'secondary',
-      name: uniqueName(resolvedSecondary),
-      anchor: resolvedSecondary,
-    });
-  if (resolvedAccent !== undefined && palette.length < 3) {
-    palette.push({
-      role: 'accent',
-      name: uniqueName(resolvedAccent),
-      anchor: resolvedAccent,
-    });
-  }
-  for (const derivedColor of buildHarmony(anchor, 'analogous')) {
-    if (palette.length >= 3) break;
-    palette.push({
-      role: palette.length === 1 ? 'secondary' : 'accent',
-      name: uniqueName(derivedColor),
-      anchor: derivedColor,
-    });
-  }
-
-  const spec: StyleSpec = {
-    name: projectName,
-    harmony: 'analogous',
-    palette,
-    rampSteps: 11,
-    neutralHue: anchor.h,
-    neutralChroma: 0.012,
-    typography: {
-      fontFamily: designFrontmatter?.fontSans ?? fontFamily ?? 'Inter, system-ui, sans-serif',
-      baseSizePx: 16,
-      ratio: designFrontmatter?.scale ?? 1.25,
-    },
-    spacingBasePx: 4,
-    density:
-      designFrontmatter?.density === 'compact' || designFrontmatter?.density === 'comfortable'
-        ? designFrontmatter.density
-        : 'comfortable',
-    radius:
-      designFrontmatter?.rounded === undefined
-        ? {
-            sm: Math.max(0, Math.round(radiusMd / 2)),
-            md: Math.round(radiusMd),
-            lg: Math.round(radiusMd * 2),
-            full: 9999,
-          }
-        : { ...designFrontmatter.rounded, full: 9999 },
-    targets: { minWcagRatio: 4.5 },
-  };
+  const { spec, notes: frontmatterNotes } = composed;
+  const anchor = spec.palette[0]?.anchor as OklchColor;
   const validation = validateStyleSpec(spec);
   if (!validation.valid) {
     console.error(`candidate style-spec validation failed: ${validation.errors.join('; ')}`);
@@ -549,13 +581,15 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
     console.log(`warning: ${warning}`);
   }
   if (dryRun) {
-    console.log(JSON.stringify({ spec, evidence, notes: frontmatterNotes }, null, 2));
+    console.log(
+      JSON.stringify({ spec, evidence: evidenceSummary, notes: frontmatterNotes }, null, 2),
+    );
     return 0;
   }
 
   writeFileSync(outPath, `${JSON.stringify(spec, null, 2)}\n`, 'utf8');
   for (const note of frontmatterNotes) console.log(note);
-  for (const entry of evidence) {
+  for (const entry of evidenceSummary) {
     console.log(`evidence: ${entry.value} (${entry.source}${entry.name ? `, ${entry.name}` : ''})`);
   }
   console.log(`extracted candidate anchor ${formatOklch(anchor)} → ${outPath}`);
