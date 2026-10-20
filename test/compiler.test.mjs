@@ -69,12 +69,45 @@ test('ResolvedDictionary provides lookup and fail-closed require', () => {
     { name: 'canvas', path: ['color', 'bg', 'canvas'], value: '#ffffff' },
   ]);
 
-  assert.equal(dict.get('color.brand.500'), '#2563eb');
-  assert.equal(dict.get('color.bg.canvas'), '#ffffff');
-  assert.equal(dict.get('nonexistent.path'), '');
-
+  assert.equal(dict.optional('color.brand.500', '#000'), '#2563eb');
+  assert.equal(dict.optional('color.bg.canvas', '#000'), '#ffffff');
+  assert.equal(dict.optional('nonexistent.path', '#fallback'), '#fallback');
   assert.equal(dict.require('color.brand.500', 'test-format'), '#2563eb');
   assert.throws(() => dict.require('nonexistent.path', 'test-format'), {
     message: /format test-format: missing required token "nonexistent.path"/,
   });
+});
+
+test('buildTokens fails closed when required token is missing', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'compiler-fail-'));
+  try {
+    const tokensDir = join(dir, 'tokens');
+    const outDir = join(dir, 'out');
+    runGenerate([
+      '--spec',
+      'src/skills/token-style/assets/style-spec.example.json',
+      '--out',
+      tokensDir,
+    ]);
+
+    rmSync(join(tokensDir, 'primitive', 'radius.tokens.json'));
+
+    const source = [
+      `${tokensDir.replaceAll('\\', '/')}/primitive/**/*.tokens.json`,
+      `${tokensDir.replaceAll('\\', '/')}/semantic/light.tokens.json`,
+      `${tokensDir.replaceAll('\\', '/')}/component/**/*.tokens.json`,
+    ];
+
+    await assert.rejects(
+      () =>
+        buildTokens({
+          source,
+          outDir,
+          theme: 'light',
+        }),
+      /missing required token|Some token references/,
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
