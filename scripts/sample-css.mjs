@@ -49,77 +49,27 @@ try {
     '--theme',
     'dark',
   ]);
-  run('dist/token-build/scripts/build.mjs', [
-    '--tokens',
-    'tokens',
-    '--out',
-    'build/profiles',
-    '--profile',
+  const UI_PROFILES = [
     'shadcn',
-  ]);
-  run('dist/token-build/scripts/build.mjs', [
-    '--tokens',
-    'tokens',
-    '--out',
-    'build/profiles',
-    '--profile',
     'bootstrap',
-    '--force',
-  ]);
-  run('dist/token-build/scripts/build.mjs', [
-    '--tokens',
-    'tokens',
-    '--out',
-    'build/profiles',
-    '--profile',
     'primevue',
-    '--force',
-  ]);
-  run('dist/token-build/scripts/build.mjs', [
-    '--tokens',
-    'tokens',
-    '--out',
-    'build/profiles',
-    '--profile',
     'antd',
-    '--force',
-  ]);
-  run('dist/token-build/scripts/build.mjs', [
-    '--tokens',
-    'tokens',
-    '--out',
-    'build/profiles',
-    '--profile',
     'mui',
-    '--force',
-  ]);
-  run('dist/token-build/scripts/build.mjs', [
-    '--tokens',
-    'tokens',
-    '--out',
-    'build/profiles',
-    '--profile',
     'chakra',
-    '--force',
-  ]);
-  run('dist/token-build/scripts/build.mjs', [
-    '--tokens',
-    'tokens',
-    '--out',
-    'build/profiles',
-    '--profile',
     'radix',
-    '--force',
-  ]);
-  run('dist/token-build/scripts/build.mjs', [
-    '--tokens',
-    'tokens',
-    '--out',
-    'build/profiles',
-    '--profile',
     'fluent',
-    '--force',
-  ]);
+  ];
+  for (const profile of UI_PROFILES) {
+    run('dist/token-build/scripts/build.mjs', [
+      '--tokens',
+      'tokens',
+      '--out',
+      'build/profiles',
+      '--profile',
+      profile,
+      '--force',
+    ]);
+  }
   execFileSync(
     process.execPath,
     [stylelintEntry, '--config', join(rootDir, 'stylelint.config.mjs'), 'build/**/*.css'],
