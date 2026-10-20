@@ -38,7 +38,7 @@ The v0.3.0 Now items shipped (below); the next Now item is unselected — promot
 - **Scope**: changeset → `npm run release` → `npm run package` → GitHub release with per-skill zips + SHA256SUMS.
 - **Exit criteria**: `v0.3.0` tag and release published; artifacts verified against `SHA256SUMS.txt`.
 
-## Next — target v0.7.0 (unselected)
+## Next — target v0.8.0 (unselected)
 
 ### X1. Human style-guide surface (DESIGN.md, Stitch format) — ✅ shipped in v0.4.0
 
@@ -46,10 +46,10 @@ The v0.3.0 Now items shipped (below); the next Now item is unselected — promot
 - **Depends on**: N1 (component specs feed the guide).
 - **Exit sketch**: a generated guide document passes a completeness checklist (every semantic role documented with usage); frontmatter colors/typography/rounded/spacing are rendered from the generated token tree (never hand-written), the 8 sections are complete with zero unreplaced slots, and a consistency check proves frontmatter colors equal the corresponding token values — the guide can never drift from the gate.
 
-### X2. UI-library output profiles — ✅ shipped in v0.4.0, extended in v0.5.0 and v0.6.0
+### X2. UI-library output profiles — ✅ shipped in v0.4.0, completed in v0.7.0
 
 - **Why**: The npm ecosystem consumes library-native variable shapes; `token-build --profile` maps the library-neutral semantic roles onto them (see `src/skills/token-build/references/ui-library-profiles.md` for the full list and selection rule).
-- **Shipped**: `shadcn` (CSS vars, `:root`/`.dark`) and `bootstrap` (`--bs-*`, `[data-bs-theme="dark"]`) in v0.4.0; `primevue` (`--p-*`) and `antd` (ConfigProvider theme-token JSON) in v0.5.0; `mui` (createTheme-ready theme JSON) and `chakra` (semantic-token JSON) in v0.6.0. **Deferred by the selection rule**: Radix Themes (needs a 12-step mapping decision), Fluent UI (enterprise priority).
+- **Shipped**: `shadcn` and `bootstrap` (CSS vars) in v0.4.0; `primevue` and `antd` in v0.5.0; `mui` and `chakra` (object themes) in v0.6.0; `radix` (12-step interpolated scales) and `fluent` (theme JSON) in v0.7.0. **Registry complete** — all eight candidates from the selection rule ship; new libraries enter only by user request.
 
 ## Later — trigger-gated
 
