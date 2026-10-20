@@ -7,7 +7,7 @@
  * and no new dependency. Publish with GitHub CLI once a remote exists:
  *   gh release create v<version> release/* --title "v<version>"
  *
- * Usage: node scripts/package-release.mjs [--skip-build]
+ * Usage: node scripts/package-release.mjs [--skip-build] [--dry-run]
  */
 import { Buffer } from 'node:buffer';
 import { execFileSync } from 'node:child_process';
@@ -27,7 +27,6 @@ import { fileURLToPath } from 'node:url';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const distDir = join(rootDir, 'dist');
-const releaseDir = join(rootDir, 'release');
 const pkg = JSON.parse(readFileSync(join(rootDir, 'package.json'), 'utf8'));
 const version = pkg.version;
 
@@ -121,22 +120,16 @@ function entriesFor(skill) {
   );
   return entries.sort((a, b) => a.arc.localeCompare(b.arc));
 }
-export function runPackage() {
-  if (!process.argv.includes('--skip-build')) {
-    execFileSync(process.execPath, [join(rootDir, 'scripts', 'build-all.mjs')], {
-      cwd: rootDir,
-      stdio: 'inherit',
-    });
-  }
-  if (!existsSync(distDir)) {
-    console.error('[package] dist/ missing — run npm run build first (or drop --skip-build)');
-    process.exit(1);
-  }
-
-  const dryRun = process.argv.includes('--dry-run');
+export function runPackage(argv = process.argv.slice(2), { root = rootDir } = {}) {
+  const dryRun = argv.includes('--dry-run');
+  const skipBuild = argv.includes('--skip-build');
+  const currentDistDir = join(root, 'dist');
+  const currentReleaseDir = join(root, 'release');
+  const currentPkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+  const currentVersion = currentPkg.version;
 
   // Preflight validation
-  const keyFile = join(rootDir, '.release-key.json');
+  const keyFile = join(root, '.release-key.json');
   let keyData = null;
   if (existsSync(keyFile)) {
     try {
@@ -146,11 +139,11 @@ export function runPackage() {
       console.error(
         `[package] invalid release key: ${err instanceof Error ? err.message : String(err)}`,
       );
-      process.exit(1);
+      return 1;
     }
   }
 
-  const lockPath = join(rootDir, 'package-lock.json');
+  const lockPath = join(root, 'package-lock.json');
   let lock = null;
   if (existsSync(lockPath)) {
     try {
@@ -159,25 +152,44 @@ export function runPackage() {
       console.error(
         `[package] invalid package-lock.json: ${err instanceof Error ? err.message : String(err)}`,
       );
-      process.exit(1);
+      return 1;
     }
   }
 
-  const skills = readdirSync(distDir, { withFileTypes: true })
+  if (dryRun) {
+    const plannedSkills = existsSync(currentDistDir)
+      ? readdirSync(currentDistDir, { withFileTypes: true })
+          .filter((entry) => entry.isDirectory())
+          .map((entry) => entry.name)
+          .sort()
+      : ['token-style', 'token-extract', 'token-math', 'token-audit', 'token-build'];
+    console.log(
+      `[package] dry-run: would package ${plannedSkills.length} skill(s) (v${currentVersion}) → release/`,
+    );
+    for (const s of plannedSkills) console.log(`  token-engine-${s}-v${currentVersion}.zip`);
+    console.log(`  token-engine-builder-v${currentVersion}.zip`);
+    console.log(`  token-engine-creation-v${currentVersion}.zip`);
+    console.log(`  token-engine-governance-v${currentVersion}.zip`);
+    console.log(`  SHA256SUMS.txt`);
+    if (keyData) console.log(`  SHA256SUMS.txt.minisig`);
+    return 0;
+  }
+
+  if (!skipBuild) {
+    execFileSync(process.execPath, [join(root, 'scripts', 'build-all.mjs')], {
+      cwd: root,
+      stdio: 'inherit',
+    });
+  }
+  if (!existsSync(currentDistDir)) {
+    console.error('[package] dist/ missing — run npm run build first (or drop --skip-build)');
+    return 1;
+  }
+
+  const skills = readdirSync(currentDistDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .sort();
-
-  if (dryRun) {
-    console.log(
-      `[package] dry-run: would package ${skills.length} skill(s) (v${version}) → release/`,
-    );
-    for (const s of skills) console.log(`  token-engine-${s}-v${version}.zip`);
-    console.log(`  token-engine-builder-v${version}.zip`);
-    console.log(`  SHA256SUMS.txt`);
-    if (keyData) console.log(`  SHA256SUMS.txt.minisig`);
-    process.exit(0);
-  }
 
   const stageDir = join(rootDir, 'release.tmp');
   rmSync(stageDir, { recursive: true, force: true });
@@ -210,7 +222,11 @@ export function runPackage() {
   for (const [bucketName, bucketSkills] of Object.entries(BUCKETS)) {
     const bucketEntries = [];
     for (const s of bucketSkills) {
-      if (skills.includes(s)) bucketEntries.push(...entriesFor(s));
+      if (!skills.includes(s)) {
+        console.error(`[package] bucket:${bucketName} missing required skill: ${s}`);
+        return 1;
+      }
+      bucketEntries.push(...entriesFor(s));
     }
     if (existsSync(claudePlugin)) {
       bucketEntries.push({ path: claudePlugin, arc: '.claude/plugin.json' });
@@ -313,10 +329,11 @@ export function runPackage() {
   }
 
   // Atomic swap
-  rmSync(releaseDir, { recursive: true, force: true });
-  renameSync(stageDir, releaseDir);
+  rmSync(currentReleaseDir, { recursive: true, force: true });
+  renameSync(stageDir, currentReleaseDir);
 
   console.log(`[package] publish: gh release create v${version} release/* --title "v${version}"`);
+  return 0;
 }
 
 const isMain =
@@ -325,5 +342,6 @@ const isMain =
     process.argv[1].endsWith('package-release.mjs'));
 
 if (isMain) {
-  runPackage();
+  const code = runPackage();
+  if (code !== 0) process.exit(code);
 }

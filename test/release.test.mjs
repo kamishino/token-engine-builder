@@ -4,7 +4,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { crc32, writeZip } from '../scripts/package-release.mjs';
+import { crc32, runPackage, writeZip } from '../scripts/package-release.mjs';
 
 test('crc32 matches standard IEEE 802.3 test vector', () => {
   const buf = Buffer.from('123456789', 'utf8');
@@ -30,4 +30,9 @@ test('writeZip creates valid zip archive with local file headers', () => {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('runPackage with --dry-run completes cleanly without touching disk', () => {
+  const code = runPackage(['--dry-run', '--skip-build']);
+  assert.equal(code, 0);
 });
