@@ -61,7 +61,6 @@ The v0.3.0 Now items shipped (below); the next Now item is unselected — promot
 | L5  | Skill grouping (buckets/plugins)                              | The set reaches ≥8 skills or gains a second install audience                                                                 |
 | L6  | Vendored color-names subset                                   | Offline color naming proves unreliable in practice (ADR-0002 follow-up)                                                      |
 | L7  | Signed releases + SBOM                                        | External consumers need publisher verification beyond unsigned SHA256SUMS                                                    |
-| L7  | Signed releases + SBOM                                        | External consumers need publisher verification beyond unsigned SHA256SUMS                                                    |
 | L8  | Pattern library (component compositions)                      | Component specs in real use reveal repeated compositions worth standardizing                                                 |
 
 L4 (Vite 8 / Rolldown migration) shipped in v0.8.0 — see ARCHITECTURE.md §4 for the re-verified build decisions.
