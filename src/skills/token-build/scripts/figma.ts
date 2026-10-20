@@ -56,11 +56,11 @@ export interface FigmaVariable {
 export function dtcgTokensToFigma(
   sources: JsonObject | string[],
   options: { collectionId?: string; defaultModeId?: string } = {},
-): { variables: FigmaVariable[]; collections: unknown[] } {
+): { variables: FigmaVariable[]; collections: unknown[]; losses: string[] } {
   const collectionId = options.collectionId ?? 'VariableCollectionId:1:1';
   const defaultModeId = options.defaultModeId ?? '1:0';
   const variables: FigmaVariable[] = [];
-
+  const losses: string[] = [];
   function flatten(node: JsonObject, prefix: string): void {
     for (const [key, value] of Object.entries(node)) {
       if (key.startsWith('$')) continue;
@@ -74,6 +74,7 @@ export function dtcgTokensToFigma(
         const desc = (rec['$description'] as string) || '';
 
         if (typeof val === 'string' && val.startsWith('{')) {
+          losses.push(`alias "${path}" exported as literal STRING: ${val}`);
           variables.push({
             id: `VariableID:${variables.length + 1}`,
             name: path,
@@ -158,12 +159,21 @@ export function dtcgTokensToFigma(
         defaultModeId,
       },
     ],
+    losses,
   };
 }
 
-export function figmaVariablesToDtcg(variables: FigmaVariable[]): JsonObject {
+export function figmaVariablesToDtcg(variables: FigmaVariable[]): {
+  tokensTree: JsonObject;
+  losses: string[];
+} {
   const rootObj: JsonObject = {};
+  const losses: string[] = [];
   for (const v of variables) {
+    const modeKeys = Object.keys(v.valuesByMode);
+    if (modeKeys.length > 1) {
+      losses.push(`variable "${v.name}" has ${modeKeys.length} modes, imported first mode only`);
+    }
     const parts = v.name.split('/');
     let cur = rootObj;
     for (let i = 0; i < parts.length - 1; i++) {
@@ -196,7 +206,7 @@ export function figmaVariablesToDtcg(variables: FigmaVariable[]): JsonObject {
       };
     }
   }
-  return rootObj;
+  return { tokensTree: rootObj, losses };
 }
 
 // -------------------------------------------------------------
@@ -233,7 +243,8 @@ function runCli(): void {
     const files = findTokenFiles(tokensDir);
     const collectionId = 'VariableCollectionId:1:1';
     const defaultModeId = '1:0';
-    const { variables } = dtcgTokensToFigma(files, { collectionId, defaultModeId });
+    const { variables, losses } = dtcgTokensToFigma(files, { collectionId, defaultModeId });
+    for (const loss of losses) console.log(`[figma] note: ${loss}`);
     const figmaPayload = {
       status: 200,
       error: false,
@@ -278,7 +289,8 @@ function runCli(): void {
     const outTokensDir = fromCwd(outArg);
     mkdirSync(outTokensDir, { recursive: true });
 
-    const rootObj = figmaVariablesToDtcg(vars);
+    const { tokensTree: rootObj, losses } = figmaVariablesToDtcg(vars);
+    for (const loss of losses) console.log(`[figma] note: ${loss}`);
 
     const outPrimitive = join(outTokensDir, 'primitive');
     mkdirSync(outPrimitive, { recursive: true });

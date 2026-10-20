@@ -5,8 +5,14 @@ import {
   figmaVariablesToDtcg,
 } from '../src/skills/token-build/scripts/figma.ts';
 
-test('dtcgTokensToFigma exports dimension objects to FLOAT with non-zero numeric value', () => {
+test('dtcgTokensToFigma exports dimension objects to FLOAT and returns loss reports', () => {
   const tree = {
+    alias: {
+      action: {
+        $value: '{color.primary}',
+        $type: 'color',
+      },
+    },
     spacing: {
       lg: {
         $value: { value: 24, unit: 'px' },
@@ -26,8 +32,10 @@ test('dtcgTokensToFigma exports dimension objects to FLOAT with non-zero numeric
     },
   };
 
-  const { variables } = dtcgTokensToFigma(tree);
-  assert.equal(variables.length, 3);
+  const { variables, losses } = dtcgTokensToFigma(tree);
+  assert.equal(variables.length, 4);
+  assert.ok(losses.length > 0);
+  assert.ok(losses.some((l) => l.includes('alias')));
 
   const dimVar = variables.find((v) => v.name === 'spacing/lg');
   assert.ok(dimVar !== undefined);
@@ -66,7 +74,8 @@ test('figmaVariablesToDtcg reconstructs DTCG tokens from Figma variables', () =>
     },
   ];
 
-  const tokens = figmaVariablesToDtcg(figmaVars);
+  const { tokensTree: tokens, losses } = figmaVariablesToDtcg(figmaVars);
+  assert.equal(Array.isArray(losses), true);
   assert.ok(tokens.radius && typeof tokens.radius === 'object');
   assert.deepEqual(tokens.radius.md, {
     $value: '8px',
