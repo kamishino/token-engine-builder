@@ -27,7 +27,6 @@ test('buildTokens compiles DTCG tokens to CSS, Tailwind @theme, docs, and visual
     const emitted = await buildTokens({
       source,
       outDir,
-      theme: 'light',
       visualizer: true,
       guide: {
         name: 'Compiler Test Brand',
@@ -35,11 +34,11 @@ test('buildTokens compiles DTCG tokens to CSS, Tailwind @theme, docs, and visual
       },
     });
 
-    assert.ok(emitted.tokensCss.endsWith('tokens.css'));
-    assert.ok(emitted.themeCss.endsWith('theme.css'));
-    assert.ok(emitted.componentsMd.endsWith('components.md'));
-    assert.ok(emitted.designMd.endsWith('DESIGN.md'));
-    assert.ok(emitted.visualizerHtml?.endsWith('visualizer.html'));
+    assert.ok(emitted.artifacts['tokens.css']?.endsWith('tokens.css'));
+    assert.ok(emitted.artifacts['theme.css']?.endsWith('theme.css'));
+    assert.ok(emitted.artifacts['components.md']?.endsWith('components.md'));
+    assert.ok(emitted.artifacts['DESIGN.md']?.endsWith('DESIGN.md'));
+    assert.ok(emitted.artifacts['visualizer.html']?.endsWith('visualizer.html'));
 
     const tokensCss = readFileSync(join(outDir, 'tokens.css'), 'utf8');
     assert.ok(tokensCss.includes(':root {'));
@@ -103,7 +102,6 @@ test('buildTokens fails closed when required token is missing', async () => {
         buildTokens({
           source,
           outDir,
-          theme: 'light',
         }),
       /missing required token|Some token references/,
     );

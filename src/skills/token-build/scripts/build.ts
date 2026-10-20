@@ -7,7 +7,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { oklchToHex } from '../../../shared/colors.js';
-import { buildTokens, DEFAULT_ARTIFACTS } from '../../../shared/compiler.js';
+import { ARTIFACT_NAMES, buildTokens } from '../../../shared/compiler.js';
 import {
   assertSafeOutDir,
   checkAuditStamp,
@@ -102,7 +102,7 @@ export async function runBuild(argv = process.argv.slice(2)): Promise<number> {
   const outDir = fromCwd(outArg);
   const outputPaths =
     profile === undefined
-      ? DEFAULT_ARTIFACTS.map((name) => join(outDir, name))
+      ? ARTIFACT_NAMES.map((name) => join(outDir, name))
       : [join(outDir, profileFileName(profile))];
   const outputsExist = outputPaths.some((path) => existsSync(path));
   const tamper = checkCssProvenance(outDir);
@@ -175,7 +175,7 @@ export async function runBuild(argv = process.argv.slice(2)): Promise<number> {
         ...(prefix === undefined ? {} : { prefix }),
         visualizer,
       });
-      const outputList = Object.values(outputs);
+      const outputList = Object.values(outputs.artifacts);
       const missing = outputList.filter((path) => !existsSync(fromCwd(path)));
       if (missing.length > 0) {
         console.error(
@@ -184,15 +184,12 @@ export async function runBuild(argv = process.argv.slice(2)): Promise<number> {
         return 1;
       }
       const inputHash = computeTreeHash(tokensDir);
-      const files: Record<string, string> = {
-        'DESIGN.md': sha256Hex(readFileSync(fromCwd(outputs.designMd))),
-        'components.md': sha256Hex(readFileSync(fromCwd(outputs.componentsMd))),
-        'theme.css': sha256Hex(readFileSync(fromCwd(outputs.themeCss))),
-        'tokens.css': sha256Hex(readFileSync(fromCwd(outputs.tokensCss))),
-        ...(outputs.visualizerHtml === undefined
-          ? {}
-          : { 'visualizer.html': sha256Hex(readFileSync(fromCwd(outputs.visualizerHtml))) }),
-      };
+      const files = Object.fromEntries(
+        Object.entries(outputs.artifacts).map(([name, path]) => [
+          name,
+          sha256Hex(readFileSync(fromCwd(path))),
+        ]),
+      );
       writeCssProvenance(outDir, inputHash, files);
       console.log(`built (${theme}) → ${outputList.join(', ')}`);
       return 0;

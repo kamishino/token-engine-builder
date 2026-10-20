@@ -603,14 +603,56 @@ function engineHooks() {
   };
 }
 
-export const DEFAULT_ARTIFACTS = ['tokens.css', 'theme.css', 'components.md', 'DESIGN.md'] as const;
+export type ArtifactName =
+  'tokens.css' | 'theme.css' | 'components.md' | 'DESIGN.md' | 'visualizer.html';
+
+export interface ArtifactSpec {
+  name: ArtifactName;
+  format: string;
+  /** Only emitted when `BuildTokensOptions.visualizer` is true. */
+  optional?: true;
+  options?: (options: BuildTokensOptions) => Record<string, unknown>;
+}
+
+export const ARTIFACTS: readonly ArtifactSpec[] = [
+  { name: 'tokens.css', format: 'token-engine/css-variables' },
+  { name: 'theme.css', format: 'tailwind/v4-theme' },
+  {
+    name: 'components.md',
+    format: 'token-engine/component-specs',
+    options: (options) => ({ label: options.label ?? 'tokens' }),
+  },
+  {
+    name: 'DESIGN.md',
+    format: 'design-md/stitch',
+    options: (options) => ({ label: options.label ?? 'tokens', guide: options.guide }),
+  },
+  {
+    name: 'visualizer.html',
+    format: 'token-engine/visualizer',
+    optional: true,
+    options: (options) => ({ label: options.label ?? 'tokens', guide: options.guide }),
+  },
+];
+
+/** Every known output, including conditional ones; used by overwrite guards. */
+export const ARTIFACT_NAMES: readonly ArtifactName[] = ARTIFACTS.map((artifact) => artifact.name);
+
+/** Emitted outputs for this build, in manifest order. */
+export function artifactNames(options: { visualizer?: boolean } = {}): ArtifactName[] {
+  return ARTIFACTS.filter(
+    (artifact) => artifact.optional !== true || options.visualizer === true,
+  ).map((artifact) => artifact.name);
+}
+
+export function artifactPaths(outDir: string, options: { visualizer?: boolean } = {}): string[] {
+  const buildPath = outDir.endsWith('/') ? outDir : `${outDir}/`;
+  return artifactNames(options).map((name) => `${buildPath}${name}`);
+}
 
 export interface CompiledOutputs {
-  tokensCss: string;
-  themeCss: string;
-  componentsMd: string;
-  designMd: string;
-  visualizerHtml?: string;
+  /** Artifact file name → build path, in manifest order. */
+  artifacts: Record<string, string>;
 }
 
 export async function buildTokens(options: BuildTokensOptions): Promise<CompiledOutputs> {
@@ -623,40 +665,21 @@ export async function buildTokens(options: BuildTokensOptions): Promise<Compiled
         transformGroup: 'token-engine/css',
         buildPath,
         ...(options.prefix === undefined ? {} : { prefix: options.prefix }),
-        files: [
-          { destination: 'tokens.css', format: 'token-engine/css-variables' },
-          { destination: 'theme.css', format: 'tailwind/v4-theme' },
-          {
-            destination: 'components.md',
-            format: 'token-engine/component-specs',
-            options: { label: options.label ?? 'tokens' },
-          },
-          {
-            destination: 'DESIGN.md',
-            format: 'design-md/stitch',
-            options: { label: options.label ?? 'tokens', guide: options.guide },
-          },
-          ...(options.visualizer
-            ? [
-                {
-                  destination: 'visualizer.html',
-                  format: 'token-engine/visualizer',
-                  options: { label: options.label ?? 'tokens', guide: options.guide },
-                },
-              ]
-            : []),
-        ],
+        files: ARTIFACTS.filter(
+          (artifact) => artifact.optional !== true || options.visualizer === true,
+        ).map((artifact) => ({
+          destination: artifact.name,
+          format: artifact.format,
+          ...(artifact.options === undefined ? {} : { options: artifact.options(options) }),
+        })),
       },
     },
   });
   await sd.buildAllPlatforms();
-  return {
-    tokensCss: `${buildPath}tokens.css`,
-    themeCss: `${buildPath}theme.css`,
-    componentsMd: `${buildPath}components.md`,
-    designMd: `${buildPath}DESIGN.md`,
-    ...(options.visualizer ? { visualizerHtml: `${buildPath}visualizer.html` } : {}),
-  };
+  const artifacts = Object.fromEntries(
+    artifactNames(options).map((name) => [name, `${buildPath}${name}`]),
+  );
+  return { artifacts };
 }
 
 /** Load one theme's resolved tokens (UI profiles): raw tokens + path → value map. */
