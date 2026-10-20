@@ -21,6 +21,7 @@ interface SdToken {
   $value?: unknown;
   value?: unknown;
   $type?: string;
+  $description?: string;
   type?: string;
   name: string;
   path: string[];
@@ -496,11 +497,11 @@ export async function buildTokens(options: BuildTokensOptions): Promise<string[]
   ];
 }
 
-/** Load one theme's resolved token dictionary as path → value (UI profiles). */
-export async function loadThemeDictionary(
+/** Load one theme's resolved tokens (UI profiles): raw tokens + path → value map. */
+export async function loadThemeTokens(
   tokensDir: string,
   theme: string,
-): Promise<Map<string, string>> {
+): Promise<{ tokens: SdToken[]; values: Map<string, string> }> {
   const base = tokensDir.replaceAll('\\', '/');
   const merged = loadTokenSources([
     `${base}/primitive/**/*.tokens.json`,
@@ -523,16 +524,34 @@ export async function loadThemeDictionary(
   for (const token of dictionary.allTokens) {
     values.set(token.path.join('.'), String(tokenValue(token)));
   }
-  return values;
+  return { tokens: dictionary.allTokens, values };
 }
 
-export type UiProfileId = 'shadcn' | 'bootstrap' | 'primevue' | 'antd';
+/** Load one theme's resolved token dictionary as path → value (UI profiles). */
+export async function loadThemeDictionary(
+  tokensDir: string,
+  theme: string,
+): Promise<Map<string, string>> {
+  return (await loadThemeTokens(tokensDir, theme)).values;
+}
 
-export const UI_PROFILE_IDS: readonly UiProfileId[] = ['shadcn', 'bootstrap', 'primevue', 'antd'];
+export type UiProfileId = 'shadcn' | 'bootstrap' | 'primevue' | 'antd' | 'mui' | 'chakra';
 
-/** Output filename per profile (Ant Design is a JSON theme, not CSS). */
+export const UI_PROFILE_IDS: readonly UiProfileId[] = [
+  'shadcn',
+  'bootstrap',
+  'primevue',
+  'antd',
+  'mui',
+  'chakra',
+];
+
+/** Output filename per profile (Ant Design/MUI/Chakra are JSON themes, not CSS). */
 export function profileFileName(profile: UiProfileId): string {
-  return profile === 'antd' ? 'antd-theme.json' : `${profile}.css`;
+  if (profile === 'antd') return 'antd-theme.json';
+  if (profile === 'mui') return 'mui-theme.json';
+  if (profile === 'chakra') return 'chakra-theme.json';
+  return `${profile}.css`;
 }
 
 interface ProfileMapping {
@@ -542,7 +561,7 @@ interface ProfileMapping {
 }
 
 const PROFILE_MAPPINGS: Record<
-  Exclude<UiProfileId, 'antd'>,
+  Exclude<UiProfileId, 'antd' | 'mui' | 'chakra'>,
   { darkSelector: string; mapping: ProfileMapping[] }
 > = {
   shadcn: {
@@ -616,6 +635,113 @@ export async function buildUiProfile(
   const buildPath = outDir.endsWith('/') ? outDir : `${outDir}/`;
   mkdirSync(buildPath, { recursive: true });
   const destination = `${buildPath}${profileFileName(profile)}`;
+
+  if (profile === 'mui' || profile === 'chakra') {
+    const required = [
+      'semantic.color.action.primary',
+      'semantic.color.action.primary-text',
+      'semantic.color.action.primary-hover',
+      'semantic.color.feedback.success.text',
+      'semantic.color.feedback.warning.text',
+      'semantic.color.feedback.danger.text',
+      'semantic.color.feedback.info.text',
+      'semantic.color.text.primary',
+      'semantic.color.text.secondary',
+      'semantic.color.text.disabled',
+      'semantic.color.bg.canvas',
+      'semantic.color.bg.surface',
+      'semantic.color.bg.raised',
+      'semantic.color.bg.subtle',
+      'semantic.color.border.default',
+      'semantic.color.border.subtle',
+      'semantic.color.border.focus',
+      'radius.md',
+      'font-family.sans',
+      'font-size.base',
+    ];
+    for (const source of required) {
+      if (!light.has(source) || !dark.has(source)) {
+        throw new Error(`profile ${profile}: missing token role ${source}`);
+      }
+    }
+    const hex = (values: Map<string, string>, path: string): string =>
+      oklchToHex(parseToOklch(values.get(path) as string));
+    const remToPx = (values: Map<string, string>, path: string): number =>
+      Math.round(Number.parseFloat(values.get(path) as string) * 16);
+
+    if (profile === 'mui') {
+      const muiTheme = async (theme: string): Promise<Record<string, unknown>> => {
+        const { tokens, values } = await loadThemeTokens(tokensDir, theme);
+        const secondary = tokens.find(
+          (token) =>
+            (token.$description ?? '').startsWith('secondary —') && token.path[2] === '500',
+        );
+        return {
+          palette: {
+            mode: theme,
+            primary: {
+              main: hex(values, 'semantic.color.action.primary'),
+              contrastText: hex(values, 'semantic.color.action.primary-text'),
+            },
+            secondary: {
+              main:
+                secondary === undefined
+                  ? hex(values, 'semantic.color.action.primary-hover')
+                  : oklchToHex(parseToOklch(String(tokenValue(secondary)))),
+            },
+            error: { main: hex(values, 'semantic.color.feedback.danger.text') },
+            warning: { main: hex(values, 'semantic.color.feedback.warning.text') },
+            success: { main: hex(values, 'semantic.color.feedback.success.text') },
+            info: { main: hex(values, 'semantic.color.feedback.info.text') },
+            text: {
+              primary: hex(values, 'semantic.color.text.primary'),
+              secondary: hex(values, 'semantic.color.text.secondary'),
+              disabled: hex(values, 'semantic.color.text.disabled'),
+            },
+            background: {
+              default: hex(values, 'semantic.color.bg.canvas'),
+              paper: hex(values, 'semantic.color.bg.surface'),
+            },
+            divider: hex(values, 'semantic.color.border.default'),
+          },
+          typography: {
+            fontFamily: values.get('font-family.sans') as string,
+            fontSize: remToPx(values, 'font-size.base'),
+          },
+          shape: { borderRadius: remToPx(values, 'radius.md') },
+        };
+      };
+      const content = `${JSON.stringify({ light: await muiTheme('light'), dark: await muiTheme('dark') }, null, 2)}\n`;
+      writeFileSync(destination, content, 'utf8');
+      return [destination];
+    }
+
+    // Chakra v3: one semantic-token object; each color pairs _light/_dark values.
+    const pair = (path: string): { value: { _light: string; _dark: string } } => ({
+      value: { _light: light.get(path) as string, _dark: dark.get(path) as string },
+    });
+    const chakra = {
+      semanticTokens: {
+        colors: {
+          bg: pair('semantic.color.bg.canvas'),
+          'bg.subtle': pair('semantic.color.bg.subtle'),
+          'bg.panel': pair('semantic.color.bg.surface'),
+          'bg.raised': pair('semantic.color.bg.raised'),
+          fg: pair('semantic.color.text.primary'),
+          'fg.muted': pair('semantic.color.text.secondary'),
+          'fg.disabled': pair('semantic.color.text.disabled'),
+          border: pair('semantic.color.border.default'),
+          'border.subtle': pair('semantic.color.border.subtle'),
+          'border.focus': pair('semantic.color.border.focus'),
+          solid: pair('semantic.color.action.primary'),
+          'solid.fg': pair('semantic.color.action.primary-text'),
+          focusRing: pair('semantic.color.border.focus'),
+        },
+      },
+    };
+    writeFileSync(destination, `${JSON.stringify(chakra, null, 2)}\n`, 'utf8');
+    return [destination];
+  }
 
   if (profile === 'antd') {
     const sources = [

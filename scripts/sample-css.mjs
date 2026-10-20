@@ -84,6 +84,24 @@ try {
     'antd',
     '--force',
   ]);
+  run('dist/token-build/scripts/build.mjs', [
+    '--tokens',
+    'tokens',
+    '--out',
+    'build/profiles',
+    '--profile',
+    'mui',
+    '--force',
+  ]);
+  run('dist/token-build/scripts/build.mjs', [
+    '--tokens',
+    'tokens',
+    '--out',
+    'build/profiles',
+    '--profile',
+    'chakra',
+    '--force',
+  ]);
   execFileSync(
     process.execPath,
     [stylelintEntry, '--config', join(rootDir, 'stylelint.config.mjs'), 'build/**/*.css'],
@@ -98,6 +116,8 @@ try {
     ['build/profiles/shadcn.css', 'src/skills/token-build/examples/shadcn.example.css'],
     ['build/profiles/primevue.css', 'src/skills/token-build/examples/primevue.example.css'],
     ['build/profiles/antd-theme.json', 'src/skills/token-build/examples/antd.example.json'],
+    ['build/profiles/mui-theme.json', 'src/skills/token-build/examples/mui.example.json'],
+    ['build/profiles/chakra-theme.json', 'src/skills/token-build/examples/chakra.example.json'],
     ['build/profiles/bootstrap.css', 'src/skills/token-build/examples/bootstrap.example.css'],
   ]) {
     const actual = readFileSync(join(workDir, built), 'utf8').replaceAll('\r\n', '\n');

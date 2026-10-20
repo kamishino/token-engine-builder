@@ -1,0 +1,84 @@
+{
+  "semanticTokens": {
+    "colors": {
+      "bg": {
+        "value": {
+          "_light": "oklch(98% 0.0012 250deg)",
+          "_dark": "oklch(20% 0.0017 250deg)"
+        }
+      },
+      "bg.subtle": {
+        "value": {
+          "_light": "oklch(88% 0.0048 250deg)",
+          "_dark": "oklch(36% 0.0058 250deg)"
+        }
+      },
+      "bg.panel": {
+        "value": {
+          "_light": "oklch(96% 0.0027 250deg)",
+          "_dark": "oklch(28% 0.0038 250deg)"
+        }
+      },
+      "bg.raised": {
+        "value": {
+          "_light": "oklch(98% 0.0098 250deg)",
+          "_dark": "oklch(20% 0.0214 250deg)"
+        }
+      },
+      "fg": {
+        "value": {
+          "_light": "oklch(28% 0.0038 250deg)",
+          "_dark": "oklch(98% 0.0012 250deg)"
+        }
+      },
+      "fg.muted": {
+        "value": {
+          "_light": "oklch(44% 0.0079 250deg)",
+          "_dark": "oklch(78% 0.0074 250deg)"
+        }
+      },
+      "fg.disabled": {
+        "value": {
+          "_light": "oklch(69% 0.0097 250deg)",
+          "_dark": "oklch(60% 0.012 250deg)"
+        }
+      },
+      "border": {
+        "value": {
+          "_light": "oklch(78% 0.0074 250deg)",
+          "_dark": "oklch(44% 0.0079 250deg)"
+        }
+      },
+      "border.subtle": {
+        "value": {
+          "_light": "oklch(88% 0.0048 250deg)",
+          "_dark": "oklch(36% 0.0058 250deg)"
+        }
+      },
+      "border.focus": {
+        "value": {
+          "_light": "oklch(44% 0.0986 250deg)",
+          "_dark": "oklch(96% 0.0197 250deg)"
+        }
+      },
+      "solid": {
+        "value": {
+          "_light": "oklch(36% 0.0729 250deg)",
+          "_dark": "oklch(96% 0.0197 250deg)"
+        }
+      },
+      "solid.fg": {
+        "value": {
+          "_light": "oklch(98% 0.0012 250deg)",
+          "_dark": "oklch(20% 0.0017 250deg)"
+        }
+      },
+      "focusRing": {
+        "value": {
+          "_light": "oklch(44% 0.0986 250deg)",
+          "_dark": "oklch(96% 0.0197 250deg)"
+        }
+      }
+    }
+  }
+}
