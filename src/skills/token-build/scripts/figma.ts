@@ -10,31 +10,12 @@
  *   node ./scripts/figma.mjs --from-figma <figma-variables.json> --out tokens
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { dtcgColorValue, oklchToHex, parseToOklch } from '../../../shared/colors.js';
 import { fromCwd, getArg, hasFlag } from '../../../shared/paths.js';
 import { findTokenFiles } from '../../../shared/tokens.js';
 import type { DtcgColorValue } from '../../../shared/types.js';
-
-const argv = process.argv.slice(2);
-
-if (hasFlag(argv, '--help')) {
-  console.log(`Usage:
-  Export to Figma:
-    node figma.mjs --to-figma <tokens-dir> --out <figma-variables.json>
-  Import from Figma:
-    node figma.mjs --from-figma <figma-variables.json> --out <tokens-dir>`);
-  process.exit(0);
-}
-
-const toFigmaArg = getArg(argv, '--to-figma');
-const fromFigmaArg = getArg(argv, '--from-figma');
-const outArg = getArg(argv, '--out', toFigmaArg ? 'figma-variables.json' : 'tokens') as string;
-
-if (!toFigmaArg && !fromFigmaArg) {
-  console.error('specify either --to-figma <tokens-dir> or --from-figma <figma-variables.json>');
-  process.exit(1);
-}
 
 type JsonObject = Record<string, unknown>;
 
@@ -58,8 +39,12 @@ function figmaRgbToHex(rgb: { r: number; g: number; b: number; a?: number }): st
   }
   return hex;
 }
+function hasNumericValue(obj: unknown): obj is { value: number } {
+  if (obj === null || typeof obj !== 'object' || !('value' in obj)) return false;
+  return typeof obj.value === 'number';
+}
 
-interface FigmaVariable {
+export interface FigmaVariable {
   id: string;
   name: string;
   key: string;
@@ -69,20 +54,13 @@ interface FigmaVariable {
   valuesByMode: Record<string, unknown>;
 }
 
-// -------------------------------------------------------------
-// 1. EXPORT: DTCG tokens -> Figma Variables JSON
-// -------------------------------------------------------------
-if (toFigmaArg) {
-  const tokensDir = fromCwd(toFigmaArg);
-  if (!existsSync(tokensDir)) {
-    console.error(`tokens directory not found: ${tokensDir}`);
-    process.exit(1);
-  }
-
-  const files = findTokenFiles(tokensDir);
+export function dtcgTokensToFigma(
+  sources: JsonObject | string[],
+  options: { collectionId?: string; defaultModeId?: string } = {},
+): { variables: FigmaVariable[]; collections: unknown[] } {
+  const collectionId = options.collectionId ?? 'VariableCollectionId:1:1';
+  const defaultModeId = options.defaultModeId ?? '1:0';
   const variables: FigmaVariable[] = [];
-  const collectionId = 'VariableCollectionId:1:1';
-  const defaultModeId = '1:0';
 
   function flatten(node: JsonObject, prefix: string): void {
     for (const [key, value] of Object.entries(node)) {
@@ -96,7 +74,6 @@ if (toFigmaArg) {
         const type = (rec['$type'] as string) || '';
         const desc = (rec['$description'] as string) || '';
 
-        // Aliases are kept as string reference in description/value
         if (typeof val === 'string' && val.startsWith('{')) {
           variables.push({
             id: `VariableID:${variables.length + 1}`,
@@ -110,7 +87,6 @@ if (toFigmaArg) {
           continue;
         }
 
-        // Color values
         if (type === 'color' || (typeof val === 'object' && val && 'colorSpace' in val)) {
           let hex = '#000000';
           if (typeof val === 'object' && val && 'hex' in val) {
@@ -127,11 +103,11 @@ if (toFigmaArg) {
             description: desc,
             valuesByMode: { [defaultModeId]: hexToFigmaRgb(hex) },
           });
-        }
-        // Dimension / Float values (px or rem)
-        else if (type === 'dimension' || typeof val === 'number') {
+        } else if (type === 'dimension' || typeof val === 'number' || hasNumericValue(val)) {
           let num = typeof val === 'number' ? val : 0;
-          if (typeof val === 'string') {
+          if (hasNumericValue(val)) {
+            num = val.value;
+          } else if (typeof val === 'string') {
             if (val.endsWith('rem')) num = Math.round(Number.parseFloat(val) * 16);
             else if (val.endsWith('px')) num = Number.parseFloat(val);
           }
@@ -144,9 +120,7 @@ if (toFigmaArg) {
             description: desc,
             valuesByMode: { [defaultModeId]: num },
           });
-        }
-        // Strings (font family, etc.)
-        else {
+        } else {
           variables.push({
             id: `VariableID:${variables.length + 1}`,
             name: path,
@@ -163,65 +137,34 @@ if (toFigmaArg) {
     }
   }
 
-  for (const file of files) {
-    try {
-      const data = JSON.parse(readFileSync(file, 'utf8')) as JsonObject;
-      flatten(data, '');
-    } catch {
-      // skip unreadable
+  if (Array.isArray(sources)) {
+    for (const file of sources) {
+      try {
+        flatten(JSON.parse(readFileSync(file, 'utf8')) as JsonObject, '');
+      } catch {
+        // skip unreadable
+      }
     }
+  } else {
+    flatten(sources, '');
   }
 
-  const figmaPayload = {
-    status: 200,
-    error: false,
-    meta: {
-      variableCollections: {
-        [collectionId]: {
-          id: collectionId,
-          name: 'Design Tokens (DTCG)',
-          modes: [{ modeId: defaultModeId, name: 'Value' }],
-          defaultModeId,
-        },
+  return {
+    variables,
+    collections: [
+      {
+        id: collectionId,
+        name: 'Design Tokens',
+        modes: [{ modeId: defaultModeId, name: 'Default' }],
+        defaultModeId,
       },
-      variables: Object.fromEntries(variables.map((v) => [v.id, v])),
-    },
+    ],
   };
-
-  const outFile = fromCwd(outArg);
-  mkdirSync(dirname(outFile), { recursive: true });
-  writeFileSync(outFile, `${JSON.stringify(figmaPayload, null, 2)}\n`, 'utf8');
-  console.log(`exported ${variables.length} Figma variables → ${outArg}`);
 }
 
-// -------------------------------------------------------------
-// 2. IMPORT: Figma Variables JSON -> DTCG tokens
-// -------------------------------------------------------------
-if (fromFigmaArg) {
-  const figmaPath = fromCwd(fromFigmaArg);
-  if (!existsSync(figmaPath)) {
-    console.error(`figma variables file not found: ${figmaPath}`);
-    process.exit(1);
-  }
-
-  const payload = JSON.parse(readFileSync(figmaPath, 'utf8')) as {
-    meta?: {
-      variables?: Record<string, FigmaVariable>;
-    };
-  };
-
-  const vars = Object.values(payload.meta?.variables ?? {});
-  if (vars.length === 0) {
-    console.error('no variables found in figma payload');
-    process.exit(1);
-  }
-
-  const outTokensDir = fromCwd(outArg);
-  mkdirSync(outTokensDir, { recursive: true });
-
+export function figmaVariablesToDtcg(variables: FigmaVariable[]): JsonObject {
   const rootObj: JsonObject = {};
-
-  for (const v of vars) {
+  for (const v of variables) {
     const parts = v.name.split('/');
     let cur = rootObj;
     for (let i = 0; i < parts.length - 1; i++) {
@@ -230,7 +173,6 @@ if (fromFigmaArg) {
       cur = cur[p] as JsonObject;
     }
     const lastKey = parts[parts.length - 1] as string;
-
     const firstModeVal = Object.values(v.valuesByMode)[0];
 
     if (v.resolvedType === 'COLOR' && firstModeVal && typeof firstModeVal === 'object') {
@@ -255,15 +197,109 @@ if (fromFigmaArg) {
       };
     }
   }
+  return rootObj;
+}
 
-  const outPrimitive = join(outTokensDir, 'primitive');
-  mkdirSync(outPrimitive, { recursive: true });
-  writeFileSync(
-    join(outPrimitive, 'figma-imported.tokens.json'),
-    `${JSON.stringify(rootObj, null, 2)}\n`,
-    'utf8',
-  );
-  console.log(
-    `imported ${vars.length} Figma variables → ${join(outArg, 'primitive/figma-imported.tokens.json')}`,
-  );
+// -------------------------------------------------------------
+// 1. EXPORT: DTCG tokens -> Figma Variables JSON
+// -------------------------------------------------------------
+function runCli(): void {
+  const argv = process.argv.slice(2);
+
+  if (hasFlag(argv, '--help')) {
+    console.log(`Usage:
+  Export to Figma:
+    node figma.mjs --to-figma <tokens-dir> --out <figma-variables.json>
+  Import from Figma:
+    node figma.mjs --from-figma <figma-variables.json> --out <tokens-dir>`);
+    process.exit(0);
+  }
+
+  const toFigmaArg = getArg(argv, '--to-figma');
+  const fromFigmaArg = getArg(argv, '--from-figma');
+  const outArg = getArg(argv, '--out', toFigmaArg ? 'figma-variables.json' : 'tokens') as string;
+
+  if (!toFigmaArg && !fromFigmaArg) {
+    console.error('specify either --to-figma <tokens-dir> or --from-figma <figma-variables.json>');
+    process.exit(1);
+  }
+
+  if (toFigmaArg) {
+    const tokensDir = fromCwd(toFigmaArg);
+    if (!existsSync(tokensDir)) {
+      console.error(`tokens directory not found: ${tokensDir}`);
+      process.exit(1);
+    }
+
+    const files = findTokenFiles(tokensDir);
+    const collectionId = 'VariableCollectionId:1:1';
+    const defaultModeId = '1:0';
+    const { variables } = dtcgTokensToFigma(files, { collectionId, defaultModeId });
+    const figmaPayload = {
+      status: 200,
+      error: false,
+      meta: {
+        variableCollections: {
+          [collectionId]: {
+            id: collectionId,
+            name: 'Design Tokens (DTCG)',
+            modes: [{ modeId: defaultModeId, name: 'Value' }],
+            defaultModeId,
+          },
+        },
+        variables: Object.fromEntries(variables.map((v) => [v.id, v])),
+      },
+    };
+
+    const outFile = fromCwd(outArg);
+    mkdirSync(dirname(outFile), { recursive: true });
+    writeFileSync(outFile, `${JSON.stringify(figmaPayload, null, 2)}\n`, 'utf8');
+    console.log(`exported ${variables.length} Figma variables → ${outArg}`);
+  }
+
+  if (fromFigmaArg) {
+    const figmaPath = fromCwd(fromFigmaArg);
+    if (!existsSync(figmaPath)) {
+      console.error(`figma variables file not found: ${figmaPath}`);
+      process.exit(1);
+    }
+
+    const payload = JSON.parse(readFileSync(figmaPath, 'utf8')) as {
+      meta?: {
+        variables?: Record<string, FigmaVariable>;
+      };
+    };
+
+    const vars = Object.values(payload.meta?.variables ?? {});
+    if (vars.length === 0) {
+      console.error('no variables found in figma payload');
+      process.exit(1);
+    }
+
+    const outTokensDir = fromCwd(outArg);
+    mkdirSync(outTokensDir, { recursive: true });
+
+    const rootObj = figmaVariablesToDtcg(vars);
+
+    const outPrimitive = join(outTokensDir, 'primitive');
+    mkdirSync(outPrimitive, { recursive: true });
+    writeFileSync(
+      join(outPrimitive, 'figma-imported.tokens.json'),
+      `${JSON.stringify(rootObj, null, 2)}\n`,
+      'utf8',
+    );
+    console.log(
+      `imported ${vars.length} Figma variables → ${join(outArg, 'primitive/figma-imported.tokens.json')}`,
+    );
+  }
+}
+
+const isMain =
+  process.argv[1] !== undefined &&
+  (resolve(process.argv[1]) === fileURLToPath(import.meta.url) ||
+    process.argv[1].endsWith('figma.mjs') ||
+    process.argv[1].endsWith('figma.ts'));
+
+if (isMain) {
+  runCli();
 }
