@@ -30,10 +30,10 @@ With all v0.x foundation epics (N1, N3, X1–X8, L1, L2, L4, L5, L6, L7, L8) shi
 - **Why**: Per AGENTS.md Charter Policy #8 (_"reserve Interactive HTML strictly for visual inspection"_), agents and human designers benefit from an interactive visualizer verifying color ramps, APCA/WCAG contrast matrix, and component states in a single rendered HTML page before deployment.
 - **Shipped**: `token-build --visualizer` generates a self-contained zero-dependency HTML inspector under `build/visualizer.html` rendering live palette ramps and component specimens (button, card, input) under the target theme.
 
-### N5. Comprehensive Verification Matrix & v1.0.0 Cut
+### N5. Comprehensive Verification Matrix & v1.0.0 Cut — ✅ shipped in v1.0.0
 
 - **Why**: Mark the transition from rapid v0.x capability expansion to production-grade stability guarantee with semantic versioning 1.0.0.
-- **Exit criteria**: Full regression pass across all 8 UI profiles, 5 skills, both bucket packages, CycloneDX SBOM validation, and signed v1.0.0 release.
+- **Shipped**: Comprehensive regression pass across all 8 UI profiles, 5 skills, both bucket packages, CycloneDX SBOM validation, and signed v1.0.0 release.
 
 ## Next — v1.x Horizon (unselected)
 
