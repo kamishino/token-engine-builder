@@ -8,53 +8,88 @@
  * skills build (dist/ is wiped only for full builds, filtered builds append).
  */
 import { execFileSync } from 'node:child_process';
-import { readdirSync, rmSync } from 'node:fs';
+import { existsSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { discoverScriptEntries, writeBuildStamp } from './build-engine.mjs';
+import {
+  discoverScriptEntries,
+  listSkills,
+  syncSkillPackages,
+  writeBuildStamp,
+} from './build-engine.mjs';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const skillsDir = join(rootDir, 'src', 'skills');
-const viteBin = join(rootDir, 'node_modules', 'vite', 'bin', 'vite.js');
 
-const only = process.argv.slice(2).filter((arg) => !arg.startsWith('-'));
-const { scriptEntries, uniqueSkills } = discoverScriptEntries(skillsDir, only);
-
-for (const name of only) {
-  if (!uniqueSkills.includes(name)) {
-    console.error(`[build] unknown skill: ${name}`);
-    process.exit(1);
-  }
+export function planBuildPasses(skillsDir, only = []) {
+  const allSkills = listSkills(skillsDir);
+  const unknown = only.filter((name) => !allSkills.includes(name));
+  if (unknown.length > 0) throw new Error(`unknown skill: ${unknown.join(', ')}`);
+  const requested = only.length === 0 ? allSkills : only;
+  const scripted = requested.filter((skill) => existsSync(join(skillsDir, skill, 'scripts')));
+  const { scriptEntries } =
+    scripted.length === 0 ? { scriptEntries: [] } : discoverScriptEntries(skillsDir, scripted);
+  const builtSkills = [...new Set(scriptEntries.map((entry) => entry.skill))].sort();
+  const staticSkills = allSkills
+    .filter((skill) => !existsSync(join(skillsDir, skill, 'scripts')))
+    .sort();
+  return {
+    allSkills,
+    requested,
+    scriptEntries,
+    builtSkills,
+    staticSkills,
+    wipe: only.length === 0,
+  };
 }
 
-// Full builds start clean; filtered builds append so sibling outputs survive.
-const wipe = only.length === 0;
-if (wipe) rmSync(join(rootDir, 'dist'), { recursive: true, force: true });
+export function runBuildAll(argv = process.argv.slice(2), { root = rootDir, runVite } = {}) {
+  const only = argv.filter((arg) => !arg.startsWith('-'));
+  const skillsDir = join(root, 'src', 'skills');
+  const distDir = join(root, 'dist');
+  const plan = planBuildPasses(skillsDir, only);
+  if (plan.wipe) rmSync(distDir, { recursive: true, force: true });
 
-scriptEntries.forEach(({ skill, script }, index) => {
-  console.log(`\n[build] ${skill}/${script}`);
-  execFileSync(process.execPath, [viteBin, 'build'], {
-    cwd: rootDir,
-    stdio: 'inherit',
-    env: {
-      ...process.env,
-      SKILL_ENTRY: `${skill}/scripts/${script}`,
-      SKILL_EMPTY: wipe && index === 0 ? '1' : '0',
-    },
+  const runner =
+    runVite ??
+    ((pass) => {
+      execFileSync(
+        process.execPath,
+        [join(root, 'node_modules', 'vite', 'bin', 'vite.js'), 'build'],
+        {
+          cwd: root,
+          stdio: 'inherit',
+          env: { ...process.env, ...pass.env },
+        },
+      );
+    });
+
+  plan.scriptEntries.forEach(({ skill, script }, index) => {
+    console.log(`\n[build] ${skill}/${script}`);
+    runner({
+      skill,
+      script,
+      env: {
+        SKILL_ENTRY: `${skill}/scripts/${script}`,
+        SKILL_EMPTY: plan.wipe && index === 0 ? '1' : '0',
+      },
+    });
   });
-});
 
-console.log(
-  `\n[build] done: ${scriptEntries.length} script(s) across ${uniqueSkills.length} skill(s) → dist/`,
-);
+  // Statics are copied on every pass; call directly so a static-only build syncs too.
+  syncSkillPackages(skillsDir, distDir);
+  for (const skill of [...plan.builtSkills, ...plan.staticSkills]) {
+    writeBuildStamp(distDir, skill);
+  }
 
-// Freshness/integrity stamps for link-skills.mjs: every src skill gets a JSON
-// stamp {builtAt, bundleHash}, including scriptless skills. link-skills
-// rebuilds when sources are newer than builtAt OR bundle bytes no longer
-// match bundleHash (post-build tampering).
-// (Dist file mtimes cannot signal freshness: copied statics keep source mtimes.)
-const distDir = join(rootDir, 'dist');
-for (const entry of readdirSync(skillsDir, { withFileTypes: true })) {
-  if (!entry.isDirectory()) continue;
-  writeBuildStamp(distDir, entry.name);
+  console.log(
+    `\n[build] done: ${plan.scriptEntries.length} script(s) across ${plan.builtSkills.length} skill(s) → dist/`,
+  );
+  return plan;
+}
+
+const isMain =
+  process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isMain) {
+  runBuildAll();
 }

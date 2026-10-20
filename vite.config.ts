@@ -1,9 +1,8 @@
-import { chmodSync, cpSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
 import { builtinModules } from 'node:module';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin } from 'vite';
-import { discoverSkillEntries } from './scripts/build-engine.mjs';
+import { discoverSkillEntries, syncSkillPackages } from './scripts/build-engine.mjs';
 
 const rootDir = dirname(fileURLToPath(import.meta.url));
 const skillsDir = resolve(rootDir, 'src/skills');
@@ -15,30 +14,11 @@ const distDir = resolve(rootDir, 'dist');
  * scripts made executable. dist/ is production-readiness: per-skill README.md
  * files stay in src/ only and never ship.
  */
-function syncSkillPackages(): Plugin {
+function syncSkillPackagesPlugin(): Plugin {
   return {
     name: 'sync-skill-packages',
     closeBundle() {
-      for (const skill of readdirSync(skillsDir, { withFileTypes: true })) {
-        if (!skill.isDirectory()) continue;
-        const src = join(skillsDir, skill.name);
-        const dest = join(distDir, skill.name);
-        mkdirSync(dest, { recursive: true });
-
-        const skillMd = join(src, 'SKILL.md');
-        if (existsSync(skillMd)) cpSync(skillMd, join(dest, 'SKILL.md'));
-
-        for (const dir of ['templates', 'assets', 'examples', 'references', 'agents'] as const) {
-          const from = join(src, dir);
-          if (existsSync(from)) cpSync(from, join(dest, dir), { recursive: true });
-        }
-
-        const outScripts = join(dest, 'scripts');
-        if (!existsSync(outScripts)) continue;
-        for (const file of readdirSync(outScripts)) {
-          if (file.endsWith('.mjs')) chmodSync(join(outScripts, file), 0o755);
-        }
-      }
+      syncSkillPackages(skillsDir, distDir);
     },
   };
 }
@@ -61,7 +41,7 @@ const entries =
 const singleEntry = Object.keys(entries).length === 1;
 
 export default defineConfig({
-  plugins: [syncSkillPackages()],
+  plugins: [syncSkillPackagesPlugin()],
   resolve: {
     alias: { '@shared': resolve(rootDir, 'src/shared') },
     // Node condition: style-dictionary's `./fs` export must resolve to its

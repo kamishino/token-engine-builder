@@ -1,6 +1,43 @@
 import { createHash } from 'node:crypto';
-import { existsSync, lstatSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  cpSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
+
+export function listSkills(skillsDir) {
+  if (!existsSync(skillsDir)) return [];
+  return readdirSync(skillsDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
+}
+
+export function syncSkillPackages(skillsDir, distDir) {
+  for (const skill of readdirSync(skillsDir, { withFileTypes: true })) {
+    if (!skill.isDirectory()) continue;
+    const src = join(skillsDir, skill.name);
+    const dest = join(distDir, skill.name);
+    mkdirSync(dest, { recursive: true });
+    const skillMd = join(src, 'SKILL.md');
+    if (existsSync(skillMd)) cpSync(skillMd, join(dest, 'SKILL.md'));
+    for (const dir of ['templates', 'assets', 'examples', 'references', 'agents']) {
+      const from = join(src, dir);
+      if (existsSync(from)) cpSync(from, join(dest, dir), { recursive: true });
+    }
+    const outScripts = join(dest, 'scripts');
+    if (!existsSync(outScripts)) continue;
+    for (const file of readdirSync(outScripts)) {
+      if (file.endsWith('.mjs')) chmodSync(join(outScripts, file), 0o755);
+    }
+  }
+}
 
 /** Auto-discover `src/skills/<skill>/scripts/*.ts` → `dist/<skill>/scripts/<name>.mjs` mapping. */
 export function discoverSkillEntries(skillsDir) {

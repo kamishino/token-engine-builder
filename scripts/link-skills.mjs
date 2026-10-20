@@ -85,16 +85,11 @@ export function runLink(argv = process.argv.slice(2), { root = rootDir } = {}) {
   // Rebuild stale skills before linking so dist/ always matches src/.
   const stale = skills.filter(isStale);
   if (stale.length > 0) {
-    const scripted = stale.filter((skill) => existsSync(join(currentSkillsDir, skill, 'scripts')));
-    if (scripted.length > 0) {
-      console.log(`[deploy] rebuilding stale: ${scripted.join(', ')}`);
-      execFileSync(process.execPath, [join(root, 'scripts', 'build-all.mjs'), ...scripted], {
-        cwd: root,
-        stdio: 'inherit',
-      });
-    } else {
-      console.log(`[deploy] stale statics in: ${stale.join(', ')} (syncing without rebuild)`);
-    }
+    console.log(`[deploy] refreshing stale: ${stale.join(', ')}`);
+    execFileSync(process.execPath, [join(root, 'scripts', 'build-all.mjs'), ...stale], {
+      cwd: root,
+      stdio: 'inherit',
+    });
   } else {
     console.log('[deploy] all bundles up to date');
   }

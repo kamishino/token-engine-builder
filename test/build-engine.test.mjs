@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -8,7 +8,9 @@ import {
   discoverScriptEntries,
   discoverSkillEntries,
   isSkillStale,
+  listSkills,
   readBuildStamp,
+  syncSkillPackages,
   writeBuildStamp,
 } from '../scripts/build-engine.mjs';
 
@@ -83,5 +85,34 @@ test('buildstamp writing, reading, and staleness detection round-trip cleanly', 
     assert.equal(staleBundle, true);
   } finally {
     rmSync(rootDir, { recursive: true, force: true });
+  }
+});
+
+test('listSkills lists all directory names sorted', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'list-skills-test-'));
+  try {
+    mkdirSync(join(dir, 'beta'), { recursive: true });
+    mkdirSync(join(dir, 'alpha'), { recursive: true });
+    assert.deepEqual(listSkills(dir), ['alpha', 'beta']);
+    assert.deepEqual(listSkills(join(dir, 'nonexistent')), []);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('syncSkillPackages copies SKILL.md and static directories to dist', () => {
+  const root = mkdtempSync(join(tmpdir(), 'sync-skills-test-'));
+  try {
+    const skillsDir = join(root, 'src', 'skills');
+    const distDir = join(root, 'dist');
+    mkdirSync(join(skillsDir, 'alpha', 'references'), { recursive: true });
+    writeFileSync(join(skillsDir, 'alpha', 'SKILL.md'), '# alpha\n', 'utf8');
+    writeFileSync(join(skillsDir, 'alpha', 'references', 'x.md'), 'ref x\n', 'utf8');
+
+    syncSkillPackages(skillsDir, distDir);
+    assert.ok(existsSync(join(distDir, 'alpha', 'SKILL.md')));
+    assert.ok(existsSync(join(distDir, 'alpha', 'references', 'x.md')));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
   }
 });

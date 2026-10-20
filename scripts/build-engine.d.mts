@@ -1,3 +1,5 @@
+export function listSkills(skillsDir: string): string[];
+export function syncSkillPackages(skillsDir: string, distDir: string): void;
 export function discoverSkillEntries(skillsDir: string): Record<string, string>;
 export function discoverScriptEntries(
   skillsDir: string,
@@ -12,12 +14,4 @@ export function writeBuildStamp(
   distDir: string,
   skill: string,
 ): { builtAt: number; bundleHash: string };
-export function isSkillStale(
-  skill: string,
-  options: {
-    skillsDir: string;
-    distDir: string;
-    sharedNewest: number;
-    newestMtime: (path: string) => number;
-  },
-): boolean;
+export function isSkillStale(skill: string, options: { root: string }): boolean;
