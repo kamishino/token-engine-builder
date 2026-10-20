@@ -11,6 +11,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, extname, join, relative } from 'node:path';
 import { nearestColorName } from '../../../shared/color-names.js';
 import { buildHarmony, formatOklch, parseToOklch } from '../../../shared/colors.js';
+import { decideWrite } from '../../../shared/guard.js';
 import { fromCwd, getArg, hasFlag, isMainModule } from '../../../shared/paths.js';
 import { validateStyleSpec } from '../../../shared/spec.js';
 import type { OklchColor, StyleSpec } from '../../../shared/types.js';
@@ -310,11 +311,7 @@ export function captureTypographySignals(state: ScanState, text: string): void {
   }
 }
 
-function recordRoleColor(
-  state: ScanState,
-  roleOrName: string,
-  color: OklchColor,
-): void {
+function recordRoleColor(state: ScanState, roleOrName: string, color: OklchColor): void {
   const role = roleForColorName(roleOrName);
   if (role !== undefined) rememberRole(role, color, state.tailwindColors);
 }
@@ -421,9 +418,12 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
     console.error(`html file not found: ${fromCwd(htmlArg)}`);
     return 1;
   }
-  if (existsSync(outPath) && !force && !dryRun) {
-    console.error(`output exists: ${outPath} (pass --force to overwrite)`);
-    return 1;
+  if (!dryRun) {
+    const decision = decideWrite({ paths: [outPath], tamper: null, force });
+    if (decision.kind === 'refuse') {
+      console.error(`output exists: ${outPath} (pass --force to overwrite)`);
+      return 1;
+    }
   }
 
   const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'release', 'coverage', '.next']);

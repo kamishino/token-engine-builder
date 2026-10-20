@@ -223,3 +223,46 @@ export function publishCssOutputs(
   writeCssProvenance(cssDir, computeTreeHash(tokensDir), files);
   return { missing: [] };
 }
+
+export interface WriteIntent {
+  /** Paths this run writes; any existing path means the destination is replaced. */
+  paths: string[];
+  /** Destination provenance, or null when the destination keeps no manifest. */
+  tamper: TamperReport | null;
+  force: boolean;
+}
+
+export type WriteDecision =
+  | { kind: 'write'; replaces: boolean; dirty: boolean }
+  | {
+      kind: 'refuse';
+      replaces: true;
+      reason: 'tampered' | 'exists';
+      changed: string[];
+      missing: string[];
+    };
+
+/**
+ * One overwrite policy for every generator: never replace existing outputs
+ * without `force`, and name the hand-edited files when provenance is dirty.
+ */
+export function decideWrite(intent: WriteIntent): WriteDecision {
+  if (!intent.paths.some((path) => existsSync(path))) {
+    return { kind: 'write', replaces: false, dirty: false };
+  }
+  const tamper = intent.tamper;
+  const dirty = tamper !== null && (tamper.status === 'tampered' || tamper.status === 'unreadable');
+  if (!intent.force) {
+    if (dirty && tamper !== null) {
+      return {
+        kind: 'refuse',
+        replaces: true,
+        reason: 'tampered',
+        changed: tamper.changed,
+        missing: tamper.missing,
+      };
+    }
+    return { kind: 'refuse', replaces: true, reason: 'exists', changed: [], missing: [] };
+  }
+  return { kind: 'write', replaces: true, dirty };
+}

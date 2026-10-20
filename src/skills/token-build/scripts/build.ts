@@ -11,6 +11,7 @@ import {
   assertSafeOutDir,
   checkAuditStamp,
   checkCssProvenance,
+  decideWrite,
   publishCssOutputs,
 } from '../../../shared/guard.js';
 import { fromCwd, getArg, hasFlag, isMainModule } from '../../../shared/paths.js';
@@ -83,8 +84,8 @@ export async function runBuild(argv = process.argv.slice(2)): Promise<number> {
     profile === undefined
       ? ARTIFACT_NAMES.map((name) => join(outDir, name))
       : [join(outDir, profileFileName(profile))];
-  const outputsExist = outputPaths.some((path) => existsSync(path));
   const tamper = checkCssProvenance(outDir);
+  const decision = decideWrite({ paths: outputPaths, tamper, force });
 
   if (dryRun) {
     console.log(
@@ -92,7 +93,7 @@ export async function runBuild(argv = process.argv.slice(2)): Promise<number> {
         ? `would build (${theme}) → ${outDir}`
         : `would build profile ${profile} (light + dark) → ${outDir}`,
     );
-    if (outputsExist) console.log(`provenance: ${tamper.status}`);
+    if (decision.replaces) console.log(`provenance: ${tamper.status}`);
     console.log(`audit stamp: ${auditStamp}`);
     return 0;
   }
@@ -103,18 +104,18 @@ export async function runBuild(argv = process.argv.slice(2)): Promise<number> {
     return 1;
   }
 
-  if (outputsExist && !force) {
-    if (tamper.status === 'tampered' || tamper.status === 'unreadable') {
+  if (decision.kind === 'refuse') {
+    if (decision.reason === 'tampered') {
       console.error(`refusing to overwrite hand-edited CSS in ${outDir}:`);
-      for (const path of tamper.changed) console.error(`  changed: ${path}`);
-      for (const path of tamper.missing) console.error(`  missing: ${path}`);
+      for (const path of decision.changed) console.error(`  changed: ${path}`);
+      for (const path of decision.missing) console.error(`  missing: ${path}`);
       console.error('pass --force to overwrite deliberately');
     } else {
       console.error(`outputs exist in ${outDir} (pass --force to overwrite)`);
     }
     return 1;
   }
-  if (outputsExist && force && (tamper.status === 'tampered' || tamper.status === 'unreadable')) {
+  if (decision.replaces && force && decision.dirty) {
     console.log('overwriting hand-edited CSS (--force)');
   }
 
@@ -140,38 +141,37 @@ export async function runBuild(argv = process.argv.slice(2)): Promise<number> {
   const source = tokenSourcePatterns(relative(process.cwd(), tokensDir), theme);
 
   try {
-    if (profile === undefined) {
-      const outputs = await buildTokens({
-        source,
-        outDir: outArg.replaceAll('\\', '/'),
-        label: theme,
-        ...(guide === undefined ? {} : { guide }),
-        ...(prefix === undefined ? {} : { prefix }),
-        visualizer,
-      });
-      const outputList = Object.values(outputs.artifacts);
-      const published = publishCssOutputs(outDir, tokensDir, outputs.artifacts);
-      if (published.missing.length > 0) {
-        console.error(
-          `build failed: Style Dictionary produced no tokens for ${published.missing.join(', ')}`,
-        );
-        return 1;
-      }
-      console.log(`built (${theme}) → ${outputList.join(', ')}`);
-      return 0;
-    }
-
-    const profilePath = await buildUiProfile(profile, tokensDir, outArg.replaceAll('\\', '/'));
-    const published = publishCssOutputs(outDir, tokensDir, {
-      [profileFileName(profile)]: profilePath,
-    });
+    const artifacts =
+      profile === undefined
+        ? (
+            await buildTokens({
+              source,
+              outDir: outArg.replaceAll('\\', '/'),
+              label: theme,
+              ...(guide === undefined ? {} : { guide }),
+              ...(prefix === undefined ? {} : { prefix }),
+              visualizer,
+            })
+          ).artifacts
+        : {
+            [profileFileName(profile)]: await buildUiProfile(
+              profile,
+              tokensDir,
+              outArg.replaceAll('\\', '/'),
+            ),
+          };
+    const published = publishCssOutputs(outDir, tokensDir, artifacts);
     if (published.missing.length > 0) {
       console.error(
         `build failed: Style Dictionary produced no tokens for ${published.missing.join(', ')}`,
       );
       return 1;
     }
-    console.log(`built profile ${profile} → ${profilePath}`);
+    console.log(
+      profile === undefined
+        ? `built (${theme}) → ${Object.values(artifacts).join(', ')}`
+        : `built profile ${profile} → ${Object.values(artifacts)[0]}`,
+    );
     return 0;
   } catch (error) {
     console.error(`build failed: ${error instanceof Error ? error.message : String(error)}`);

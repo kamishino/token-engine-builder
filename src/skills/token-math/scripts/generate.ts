@@ -9,6 +9,7 @@ import { dirname, join } from 'node:path';
 import {
   assertSafeOutDir,
   checkTokensProvenance,
+  decideWrite,
   sha256Hex,
   writeTokensProvenance,
 } from '../../../shared/guard.js';
@@ -70,23 +71,20 @@ export function runGenerate(argv = process.argv.slice(2)): number {
     return 1;
   }
 
-  if (existsSync(outDir)) {
-    if (tamper !== null && (tamper.status === 'tampered' || tamper.status === 'unreadable')) {
-      if (!force) {
-        console.error(`refusing to overwrite hand-edited tokens in ${outDir}:`);
-        for (const path of tamper.changed) console.error(`  changed: ${path}`);
-        for (const path of tamper.missing) console.error(`  missing: ${path}`);
-        console.error('pass --force to overwrite deliberately');
-        return 1;
-      }
-      console.log('overwriting hand-edited tokens (--force)');
-    } else if (tamper !== null && tamper.status === 'absent' && force) {
-      console.log('adopting existing tree: no manifest found, one will be created');
-    }
-    if (!force) {
+  const decision = decideWrite({ paths: [outDir], tamper, force });
+  if (decision.kind === 'refuse') {
+    if (decision.reason === 'tampered') {
+      console.error(`refusing to overwrite hand-edited tokens in ${outDir}:`);
+      for (const path of decision.changed) console.error(`  changed: ${path}`);
+      for (const path of decision.missing) console.error(`  missing: ${path}`);
+      console.error('pass --force to overwrite deliberately');
+    } else {
       console.error(`output exists: ${outDir} (pass --force to overwrite)`);
-      return 1;
     }
+    return 1;
+  }
+  if (decision.replaces && force && tamper?.status === 'absent') {
+    console.log('adopting existing tree: no manifest found, one will be created');
   }
 
   console.log(`writing tokens → ${outDir}`);
