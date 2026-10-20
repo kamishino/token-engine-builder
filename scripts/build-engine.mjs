@@ -1,22 +1,14 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { basename, extname, join } from 'node:path';
+import { join } from 'node:path';
 
 /** Auto-discover `src/skills/<skill>/scripts/*.ts` → `dist/<skill>/scripts/<name>.mjs` mapping. */
 export function discoverSkillEntries(skillsDir) {
   const entries = {};
   if (!existsSync(skillsDir)) return entries;
-
-  for (const skill of readdirSync(skillsDir, { withFileTypes: true })) {
-    if (!skill.isDirectory()) continue;
-    const scriptsDir = join(skillsDir, skill.name, 'scripts');
-    if (!existsSync(scriptsDir)) continue;
-
-    for (const file of readdirSync(scriptsDir)) {
-      if (extname(file) !== '.ts') continue;
-      const name = basename(file, '.ts');
-      entries[`${skill.name}/scripts/${name}`] = join(scriptsDir, file);
-    }
+  const { scriptEntries } = discoverScriptEntries(skillsDir);
+  for (const { skill, script } of scriptEntries) {
+    entries[`${skill}/scripts/${script}`] = join(skillsDir, skill, 'scripts', `${script}.ts`);
   }
   return entries;
 }
@@ -72,9 +64,10 @@ export function readBuildStamp(distDir, skill) {
 export function writeBuildStamp(distDir, skill) {
   const scriptsDir = join(distDir, skill, 'scripts');
   const bundleHash = computeBundleHash(scriptsDir);
+  const builtAt = Date.now();
   const stampPath = join(distDir, skill, '.buildstamp');
-  writeFileSync(stampPath, `${JSON.stringify({ builtAt: Date.now(), bundleHash })}\n`, 'utf8');
-  return { builtAt: Date.now(), bundleHash };
+  writeFileSync(stampPath, `${JSON.stringify({ builtAt, bundleHash })}\n`, 'utf8');
+  return { builtAt, bundleHash };
 }
 
 /** Check if a built skill is stale relative to its sources or bundle bytes. */
