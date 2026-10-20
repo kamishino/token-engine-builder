@@ -75,7 +75,93 @@ const BARE_COLOR = /(#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b|oklch\([^)]*\))/g;
 const candidates = new Map<string, Candidate>();
 let fontFamily: string | undefined;
 const radiusCounts = new Map<number, number>();
+const tailwindColors = new Map<string, { role: string; color: OklchColor }>();
 
+function extractTailwindConfig(text: string, relSource: string): void {
+  // Tailwind v3: colors: { primary: { 500: '#...' } or primary: '#...' }
+  const colorBlockMatch = /colors\s*:\s*\{([^}]+(?:\{[^}]+\}[^}]+)*)\}/s.exec(text);
+  if (colorBlockMatch?.[1] !== undefined) {
+    const block = colorBlockMatch[1];
+    // Look for roles or names with hex/oklch values
+    const entryRegex = /([a-zA-Z0-9_-]+)\s*:\s*(?:\{([^}]+)\}|["']([^"']+)["'])/g;
+    for (const match of block.matchAll(entryRegex)) {
+      const roleOrName = (match[1] || '').toLowerCase();
+      const nested = match[2];
+      const direct = match[3];
+      if (direct) {
+        try {
+          const col = parseToOklch(direct);
+          record(direct, roleOrName, relSource);
+          if (['primary', 'brand'].includes(roleOrName) && !tailwindColors.has('primary')) {
+            tailwindColors.set('primary', { role: 'primary', color: col });
+          } else if (
+            ['secondary', 'accent'].includes(roleOrName) &&
+            !tailwindColors.has('secondary')
+          ) {
+            tailwindColors.set('secondary', { role: 'secondary', color: col });
+          }
+        } catch {
+          /* skip */
+        }
+      } else if (nested) {
+        // Look for 500 shade first, or any first valid shade
+        const shade500 = /(?:500|DEFAULT)\s*:\s*["']([^"']+)["']/.exec(nested);
+        const anyShade = /(?:[0-9]{2,3})\s*:\s*["']([^"']+)["']/.exec(nested);
+        const target = shade500?.[1] || anyShade?.[1];
+        if (target) {
+          try {
+            const col = parseToOklch(target);
+            record(target, roleOrName, relSource);
+            if (['primary', 'brand'].includes(roleOrName) && !tailwindColors.has('primary')) {
+              tailwindColors.set('primary', { role: 'primary', color: col });
+            } else if (
+              ['secondary', 'accent'].includes(roleOrName) &&
+              !tailwindColors.has('secondary')
+            ) {
+              tailwindColors.set('secondary', { role: 'secondary', color: col });
+            }
+          } catch {
+            /* skip */
+          }
+        }
+      }
+    }
+  }
+}
+
+function extractTailwindV4Theme(text: string, relSource: string): void {
+  // Tailwind v4: @theme { --color-primary: #...; --color-primary-500: #...; }
+  const themeMatch = /@theme\s*\{([^}]+)\}/s.exec(text);
+  if (themeMatch?.[1] !== undefined) {
+    const block = themeMatch[1];
+    for (const match of block.matchAll(/--color-([a-zA-Z0-9_-]+)\s*:\s*([^;]+);/g)) {
+      const varName = (match[1] || '').toLowerCase();
+      const val = (match[2] || '').trim();
+      try {
+        const col = parseToOklch(val);
+        record(val, varName, relSource);
+        if (
+          (varName === 'primary' || varName.startsWith('primary-500') || varName === 'brand') &&
+          !tailwindColors.has('primary')
+        ) {
+          tailwindColors.set('primary', { role: 'primary', color: col });
+        } else if (
+          (varName === 'secondary' || varName.startsWith('secondary-500')) &&
+          !tailwindColors.has('secondary')
+        ) {
+          tailwindColors.set('secondary', { role: 'secondary', color: col });
+        } else if (
+          (varName === 'accent' || varName.startsWith('accent-500')) &&
+          !tailwindColors.has('accent')
+        ) {
+          tailwindColors.set('accent', { role: 'accent', color: col });
+        }
+      } catch {
+        /* skip */
+      }
+    }
+  }
+}
 function nameScore(name: string): number {
   const n = name.toLowerCase();
   if (/(brand|primary|accent)/.test(n)) return 60;
@@ -264,6 +350,12 @@ if (urlArg !== undefined || htmlArg !== undefined) {
     } catch {
       continue;
     }
+    if (file.includes('tailwind.config')) {
+      extractTailwindConfig(text, rel);
+    }
+    if (file.endsWith('.css') || file.endsWith('.scss')) {
+      extractTailwindV4Theme(text, rel);
+    }
     if (file.endsWith('.md')) {
       const parsed = parseDesignFrontmatter(text, rel);
       if (parsed !== undefined && parsed.primary !== undefined) {
@@ -352,7 +444,12 @@ if (designFrontmatter !== undefined) {
 }
 
 const radiusMd = [...radiusCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 8;
-const anchor: OklchColor = fmPrimary ?? toAnchor((top as Candidate).color);
+const primaryCand = tailwindColors.get('primary')?.color;
+const secondaryCand = tailwindColors.get('secondary')?.color;
+const anchor: OklchColor =
+  fmPrimary ?? (primaryCand ? toAnchor(primaryCand) : toAnchor((top as Candidate).color));
+const resolvedSecondary: OklchColor | undefined =
+  fmSecondary ?? (secondaryCand ? toAnchor(secondaryCand) : undefined);
 
 const usedNames = new Set<string>();
 function uniqueName(color: OklchColor): string {
@@ -369,8 +466,12 @@ function uniqueName(color: OklchColor): string {
 
 type PaletteEntry = StyleSpec['palette'][number];
 const palette: PaletteEntry[] = [{ role: 'primary', name: uniqueName(anchor), anchor }];
-if (fmSecondary !== undefined)
-  palette.push({ role: 'secondary', name: uniqueName(fmSecondary), anchor: fmSecondary });
+if (resolvedSecondary !== undefined)
+  palette.push({
+    role: 'secondary',
+    name: uniqueName(resolvedSecondary),
+    anchor: resolvedSecondary,
+  });
 for (const derivedColor of buildHarmony(anchor, 'analogous')) {
   if (palette.length >= 3) break;
   palette.push({

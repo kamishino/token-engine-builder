@@ -18,7 +18,7 @@ node ~/agents/skills/token-extract/scripts/extract.mjs --url https://example.com
 node ~/agents/skills/token-extract/scripts/extract.mjs --html page.html --out style-spec.json
 ```
 
-Prints the top-5 candidate anchors with their source files as evidence. `--dry-run` prints the candidate spec + evidence as JSON (a gold example lives in `examples/extraction-report.example.json`); `--force` overwrites an existing spec. Scoring rules: `references/heuristics.md`. The full procedure is in [SKILL.md](SKILL.md).
+Extracts candidate palettes directly from Tailwind v3 (`tailwind.config`), Tailwind v4 (`@theme`), CSS variables, or rendered URLs/HTML. Prints the top-5 candidate anchors with their source files as evidence. `--dry-run` prints the candidate spec + evidence as JSON (a gold example lives in `examples/extraction-report.example.json`); `--force` overwrites an existing spec. Scoring rules: `references/heuristics.md`. The full procedure is in [SKILL.md](SKILL.md).
 
 ## Next
 

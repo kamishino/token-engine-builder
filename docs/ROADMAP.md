@@ -36,9 +36,10 @@ With v1.0.0 production stability achieved, the pipeline focuses on expanding UI 
 - **Why**: Enable bi-directional synchronization between W3C DTCG JSON token files and Figma Variables via the Figma REST API.
 - **Shipped**: Bidirectional sync CLI in `token-build` (`scripts/figma.mjs`) supporting export (`--to-figma <tokens-dir>` generating full COLOR, FLOAT, and STRING variable payloads) and import (`--from-figma <figma.json>` converting to DTCG 3-tier hierarchies).
 
-### C4. Automated CSS-to-Spec Ingestion Refinement
+### C4. Automated CSS-to-Spec Ingestion Refinement — ✅ shipped in v1.4.0
 
-- **Why**: Improve AST-level extraction from Tailwind config and CSS variable definitions into exact candidate `style-spec.json` palettes.
+- **Why**: Improve extraction from Tailwind configs and CSS variable definitions into exact candidate `style-spec.json` palettes.
+- **Shipped**: Added structured parsers in `token-extract` for Tailwind v3 configs (`tailwind.config.{js,ts,cjs,mjs}`), Tailwind v4 `@theme` blocks (`--color-*`), and CSS root custom properties, preserving primary and secondary color roles into candidate `style-spec.json`.
 
 ## Later — Trigger-Gated
 
