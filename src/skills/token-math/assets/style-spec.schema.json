@@ -90,6 +90,29 @@
         "additionalProperties": { "type": "string", "pattern": "^\\{[a-z0-9.-]+\\}$" }
       }
     },
+    "themes": {
+      "type": "object",
+      "$description": "Dynamic custom themes declared with base mode ('light'|'dark') and surface/action step overrides.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["mode"],
+        "properties": {
+          "mode": { "enum": ["light", "dark"] },
+          "surfaceSteps": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "canvas": { "type": "number" },
+              "surface": { "type": "number" },
+              "subtle": { "type": "number" },
+              "raised": { "type": "number" }
+            }
+          },
+          "actionStep": { "type": "number" }
+        }
+      }
+    },
     "spacingBasePx": { "type": "number", "exclusiveMinimum": 0 },
     "density": { "enum": ["comfortable", "compact"] },
     "radius": {

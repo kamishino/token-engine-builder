@@ -332,7 +332,52 @@ const FEEDBACK_TARGETS: Record<string, readonly [number, number]> = {
 };
 const FEEDBACK_ROLES = ['success', 'warning', 'danger', 'info', 'help'] as const;
 
-for (const [theme, targets] of Object.entries(SEMANTIC_TARGETS)) {
+// Assemble complete themes map: base 3 themes + any custom themes declared in spec
+const ALL_THEMES: Record<
+  string,
+  { targets: Record<string, readonly [string, number]>; feedback: readonly [number, number] }
+> = {
+  light: {
+    targets: SEMANTIC_TARGETS['light'] as Record<string, readonly [string, number]>,
+    feedback: FEEDBACK_TARGETS['light'] as readonly [number, number],
+  },
+  dark: {
+    targets: SEMANTIC_TARGETS['dark'] as Record<string, readonly [string, number]>,
+    feedback: FEEDBACK_TARGETS['dark'] as readonly [number, number],
+  },
+  'high-contrast': {
+    targets: SEMANTIC_TARGETS['high-contrast'] as Record<string, readonly [string, number]>,
+    feedback: FEEDBACK_TARGETS['high-contrast'] as readonly [number, number],
+  },
+};
+
+if (spec.themes !== undefined) {
+  for (const [customName, customConfig] of Object.entries(spec.themes)) {
+    const baseMode = customConfig.mode;
+    const baseTargets = {
+      ...(SEMANTIC_TARGETS[baseMode] as Record<string, readonly [string, number]>),
+    };
+    const baseFeedback = FEEDBACK_TARGETS[baseMode] as readonly [number, number];
+
+    if (customConfig.surfaceSteps !== undefined) {
+      if (customConfig.surfaceSteps.canvas !== undefined)
+        baseTargets['canvas'] = ['neutral', customConfig.surfaceSteps.canvas];
+      if (customConfig.surfaceSteps.surface !== undefined)
+        baseTargets['surface'] = ['neutral', customConfig.surfaceSteps.surface];
+      if (customConfig.surfaceSteps.subtle !== undefined)
+        baseTargets['subtle'] = ['neutral', customConfig.surfaceSteps.subtle];
+      if (customConfig.surfaceSteps.raised !== undefined)
+        baseTargets['raised'] = ['primary', customConfig.surfaceSteps.raised];
+    }
+    if (customConfig.actionStep !== undefined) {
+      baseTargets['action'] = ['primary', customConfig.actionStep];
+    }
+    ALL_THEMES[customName] = { targets: baseTargets, feedback: baseFeedback };
+  }
+}
+
+for (const [theme, config] of Object.entries(ALL_THEMES)) {
+  const targets = config.targets;
   const resolveTarget = (key: string): { $value: string; $type: 'color' } => {
     const target = targets[key] as readonly [string, number];
     return colorAlias(target[0] === 'primary' ? primaryEntry.name : target[0], target[1]);
@@ -369,7 +414,7 @@ for (const [theme, targets] of Object.entries(SEMANTIC_TARGETS)) {
         },
         feedback: Object.fromEntries(
           FEEDBACK_ROLES.map((role) => {
-            const fb = FEEDBACK_TARGETS[theme] as readonly [number, number];
+            const fb = config.feedback;
             return [
               role,
               {

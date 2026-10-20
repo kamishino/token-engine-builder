@@ -73,6 +73,19 @@ export type HarmonyMethod =
   'triadic' | 'analogous' | 'complementary' | 'split-complementary' | 'tetradic' | 'monochromatic';
 export type FeedbackRole = 'success' | 'warning' | 'danger' | 'info' | 'help';
 
+export interface CustomThemeConfig {
+  /** Polarity mode: 'light' or 'dark' base mapping. */
+  mode: 'light' | 'dark';
+  /** Optional custom background surface step overrides (e.g. canvas: 100, surface: 200). */
+  surfaceSteps?: {
+    canvas?: number;
+    surface?: number;
+    subtle?: number;
+    raised?: number;
+  };
+  /** Optional primary action step override. */
+  actionStep?: number;
+}
 /** Output of skill `token-style`; input to `token-math/scripts/generate`. */
 export interface StyleSpec {
   name: string;
@@ -103,6 +116,8 @@ export interface StyleSpec {
   };
   /** Durable remediation: theme → semantic dotted path → alias, applied by generate after semantic writes. */
   overrides?: Record<string, Record<string, string>>;
+  /** Optional custom named themes (e.g. sepia, solarized) mapped onto light/dark polarity. */
+  themes?: Record<string, CustomThemeConfig>;
   spacingBasePx: number;
   density: 'comfortable' | 'compact';
   radius: { sm: number; md: number; lg: number; full: number };

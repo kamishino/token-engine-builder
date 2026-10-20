@@ -24,11 +24,10 @@ With v1.0.0 production stability achieved, the pipeline focuses on expanding UI 
 - **Why**: Expand beyond core button/card/input to cover high-frequency atomic components: badge, alert, dialog, avatar, tooltip, and table.
 - **Shipped**: Added DTCG component token templates under `token-math/templates/tokens/component/`, extended `token-audit` to cover 42 foreground/background and boundary contrast pairs across themes, updated `components.md` and `DESIGN.md` spec outputs, and integrated specimens in `visualizer.html`.
 
-### C2. Dynamic Custom Theme Authoring
+### C2. Dynamic Custom Theme Authoring — ✅ shipped in v1.2.0
 
 - **Why**: Eliminate the restriction to fixed `light`/`dark`/`high-contrast` themes; allow consumers to specify arbitrary named themes (e.g. `sepia`, `solarized`, brand sub-themes) directly in `style-spec.json`.
-- **Scope**: Update `StyleSpec` schema to admit `themes?: Record<string, ThemeConfig>`, generate corresponding `semantic/<name>.tokens.json` maps, and audit/build any declared theme dynamically.
-- **Exit criteria**: Custom theme declared in spec generates, passes audit, and builds corresponding CSS / theme files without code modification.
+- **Shipped**: Added `themes?: Record<string, CustomThemeConfig>` to `StyleSpec` schema admitting base polarity mode (`light` | `dark`), custom surface steps (`canvas`, `surface`, `subtle`, `raised`), and action step overrides. End-to-end integration across `token-math` (generating `semantic/<theme>.tokens.json`), `token-audit` (dynamic multi-theme contrast verification), and `token-build` (`--theme <name>`).
 
 ## Next — v1.2+ Horizon
 
