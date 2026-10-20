@@ -1,0 +1,5 @@
+interface:
+  display_name: 'Token Extract'
+  short_description: 'Extract candidate style-spec from existing projects, HTML documents, or rendered URLs'
+policy:
+  allow_implicit_invocation: false

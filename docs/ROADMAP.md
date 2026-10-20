@@ -38,7 +38,7 @@ The v0.3.0 Now items shipped (below); the next Now item is unselected — promot
 - **Scope**: changeset → `npm run release` → `npm run package` → GitHub release with per-skill zips + SHA256SUMS.
 - **Exit criteria**: `v0.3.0` tag and release published; artifacts verified against `SHA256SUMS.txt`.
 
-## Next — target v0.13.0 (unselected)
+## Next — target v0.14.0 (unselected)
 
 ### X1. Human style-guide surface (DESIGN.md, Stitch format) — ✅ shipped in v0.4.0
 
@@ -71,12 +71,17 @@ The v0.3.0 Now items shipped (below); the next Now item is unselected — promot
 - **Why**: An existing rendered product must be onboarded where source files are unavailable, or where computed styles in DOM determine actual visual presentation.
 - **Shipped**: `token-extract` extended with `--url <url>` and `--html <file.html>` to evaluate computed styles (colors, fonts, radii) via headless browser automation with graceful DOM parsing fallback, mapping directly to `style-spec.json`.
 
+### X7. Plugin manifests & marketplace distribution — ✅ shipped in v0.13.0
+
+- **Why**: Skills are shared across diverse agent runtimes and ecosystems (Anthropic/Claude Code and OpenAI Agent standards) requiring standardized discoverability manifests.
+- **Shipped**: In-tree Claude Code plugin manifest (`.claude/plugin.json`), OpenAI Agent manifests (`agents/openai.yaml` in each skill), bundled into release zips and mirrored into `dist/`.
+
 ## Later — trigger-gated
 
 | ID  | Item                                                          | Trigger that promotes it                                                                                                     |
 | --- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | L1  | Rendered-product extraction (DOM/screenshot → candidate spec) | Promoted and shipped as X6 in v0.12.0                                                                                        |
-| L2  | Plugin manifests & marketplace distribution                   | Skills are shared beyond personal installs and the release channel needs an update mechanism                                 |
+| L2  | Plugin manifests & marketplace distribution                   | Promoted and shipped as X7 in v0.13.0                                                                                        |
 | L3  | TypeScript 7 migration                                        | `typescript-eslint` peer range admits TypeScript ≥7 (re-checked 2026-10-20: latest peer is `>=4.8.4 <6.1.0` — still blocked) |
 | L5  | Skill grouping (buckets/plugins)                              | The set reaches ≥8 skills or gains a second install audience                                                                 |
 | L6  | Vendored color-names subset                                   | Promoted and shipped as X4 in v0.10.0                                                                                        |

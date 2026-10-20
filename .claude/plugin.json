@@ -1,0 +1,40 @@
+{
+  "name": "token-engine-builder",
+  "version": "0.12.0",
+  "description": "5-skill agent pipeline for 3-tier W3C DTCG design tokens (OKLCH, WCAG+APCA, Style Dictionary v5, UI profiles)",
+  "author": {
+    "name": "kamishino"
+  },
+  "homepage": "https://github.com/kamishino/token-engine-builder",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kamishino/token-engine-builder"
+  },
+  "skills": [
+    {
+      "name": "token-style",
+      "path": "dist/token-style",
+      "description": "Interview for brand aesthetic, then record the anchor as style-spec.json"
+    },
+    {
+      "name": "token-extract",
+      "path": "dist/token-extract",
+      "description": "Extract candidate style-spec from existing projects, HTML documents, or rendered URLs"
+    },
+    {
+      "name": "token-math",
+      "path": "dist/token-math",
+      "description": "Deterministic OKLCH ramps and 3-tier DTCG token scaffold generator"
+    },
+    {
+      "name": "token-audit",
+      "path": "dist/token-audit",
+      "description": "Dual WCAG 2.1 and APCA contrast gatekeeper and provenance manifest validator"
+    },
+    {
+      "name": "token-build",
+      "path": "dist/token-build",
+      "description": "Compile DTCG token trees to CSS variables, Tailwind v4 @theme, and UI-library profiles"
+    }
+  ]
+}

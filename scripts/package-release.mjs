@@ -150,6 +150,10 @@ for (const skill of skills) {
   artifacts.push(out);
   console.log(`[package] ${skill} → release/${basename(out)}`);
 }
+const claudePlugin = join(rootDir, '.claude', 'plugin.json');
+if (existsSync(claudePlugin)) {
+  bundleEntries.push({ path: claudePlugin, arc: '.claude/plugin.json' });
+}
 const bundle = join(releaseDir, `token-engine-builder-v${version}.zip`);
 writeZip(bundleEntries, bundle);
 artifacts.push(bundle);
