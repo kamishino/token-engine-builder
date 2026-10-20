@@ -166,6 +166,7 @@ const PAIRS: readonly AuditPair[] = [
   decorative('semantic.color.border.default', 'semantic.color.bg.surface'),
   decorative('semantic.color.border.subtle', 'semantic.color.bg.canvas'),
   // Components
+  // Components — Core 3
   text('component.button.text', 'component.button.bg'),
   text('component.button.text', 'component.button.bg-hover'),
   text('component.card.text', 'component.card.bg'),
@@ -175,8 +176,22 @@ const PAIRS: readonly AuditPair[] = [
   border('component.input.border', 'component.input.bg'),
   border('component.input.focus-border', 'component.input.bg'),
   border('component.input.error-border', 'component.input.bg'),
+  // Components — Extended 6 (C1)
+  text('component.badge.text', 'component.badge.bg'),
+  text('component.alert.text', 'component.alert.bg'),
+  text('component.dialog.text', 'component.dialog.bg'),
+  text('component.avatar.text', 'component.avatar.bg'),
+  text('component.tooltip.text', 'component.tooltip.bg'),
+  text('component.table.header-text', 'component.table.header-bg'),
+  text('component.table.row-text', 'component.table.row-bg'),
+  text('component.table.row-text', 'component.table.row-hover-bg'),
+  border('component.alert.icon', 'component.alert.bg'),
+  border('component.dialog.border', 'component.dialog.bg'),
+  decorative('component.badge.border', 'component.badge.bg'),
+  decorative('component.alert.border', 'component.alert.bg'),
+  decorative('component.avatar.border', 'component.avatar.bg'),
+  decorative('component.table.border', 'component.table.row-bg'),
 ];
-
 const BORDER_KEYS = new Set(
   PAIRS.filter((pair) => pair.kind === 'border').map((pair) => `${pair.fg}|${pair.bg}`),
 );

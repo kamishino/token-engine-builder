@@ -1,0 +1,14 @@
+{
+  "$description": "Tier 3 — badge. Status, count, and category label tokens.",
+  "component": {
+    "badge": {
+      "bg": { "$value": "{semantic.color.bg.raised}", "$type": "color" },
+      "text": { "$value": "{semantic.color.text.primary}", "$type": "color" },
+      "border": { "$value": "{semantic.color.border.default}", "$type": "color" },
+      "radius": { "$value": "{radius.full}", "$type": "dimension" },
+      "padding-x": { "$value": "{layout.inset.sm}", "$type": "dimension" },
+      "padding-y": { "$value": "{layout.inset.xs}", "$type": "dimension" },
+      "font-size": { "$value": "{font-size.xs}", "$type": "dimension" }
+    }
+  }
+}

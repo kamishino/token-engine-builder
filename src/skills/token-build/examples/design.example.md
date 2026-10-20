@@ -19,7 +19,7 @@ rounded:
 spacing:
   base: "0.25rem"
   density: "comfortable"
-components: ["button", "card", "input"]
+components: ["alert", "avatar", "badge", "button", "card", "dialog", "input", "table", "tooltip"]
 ---
 
 # Example Brand Design Contract
@@ -119,9 +119,15 @@ Font stack: `Inter, system-ui, sans-serif`
 
 ## Components
 
+- alert
+- avatar
+- badge
 - button
 - card
+- dialog
 - input
+- table
+- tooltip
 
 Composite patterns:
 - Form Field: Input + Label + Hint/Error

@@ -243,8 +243,9 @@ export async function componentSpecsFormat(args: {
   }
   sections.push(
     '## States\n\n' +
-      'Button carries enabled, hover, focus, and disabled states; input carries enabled, focus, error, and disabled; card carries enabled and hover. ' +
-      'Hover, focus, and error state pairs are contrast-gated by token-audit; disabled states are tokenized here but WCAG-exempt from the audit gate.\n',
+      'Button carries enabled, hover, focus, and disabled states; input carries enabled, focus, error, and disabled; card carries enabled and hover; ' +
+      'table carries row-hover; badge, alert, dialog, avatar, and tooltip define surface, border, and typography tokens across light and dark themes. ' +
+      'All foreground, background, and meaningful boundary pairs are contrast-gated by token-audit; disabled states are tokenized here but WCAG-exempt from the audit gate.\n',
   );
   sections.push(
     '## Composite patterns\n\n' +
@@ -477,6 +478,28 @@ export async function visualizerHtmlFormat(args: {
         <button class="btn">Action Button</button>
         <input type="text" class="input-field" placeholder="Input specimen..." value="Sample text" />
       </div>
+      <div style="display:flex;gap:0.75rem;align-items:center;margin-top:1rem;flex-wrap:wrap;">
+        <span style="background:${get('semantic.color.bg.raised')};border:1px solid ${get('semantic.color.border.default')};color:${get('semantic.color.text.primary')};padding:0.25rem 0.5rem;border-radius:9999px;font-size:0.75rem;font-weight:600;">Status Badge</span>
+        <div style="background:${get('semantic.color.bg.subtle')};border:1px solid ${get('semantic.color.border.default')};color:${get('semantic.color.text.secondary')};width:32px;height:32px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font-size:0.875rem;font-weight:600;">JD</div>
+        <div style="background:${get('semantic.color.text.primary')};color:${get('semantic.color.bg.canvas')};padding:0.25rem 0.5rem;border-radius:${get('radius.sm')};font-size:0.75rem;">Tooltip helper</div>
+      </div>
+      <div style="background:${get('semantic.color.bg.subtle')};border-left:4px solid ${get('semantic.color.action.primary')};padding:0.75rem 1rem;border-radius:${get('radius.md')};margin-top:1rem;font-size:0.875rem;color:${get('semantic.color.text.primary')};">
+        <strong>Alert Banner:</strong> System tokens active and certified.
+      </div>
+      <table style="width:100%;margin-top:1rem;border-collapse:collapse;font-size:0.875rem;">
+        <thead>
+          <tr style="background:${get('semantic.color.bg.surface')};color:${get('semantic.color.text.secondary')};border-bottom:1px solid ${get('semantic.color.border.default')};">
+            <th style="padding:0.5rem;text-align:left;">Role</th>
+            <th style="padding:0.5rem;text-align:left;">Token</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid ${get('semantic.color.border.default')};">
+            <td style="padding:0.5rem;">Surface</td>
+            <td style="padding:0.5rem;font-family:monospace;">${get('semantic.color.bg.surface')}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </body>

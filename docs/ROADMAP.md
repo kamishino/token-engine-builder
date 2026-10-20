@@ -19,11 +19,10 @@ token-engine-builder is an agent-skill pipeline that turns a recorded brand pale
 
 With v1.0.0 production stability achieved, the pipeline focuses on expanding UI system coverage and theme flexibility:
 
-### C1. Extended Component Catalog (6 additional components)
+### C1. Extended Component Catalog (6 additional components) — ✅ shipped in v1.1.0
 
 - **Why**: Expand beyond core button/card/input to cover high-frequency atomic components: badge, alert, dialog, avatar, tooltip, and table.
-- **Scope**: Add DTCG component token templates under `token-math/templates/tokens/3-component/`, define state tables and contrast requirements in `token-audit` and `components.md`, and add specimens in `visualizer.html`.
-- **Exit criteria**: 9 total components generate from `token-math`, pass contrast audits, and render in `components.md` and `visualizer.html`.
+- **Shipped**: Added DTCG component token templates under `token-math/templates/tokens/component/`, extended `token-audit` to cover 42 foreground/background and boundary contrast pairs across themes, updated `components.md` and `DESIGN.md` spec outputs, and integrated specimens in `visualizer.html`.
 
 ### C2. Dynamic Custom Theme Authoring
 

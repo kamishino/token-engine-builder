@@ -6,6 +6,40 @@
 
 Theme: light
 
+## alert
+
+| Token | Value |
+|---|---|
+| bg | oklch(88% 0.0048 250deg) |
+| text | oklch(28% 0.0038 250deg) |
+| border | oklch(78% 0.0074 250deg) |
+| icon | oklch(36% 0.0729 250deg) |
+| radius | 0.5rem |
+| padding | 1rem |
+
+## avatar
+
+| Token | Value |
+|---|---|
+| bg | oklch(88% 0.0048 250deg) |
+| text | oklch(28% 0.0038 250deg) |
+| border | oklch(78% 0.0074 250deg) |
+| radius | 624.9375rem |
+| size | 2rem |
+| font-size | 0.8rem |
+
+## badge
+
+| Token | Value |
+|---|---|
+| bg | oklch(98% 0.0098 250deg) |
+| text | oklch(28% 0.0038 250deg) |
+| border | oklch(78% 0.0074 250deg) |
+| radius | 624.9375rem |
+| padding-x | 0.5rem |
+| padding-y | 0.25rem |
+| font-size | 0.64rem |
+
 ## button
 
 | Token | Value |
@@ -32,6 +66,17 @@ Theme: light
 | radius | 1rem |
 | padding | 1.5rem |
 
+## dialog
+
+| Token | Value |
+|---|---|
+| bg | oklch(98% 0.0098 250deg) |
+| text | oklch(28% 0.0038 250deg) |
+| overlay-bg | oklch(98% 0.0012 250deg) |
+| border | oklch(60% 0.012 250deg) |
+| radius | 1rem |
+| padding | 2rem |
+
 ## input
 
 | Token | Value |
@@ -48,9 +93,34 @@ Theme: light
 | padding-y | 0.5rem |
 | font-size | 1rem |
 
+## table
+
+| Token | Value |
+|---|---|
+| header-bg | oklch(96% 0.0027 250deg) |
+| header-text | oklch(44% 0.0079 250deg) |
+| row-bg | oklch(98% 0.0012 250deg) |
+| row-hover-bg | oklch(88% 0.0048 250deg) |
+| row-text | oklch(28% 0.0038 250deg) |
+| border | oklch(78% 0.0074 250deg) |
+| padding-x | 1rem |
+| padding-y | 0.5rem |
+| font-size | 0.8rem |
+
+## tooltip
+
+| Token | Value |
+|---|---|
+| bg | oklch(28% 0.0038 250deg) |
+| text | oklch(98% 0.0012 250deg) |
+| radius | 0.25rem |
+| padding-x | 0.5rem |
+| padding-y | 0.25rem |
+| font-size | 0.64rem |
+
 ## States
 
-Button carries enabled, hover, focus, and disabled states; input carries enabled, focus, error, and disabled; card carries enabled and hover. Hover, focus, and error state pairs are contrast-gated by token-audit; disabled states are tokenized here but WCAG-exempt from the audit gate.
+Button carries enabled, hover, focus, and disabled states; input carries enabled, focus, error, and disabled; card carries enabled and hover; table carries row-hover; badge, alert, dialog, avatar, and tooltip define surface, border, and typography tokens across light and dark themes. All foreground, background, and meaningful boundary pairs are contrast-gated by token-audit; disabled states are tokenized here but WCAG-exempt from the audit gate.
 
 ## Composite patterns
 

@@ -1,0 +1,13 @@
+{
+  "$description": "Tier 3 — dialog / modal. Dialog panel and header surface tokens.",
+  "component": {
+    "dialog": {
+      "bg": { "$value": "{semantic.color.bg.raised}", "$type": "color" },
+      "text": { "$value": "{semantic.color.text.primary}", "$type": "color" },
+      "overlay-bg": { "$value": "{semantic.color.bg.canvas}", "$type": "color" },
+      "border": { "$value": "{semantic.color.border.strong}", "$type": "color" },
+      "radius": { "$value": "{radius.lg}", "$type": "dimension" },
+      "padding": { "$value": "{layout.inset.xl}", "$type": "dimension" }
+    }
+  }
+}
