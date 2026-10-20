@@ -17,6 +17,7 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  renameSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -29,17 +30,6 @@ const distDir = join(rootDir, 'dist');
 const releaseDir = join(rootDir, 'release');
 const pkg = JSON.parse(readFileSync(join(rootDir, 'package.json'), 'utf8'));
 const version = pkg.version;
-
-if (!process.argv.includes('--skip-build')) {
-  execFileSync(process.execPath, [join(rootDir, 'scripts', 'build-all.mjs')], {
-    cwd: rootDir,
-    stdio: 'inherit',
-  });
-}
-if (!existsSync(distDir)) {
-  console.error('[package] dist/ missing — run npm run build first (or drop --skip-build)');
-  process.exit(1);
-}
 
 function walk(dir, visit) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -55,7 +45,7 @@ const CRC_TABLE = new Int32Array(256).map((_, i) => {
   for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
   return c;
 });
-function crc32(buf) {
+export function crc32(buf) {
   let crc = 0xffffffff;
   for (const byte of buf) crc = CRC_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8);
   return (crc ^ 0xffffffff) >>> 0;
@@ -74,7 +64,7 @@ function dosTimeDate(date) {
 }
 
 /** entries: [{ path, arc }] — arc is the slash-separated name inside the zip. */
-function writeZip(entries, outPath) {
+export function writeZip(entries, outPath) {
   const chunks = [];
   const central = [];
   let offset = 0;
@@ -131,148 +121,209 @@ function entriesFor(skill) {
   );
   return entries.sort((a, b) => a.arc.localeCompare(b.arc));
 }
-
-rmSync(releaseDir, { recursive: true, force: true });
-mkdirSync(releaseDir, { recursive: true });
-
-const skills = readdirSync(distDir, { withFileTypes: true })
-  .filter((entry) => entry.isDirectory())
-  .map((entry) => entry.name)
-  .sort();
-
-const artifacts = [];
-const bundleEntries = [];
-for (const skill of skills) {
-  const entries = entriesFor(skill);
-  bundleEntries.push(...entries);
-  const out = join(releaseDir, `token-engine-${skill}-v${version}.zip`);
-  writeZip(entries, out);
-  artifacts.push(out);
-  console.log(`[package] ${skill} → release/${basename(out)}`);
-}
-const claudePlugin = join(rootDir, '.claude', 'plugin.json');
-if (existsSync(claudePlugin)) {
-  bundleEntries.push({ path: claudePlugin, arc: '.claude/plugin.json' });
-}
-const bundle = join(releaseDir, `token-engine-builder-v${version}.zip`);
-writeZip(bundleEntries, bundle);
-artifacts.push(bundle);
-console.log(`[package] bundle → release/${basename(bundle)}`);
-
-// L5 Skill Grouping: functional bucket bundles
-const BUCKETS = {
-  creation: ['token-style', 'token-extract', 'token-math'],
-  governance: ['token-audit', 'token-build'],
-};
-for (const [bucketName, bucketSkills] of Object.entries(BUCKETS)) {
-  const bucketEntries = [];
-  for (const s of bucketSkills) {
-    if (skills.includes(s)) bucketEntries.push(...entriesFor(s));
+export function runPackage() {
+  if (!process.argv.includes('--skip-build')) {
+    execFileSync(process.execPath, [join(rootDir, 'scripts', 'build-all.mjs')], {
+      cwd: rootDir,
+      stdio: 'inherit',
+    });
   }
-  if (existsSync(claudePlugin)) {
-    bucketEntries.push({ path: claudePlugin, arc: '.claude/plugin.json' });
+  if (!existsSync(distDir)) {
+    console.error('[package] dist/ missing — run npm run build first (or drop --skip-build)');
+    process.exit(1);
   }
-  const bucketZip = join(releaseDir, `token-engine-${bucketName}-v${version}.zip`);
-  writeZip(bucketEntries, bucketZip);
-  artifacts.push(bucketZip);
-  console.log(`[package] bucket:${bucketName} → release/${basename(bucketZip)}`);
-}
 
-// CycloneDX 1.5 JSON SBOM covering inlined packages in shipped bundles
-const lockPath = join(rootDir, 'package-lock.json');
-if (existsSync(lockPath)) {
-  const lock = JSON.parse(readFileSync(lockPath, 'utf8'));
-  const packages = lock.packages ?? {};
-  const seen = new Set();
-  function collectDeps(depName) {
-    const key = `node_modules/${depName}`;
-    if (seen.has(key) || !packages[key]) return;
-    seen.add(key);
-    const info = packages[key];
-    for (const d of Object.keys(info.dependencies ?? {})) {
-      collectDeps(d);
+  const dryRun = process.argv.includes('--dry-run');
+
+  // Preflight validation
+  const keyFile = join(rootDir, '.release-key.json');
+  let keyData = null;
+  if (existsSync(keyFile)) {
+    try {
+      keyData = JSON.parse(readFileSync(keyFile, 'utf8'));
+      if (!keyData.keyId || !keyData.privateKey) throw new Error('missing keyId or privateKey');
+    } catch (err) {
+      console.error(
+        `[package] invalid release key: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      process.exit(1);
     }
   }
-  collectDeps('colorjs.io');
-  collectDeps('style-dictionary');
 
-  const components = Array.from(seen)
-    .sort()
-    .map((k) => {
-      const name = k.replace(/^node_modules\//, '');
-      const info = packages[k];
-      const encodedName = name.startsWith('@') ? name.replace('/', '%2F') : name;
-      return {
-        type: 'library',
-        name,
-        version: info.version,
-        ...(info.license ? { licenses: [{ license: { id: info.license } }] } : {}),
-        purl: `pkg:npm/${encodedName}@${info.version}`,
-      };
-    });
+  const lockPath = join(rootDir, 'package-lock.json');
+  let lock = null;
+  if (existsSync(lockPath)) {
+    try {
+      lock = JSON.parse(readFileSync(lockPath, 'utf8'));
+    } catch (err) {
+      console.error(
+        `[package] invalid package-lock.json: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      process.exit(1);
+    }
+  }
 
-  const sbom = {
-    bomFormat: 'CycloneDX',
-    specVersion: '1.5',
-    serialNumber: `urn:uuid:${randomUUID()}`,
-    version: 1,
-    metadata: {
-      timestamp: new Date().toISOString(),
-      tools: [
-        {
-          vendor: 'token-engine-builder',
-          name: 'package-release',
-          version,
-        },
-      ],
-      component: {
-        type: 'application',
-        name: pkg.name,
-        version: pkg.version,
-        licenses: [{ license: { id: pkg.license ?? 'MIT' } }],
-      },
-    },
-    components,
+  const skills = readdirSync(distDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
+
+  if (dryRun) {
+    console.log(
+      `[package] dry-run: would package ${skills.length} skill(s) (v${version}) → release/`,
+    );
+    for (const s of skills) console.log(`  token-engine-${s}-v${version}.zip`);
+    console.log(`  token-engine-builder-v${version}.zip`);
+    console.log(`  SHA256SUMS.txt`);
+    if (keyData) console.log(`  SHA256SUMS.txt.minisig`);
+    process.exit(0);
+  }
+
+  const stageDir = join(rootDir, 'release.tmp');
+  rmSync(stageDir, { recursive: true, force: true });
+  mkdirSync(stageDir, { recursive: true });
+
+  const artifacts = [];
+  const bundleEntries = [];
+  for (const skill of skills) {
+    const entries = entriesFor(skill);
+    bundleEntries.push(...entries);
+    const out = join(stageDir, `token-engine-${skill}-v${version}.zip`);
+    writeZip(entries, out);
+    artifacts.push(out);
+    console.log(`[package] ${skill} → release/${basename(out)}`);
+  }
+  const claudePlugin = join(rootDir, '.claude', 'plugin.json');
+  if (existsSync(claudePlugin)) {
+    bundleEntries.push({ path: claudePlugin, arc: '.claude/plugin.json' });
+  }
+  const bundle = join(stageDir, `token-engine-builder-v${version}.zip`);
+  writeZip(bundleEntries, bundle);
+  artifacts.push(bundle);
+  console.log(`[package] bundle → release/${basename(bundle)}`);
+
+  // L5 Skill Grouping: functional bucket bundles
+  const BUCKETS = {
+    creation: ['token-style', 'token-extract', 'token-math'],
+    governance: ['token-audit', 'token-build'],
   };
+  for (const [bucketName, bucketSkills] of Object.entries(BUCKETS)) {
+    const bucketEntries = [];
+    for (const s of bucketSkills) {
+      if (skills.includes(s)) bucketEntries.push(...entriesFor(s));
+    }
+    if (existsSync(claudePlugin)) {
+      bucketEntries.push({ path: claudePlugin, arc: '.claude/plugin.json' });
+    }
+    const bucketZip = join(stageDir, `token-engine-${bucketName}-v${version}.zip`);
+    writeZip(bucketEntries, bucketZip);
+    artifacts.push(bucketZip);
+    console.log(`[package] bucket:${bucketName} → release/${basename(bucketZip)}`);
+  }
 
-  const sbomPath = join(releaseDir, `token-engine-builder-v${version}.cyclonedx.json`);
-  writeFileSync(sbomPath, `${JSON.stringify(sbom, null, 2)}\n`, 'utf8');
-  artifacts.push(sbomPath);
-  console.log(`[package] SBOM → release/${basename(sbomPath)} (${components.length} components)`);
+  if (lock !== null) {
+    const packages = lock.packages ?? {};
+    const seen = new Set();
+    function collectDeps(depName) {
+      const key = `node_modules/${depName}`;
+      if (seen.has(key) || !packages[key]) return;
+      seen.add(key);
+      const info = packages[key];
+      for (const d of Object.keys(info.dependencies ?? {})) {
+        collectDeps(d);
+      }
+    }
+    collectDeps('colorjs.io');
+    collectDeps('style-dictionary');
+
+    const components = Array.from(seen)
+      .sort()
+      .map((k) => {
+        const name = k.replace(/^node_modules\//, '');
+        const info = packages[k];
+        const encodedName = name.startsWith('@') ? name.replace('/', '%2F') : name;
+        return {
+          type: 'library',
+          name,
+          version: info.version,
+          ...(info.license ? { licenses: [{ license: { id: info.license } }] } : {}),
+          purl: `pkg:npm/${encodedName}@${info.version}`,
+        };
+      });
+
+    const sbom = {
+      bomFormat: 'CycloneDX',
+      specVersion: '1.5',
+      serialNumber: `urn:uuid:${randomUUID()}`,
+      version: 1,
+      metadata: {
+        timestamp: new Date().toISOString(),
+        tools: [
+          {
+            vendor: 'token-engine-builder',
+            name: 'package-release',
+            version,
+          },
+        ],
+        component: {
+          type: 'application',
+          name: pkg.name,
+          version: pkg.version,
+          licenses: [{ license: { id: pkg.license ?? 'MIT' } }],
+        },
+      },
+      components,
+    };
+
+    const sbomPath = join(stageDir, `token-engine-builder-v${version}.cyclonedx.json`);
+    writeFileSync(sbomPath, `${JSON.stringify(sbom, null, 2)}\n`, 'utf8');
+    artifacts.push(sbomPath);
+    console.log(`[package] SBOM → release/${basename(sbomPath)} (${components.length} components)`);
+  }
+
+  const sums = artifacts
+    .map(
+      (path) =>
+        `${createHash('sha256').update(readFileSync(path)).digest('hex')}  ${basename(path)}`,
+    )
+    .join('\n');
+  const sumsFile = join(stageDir, 'SHA256SUMS.txt');
+  writeFileSync(sumsFile, `${sums}\n`, 'utf8');
+  console.log(`[package] SHA256SUMS.txt written (${artifacts.length} artifacts, v${version})`);
+
+  if (keyData !== null) {
+    const keyId = Buffer.from(keyData.keyId, 'hex');
+    const pkcs8Prefix = Buffer.from('302e020100300506032b657004220420', 'hex');
+    const pkcs8Der = Buffer.concat([pkcs8Prefix, Buffer.from(keyData.privateKey, 'hex')]);
+    const privKeyObj = createPrivateKey({ key: pkcs8Der, format: 'der', type: 'pkcs8' });
+
+    const sumsBuf = readFileSync(sumsFile);
+    const rawSig = sign(null, sumsBuf, privKeyObj);
+
+    const sigBuf = Buffer.concat([Buffer.from('Ed'), keyId, rawSig]);
+    const sigContent =
+      `untrusted comment: signature from token-engine-builder secret key\n` +
+      `${sigBuf.toString('base64')}\n` +
+      `trusted comment: timestamp:${Math.floor(Date.now() / 1000)}\tfile:SHA256SUMS.txt\n` +
+      `${Buffer.concat([rawSig]).toString('base64')}\n`;
+
+    const sigFile = join(stageDir, 'SHA256SUMS.txt.minisig');
+    writeFileSync(sigFile, sigContent, 'utf8');
+    console.log(`[package] SHA256SUMS.txt.minisig written (Ed25519 signature)`);
+  }
+
+  // Atomic swap
+  rmSync(releaseDir, { recursive: true, force: true });
+  renameSync(stageDir, releaseDir);
+
+  console.log(`[package] publish: gh release create v${version} release/* --title "v${version}"`);
 }
 
-const sums = artifacts
-  .map(
-    (path) => `${createHash('sha256').update(readFileSync(path)).digest('hex')}  ${basename(path)}`,
-  )
-  .join('\n');
-const sumsFile = join(releaseDir, 'SHA256SUMS.txt');
-writeFileSync(sumsFile, `${sums}\n`, 'utf8');
-console.log(`[package] SHA256SUMS.txt written (${artifacts.length} artifacts, v${version})`);
+const isMain =
+  process.argv[1] !== undefined &&
+  (resolve(process.argv[1]) === fileURLToPath(import.meta.url) ||
+    process.argv[1].endsWith('package-release.mjs'));
 
-// Cryptographic Minisign signature over SHA256SUMS.txt
-const keyFile = join(rootDir, '.release-key.json');
-if (existsSync(keyFile)) {
-  const keyData = JSON.parse(readFileSync(keyFile, 'utf8'));
-  const keyId = Buffer.from(keyData.keyId, 'hex');
-  // Convert raw 32-byte Ed25519 private key into PKCS#8 DER for node:crypto
-  const pkcs8Prefix = Buffer.from('302e020100300506032b657004220420', 'hex');
-  const pkcs8Der = Buffer.concat([pkcs8Prefix, Buffer.from(keyData.privateKey, 'hex')]);
-  const privKeyObj = createPrivateKey({ key: pkcs8Der, format: 'der', type: 'pkcs8' });
-
-  const sumsBuf = readFileSync(sumsFile);
-  const rawSig = sign(null, sumsBuf, privKeyObj);
-
-  const sigBuf = Buffer.concat([Buffer.from('Ed'), keyId, rawSig]);
-  const sigContent =
-    `untrusted comment: signature from token-engine-builder secret key\n` +
-    `${sigBuf.toString('base64')}\n` +
-    `trusted comment: timestamp:${Math.floor(Date.now() / 1000)}\tfile:SHA256SUMS.txt\n` +
-    `${Buffer.concat([rawSig]).toString('base64')}\n`;
-
-  const sigFile = join(releaseDir, 'SHA256SUMS.txt.minisig');
-  writeFileSync(sigFile, sigContent, 'utf8');
-  console.log(`[package] SHA256SUMS.txt.minisig written (Ed25519 signature)`);
+if (isMain) {
+  runPackage();
 }
-
-console.log(`[package] publish: gh release create v${version} release/* --title "v${version}"`);
