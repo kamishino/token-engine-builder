@@ -23,8 +23,84 @@ import {
   spacingScale,
   typographyScale,
 } from '../../../shared/scales.js';
-import { loadStyleSpec } from '../../../shared/spec.js';
+import { GENERATED_THEMES, loadStyleSpec } from '../../../shared/spec.js';
 import type { ColorRamp, StyleSpec, TokenGroup } from '../../../shared/types.js';
+
+type ThemeName = (typeof GENERATED_THEMES)[number];
+type ThemeTarget = readonly [string, number];
+interface ThemeConfig {
+  targets: Record<string, ThemeTarget>;
+  feedback: readonly [number, number];
+}
+
+const THEME_REGISTRY: Record<ThemeName, ThemeConfig> = {
+  light: {
+    targets: {
+      canvas: ['neutral', 50],
+      surface: ['neutral', 100],
+      subtle: ['neutral', 200],
+      raised: ['primary', 50],
+      textPrimary: ['neutral', 900],
+      textSecondary: ['neutral', 700],
+      textTertiary: ['neutral', 600],
+      textDisabled: ['neutral', 400],
+      textInverse: ['neutral', 50],
+      textLink: ['primary', 800],
+      action: ['primary', 800],
+      actionHover: ['primary', 900],
+      actionText: ['neutral', 50],
+      borderSubtle: ['neutral', 200],
+      borderDefault: ['neutral', 300],
+      borderStrong: ['neutral', 500],
+      borderFocus: ['primary', 700],
+    },
+    feedback: [100, 800],
+  },
+  dark: {
+    targets: {
+      canvas: ['neutral', 950],
+      surface: ['neutral', 900],
+      subtle: ['neutral', 800],
+      raised: ['primary', 950],
+      textPrimary: ['neutral', 50],
+      textSecondary: ['neutral', 300],
+      textTertiary: ['neutral', 300],
+      textDisabled: ['neutral', 500],
+      textInverse: ['neutral', 900],
+      textLink: ['primary', 100],
+      action: ['primary', 100],
+      actionHover: ['primary', 50],
+      actionText: ['neutral', 950],
+      borderSubtle: ['neutral', 800],
+      borderDefault: ['neutral', 700],
+      borderStrong: ['neutral', 500],
+      borderFocus: ['primary', 100],
+    },
+    feedback: [800, 100],
+  },
+  'high-contrast': {
+    targets: {
+      canvas: ['neutral', 50],
+      surface: ['neutral', 50],
+      subtle: ['neutral', 100],
+      raised: ['primary', 100],
+      textPrimary: ['neutral', 950],
+      textSecondary: ['neutral', 900],
+      textTertiary: ['neutral', 800],
+      textDisabled: ['neutral', 600],
+      textInverse: ['neutral', 50],
+      textLink: ['primary', 800],
+      action: ['primary', 800],
+      actionHover: ['primary', 900],
+      actionText: ['neutral', 50],
+      borderSubtle: ['neutral', 500],
+      borderDefault: ['neutral', 700],
+      borderStrong: ['neutral', 900],
+      borderFocus: ['primary', 800],
+    },
+    feedback: [100, 900],
+  },
+};
 
 export function runGenerate(argv = process.argv.slice(2)): number {
   if (hasFlag(argv, '--help')) {
@@ -173,98 +249,20 @@ export function runGenerate(argv = process.argv.slice(2)): number {
     return { $value: `{color.${family}.${pickStep(targetStep)}}`, $type: 'color' };
   }
 
-  const SEMANTIC_TARGETS: Record<string, Record<string, readonly [string, number]>> = {
-    light: {
-      canvas: ['neutral', 50],
-      surface: ['neutral', 100],
-      subtle: ['neutral', 200],
-      raised: ['primary', 50],
-      textPrimary: ['neutral', 900],
-      textSecondary: ['neutral', 700],
-      textTertiary: ['neutral', 600],
-      textDisabled: ['neutral', 400],
-      textInverse: ['neutral', 50],
-      textLink: ['primary', 800],
-      action: ['primary', 800],
-      actionHover: ['primary', 900],
-      actionText: ['neutral', 50],
-      borderSubtle: ['neutral', 200],
-      borderDefault: ['neutral', 300],
-      borderStrong: ['neutral', 500],
-      borderFocus: ['primary', 700],
-    },
-    dark: {
-      canvas: ['neutral', 950],
-      surface: ['neutral', 900],
-      subtle: ['neutral', 800],
-      raised: ['primary', 950],
-      textPrimary: ['neutral', 50],
-      textSecondary: ['neutral', 300],
-      textTertiary: ['neutral', 300],
-      textDisabled: ['neutral', 500],
-      textInverse: ['neutral', 900],
-      textLink: ['primary', 100],
-      action: ['primary', 100],
-      actionHover: ['primary', 50],
-      actionText: ['neutral', 950],
-      borderSubtle: ['neutral', 800],
-      borderDefault: ['neutral', 700],
-      borderStrong: ['neutral', 500],
-      borderFocus: ['primary', 100],
-    },
-    'high-contrast': {
-      canvas: ['neutral', 50],
-      surface: ['neutral', 50],
-      subtle: ['neutral', 100],
-      raised: ['primary', 100],
-      textPrimary: ['neutral', 950],
-      textSecondary: ['neutral', 900],
-      textTertiary: ['neutral', 800],
-      textDisabled: ['neutral', 600],
-      textInverse: ['neutral', 50],
-      textLink: ['primary', 800],
-      action: ['primary', 800],
-      actionHover: ['primary', 900],
-      actionText: ['neutral', 50],
-      borderSubtle: ['neutral', 500],
-      borderDefault: ['neutral', 700],
-      borderStrong: ['neutral', 900],
-      borderFocus: ['primary', 800],
-    },
-  };
-
-  const FEEDBACK_TARGETS: Record<string, readonly [number, number]> = {
-    light: [100, 800],
-    dark: [800, 100],
-    'high-contrast': [100, 900],
-  };
-
-  // Assemble complete themes map: base 3 themes + any custom themes declared in spec
-  const ALL_THEMES: Record<
-    string,
-    { targets: Record<string, readonly [string, number]>; feedback: readonly [number, number] }
-  > = {
-    light: {
-      targets: SEMANTIC_TARGETS['light'] as Record<string, readonly [string, number]>,
-      feedback: FEEDBACK_TARGETS['light'] as readonly [number, number],
-    },
-    dark: {
-      targets: SEMANTIC_TARGETS['dark'] as Record<string, readonly [string, number]>,
-      feedback: FEEDBACK_TARGETS['dark'] as readonly [number, number],
-    },
-    'high-contrast': {
-      targets: SEMANTIC_TARGETS['high-contrast'] as Record<string, readonly [string, number]>,
-      feedback: FEEDBACK_TARGETS['high-contrast'] as readonly [number, number],
-    },
-  };
+  const allThemes: Record<string, ThemeConfig> = Object.fromEntries(
+    GENERATED_THEMES.map((name) => [
+      name,
+      { targets: { ...THEME_REGISTRY[name].targets }, feedback: THEME_REGISTRY[name].feedback },
+    ]),
+  );
 
   if (spec.themes !== undefined) {
     for (const [customName, customConfig] of Object.entries(spec.themes)) {
-      const baseMode = customConfig.mode;
-      const baseTargets = {
-        ...(SEMANTIC_TARGETS[baseMode] as Record<string, readonly [string, number]>),
-      };
-      const baseFeedback = FEEDBACK_TARGETS[baseMode] as readonly [number, number];
+      const baseMode = customConfig.mode as ThemeName;
+      const base = THEME_REGISTRY[baseMode];
+      if (base === undefined) throw new Error(`unknown theme mode: ${customConfig.mode}`);
+      const baseTargets = { ...base.targets };
+      const baseFeedback = base.feedback;
 
       if (customConfig.surfaceSteps !== undefined) {
         if (customConfig.surfaceSteps.canvas !== undefined)
@@ -279,14 +277,15 @@ export function runGenerate(argv = process.argv.slice(2)): number {
       if (customConfig.actionStep !== undefined) {
         baseTargets['action'] = ['primary', customConfig.actionStep];
       }
-      ALL_THEMES[customName] = { targets: baseTargets, feedback: baseFeedback };
+      allThemes[customName] = { targets: baseTargets, feedback: baseFeedback };
     }
   }
 
-  for (const [theme, config] of Object.entries(ALL_THEMES)) {
+  for (const [theme, config] of Object.entries(allThemes)) {
     const targets = config.targets;
     const resolveTarget = (key: string): { $value: string; $type: 'color' } => {
-      const target = targets[key] as readonly [string, number];
+      const target = targets[key];
+      if (target === undefined) throw new Error(`theme ${theme}: unknown semantic target "${key}"`);
       return colorAlias(target[0] === 'primary' ? primaryEntry.name : target[0], target[1]);
     };
     writeTokenFile(['semantic', `${theme}.tokens.json`], {

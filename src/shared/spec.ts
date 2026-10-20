@@ -11,7 +11,8 @@ export interface StyleSpecValidationResult {
 
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const ALIAS_PATTERN = /^\{[a-z0-9.-]+\}$/;
-const GENERATED_THEMES = ['light', 'dark', 'high-contrast'] as const;
+export const GENERATED_THEMES = ['light', 'dark', 'high-contrast'] as const;
+export type GeneratedTheme = (typeof GENERATED_THEMES)[number];
 const HARMONY_METHODS: readonly HarmonyMethod[] = [
   'triadic',
   'analogous',
