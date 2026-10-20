@@ -5,7 +5,7 @@
  * Extraction is evidence, not migration: nothing scanned is modified, and
  * the candidate must pass token-style's read-back before token-math runs.
  *
- * Usage: node ./scripts/extract.mjs --root <dir> --out style-spec.json [--force] [--dry-run]
+ * Usage: node ./scripts/extract.mjs [--root <dir>] [--url <url>] [--html <file.html>] [--out <style-spec.json>] [--force] [--dry-run]
  */
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, extname, join, relative } from 'node:path';

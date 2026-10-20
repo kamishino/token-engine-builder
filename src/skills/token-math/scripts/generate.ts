@@ -2,7 +2,7 @@
  * generate — scaffold the 3-tier token tree from bundled templates and
  * populate Tier-1 primitives from a style-spec.json (skill token-style output).
  *
- * Usage: node ./scripts/generate.mjs --spec style-spec.json --out tokens [--force]
+ * Usage: node ./scripts/generate.mjs --spec <style-spec.json> --out <tokens-dir> [--force] [--dry-run]
  */
 import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';

@@ -2,7 +2,7 @@
  * audit — WCAG 2.1 gatekeeper over a 3-tier token tree.
  * Exit 0 = pass, 1 = contrast failure / unresolved alias / raw value above Tier 1.
  *
- * Usage: node ./scripts/audit.mjs --tokens tokens [--theme light|dark|both] [--min-ratio 4.5] [--json]
+ * Usage: node ./scripts/audit.mjs --tokens <dir> [--theme light|dark|both] [--min-ratio 4.5] [--min-apca 60] [--spec <style-spec.json>] [--json]
  */
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';

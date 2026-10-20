@@ -75,9 +75,13 @@ for (const entry of readdirSync(skillsDir, { withFileTypes: true })) {
     for (const scriptFile of readdirSync(scriptsSubDir)) {
       if (!scriptFile.endsWith('.ts')) continue;
       const scriptSource = readFileSync(join(scriptsSubDir, scriptFile), 'utf8');
-      const helpMatch = scriptSource.match(/Usage:[^`'"]+/);
-      if (helpMatch) {
-        const flags = [...helpMatch[0].matchAll(/--[a-z-]+/g)].map((m) => m[0]);
+      const helpBlockMatch =
+        scriptSource.match(
+          /hasFlag\(argv,\s*['"]--help['"]\)[\s\S]*?console\.log\(\s*[`'"]([\s\S]*?)[`'"]\s*\)/,
+        ) ?? scriptSource.match(/Usage:[^\n\r]+/);
+      if (helpBlockMatch) {
+        const textToScan = helpBlockMatch[1] ?? helpBlockMatch[0];
+        const flags = [...textToScan.matchAll(/--[a-z-]+/g)].map((m) => m[0]);
         for (const flag of flags) {
           if (!skillContent.includes(flag)) {
             fail(
