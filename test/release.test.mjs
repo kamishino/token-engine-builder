@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -35,4 +35,40 @@ test('writeZip creates valid zip archive with local file headers', () => {
 test('runPackage with --dry-run completes cleanly without touching disk', () => {
   const code = runPackage(['--dry-run', '--skip-build']);
   assert.equal(code, 0);
+});
+
+test('runPackage packages all buckets, bundle, SBOM, and checksums into isolated root', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'release-root-test-'));
+  try {
+    writeFileSync(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'test-pkg', version: '2.0.0', license: 'MIT' }),
+      'utf8',
+    );
+    writeFileSync(
+      join(dir, 'package-lock.json'),
+      JSON.stringify({ name: 'test-pkg', version: '2.0.0', packages: {} }),
+      'utf8',
+    );
+    mkdirSync(join(dir, '.claude'), { recursive: true });
+    writeFileSync(join(dir, '.claude', 'plugin.json'), '{"name":"test"}', 'utf8');
+
+    const skills = ['token-style', 'token-extract', 'token-math', 'token-audit', 'token-build'];
+    for (const s of skills) {
+      const sDir = join(dir, 'dist', s);
+      mkdirSync(sDir, { recursive: true });
+      writeFileSync(join(sDir, 'SKILL.md'), `# ${s}`, 'utf8');
+    }
+
+    const code = runPackage(['--skip-build'], { root: dir });
+    assert.equal(code, 0);
+
+    assert.ok(existsSync(join(dir, 'release', 'token-engine-builder-v2.0.0.zip')));
+    assert.ok(existsSync(join(dir, 'release', 'token-engine-creation-v2.0.0.zip')));
+    assert.ok(existsSync(join(dir, 'release', 'token-engine-governance-v2.0.0.zip')));
+    assert.ok(existsSync(join(dir, 'release', 'token-engine-builder-v2.0.0.cyclonedx.json')));
+    assert.ok(existsSync(join(dir, 'release', 'SHA256SUMS.txt')));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

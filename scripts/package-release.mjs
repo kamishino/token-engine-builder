@@ -27,8 +27,6 @@ import { fileURLToPath } from 'node:url';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const distDir = join(rootDir, 'dist');
-const pkg = JSON.parse(readFileSync(join(rootDir, 'package.json'), 'utf8'));
-const version = pkg.version;
 
 function walk(dir, visit) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -112,8 +110,8 @@ export function writeZip(entries, outPath) {
   writeFileSync(outPath, Buffer.concat([...chunks, ...central, end]));
 }
 
-function entriesFor(skill) {
-  const dir = join(distDir, skill);
+function entriesFor(skill, dist = distDir) {
+  const dir = join(dist, skill);
   const entries = [];
   walk(dir, (path) =>
     entries.push({ path, arc: `${skill}/${relative(dir, path).replaceAll('\\', '/')}` }),
@@ -191,25 +189,25 @@ export function runPackage(argv = process.argv.slice(2), { root = rootDir } = {}
     .map((entry) => entry.name)
     .sort();
 
-  const stageDir = join(rootDir, 'release.tmp');
+  const stageDir = join(root, 'release.tmp');
   rmSync(stageDir, { recursive: true, force: true });
   mkdirSync(stageDir, { recursive: true });
 
   const artifacts = [];
   const bundleEntries = [];
   for (const skill of skills) {
-    const entries = entriesFor(skill);
+    const entries = entriesFor(skill, currentDistDir);
     bundleEntries.push(...entries);
-    const out = join(stageDir, `token-engine-${skill}-v${version}.zip`);
+    const out = join(stageDir, `token-engine-${skill}-v${currentVersion}.zip`);
     writeZip(entries, out);
     artifacts.push(out);
     console.log(`[package] ${skill} → release/${basename(out)}`);
   }
-  const claudePlugin = join(rootDir, '.claude', 'plugin.json');
+  const claudePlugin = join(root, '.claude', 'plugin.json');
   if (existsSync(claudePlugin)) {
     bundleEntries.push({ path: claudePlugin, arc: '.claude/plugin.json' });
   }
-  const bundle = join(stageDir, `token-engine-builder-v${version}.zip`);
+  const bundle = join(stageDir, `token-engine-builder-v${currentVersion}.zip`);
   writeZip(bundleEntries, bundle);
   artifacts.push(bundle);
   console.log(`[package] bundle → release/${basename(bundle)}`);
@@ -226,12 +224,12 @@ export function runPackage(argv = process.argv.slice(2), { root = rootDir } = {}
         console.error(`[package] bucket:${bucketName} missing required skill: ${s}`);
         return 1;
       }
-      bucketEntries.push(...entriesFor(s));
+      bucketEntries.push(...entriesFor(s, currentDistDir));
     }
     if (existsSync(claudePlugin)) {
       bucketEntries.push({ path: claudePlugin, arc: '.claude/plugin.json' });
     }
-    const bucketZip = join(stageDir, `token-engine-${bucketName}-v${version}.zip`);
+    const bucketZip = join(stageDir, `token-engine-${bucketName}-v${currentVersion}.zip`);
     writeZip(bucketEntries, bucketZip);
     artifacts.push(bucketZip);
     console.log(`[package] bucket:${bucketName} → release/${basename(bucketZip)}`);
@@ -278,20 +276,20 @@ export function runPackage(argv = process.argv.slice(2), { root = rootDir } = {}
           {
             vendor: 'token-engine-builder',
             name: 'package-release',
-            version,
+            version: currentVersion,
           },
         ],
         component: {
           type: 'application',
-          name: pkg.name,
-          version: pkg.version,
-          licenses: [{ license: { id: pkg.license ?? 'MIT' } }],
+          name: currentPkg.name,
+          version: currentPkg.version,
+          licenses: [{ license: { id: currentPkg.license ?? 'MIT' } }],
         },
       },
       components,
     };
 
-    const sbomPath = join(stageDir, `token-engine-builder-v${version}.cyclonedx.json`);
+    const sbomPath = join(stageDir, `token-engine-builder-v${currentVersion}.cyclonedx.json`);
     writeFileSync(sbomPath, `${JSON.stringify(sbom, null, 2)}\n`, 'utf8');
     artifacts.push(sbomPath);
     console.log(`[package] SBOM → release/${basename(sbomPath)} (${components.length} components)`);
@@ -305,7 +303,9 @@ export function runPackage(argv = process.argv.slice(2), { root = rootDir } = {}
     .join('\n');
   const sumsFile = join(stageDir, 'SHA256SUMS.txt');
   writeFileSync(sumsFile, `${sums}\n`, 'utf8');
-  console.log(`[package] SHA256SUMS.txt written (${artifacts.length} artifacts, v${version})`);
+  console.log(
+    `[package] SHA256SUMS.txt written (${artifacts.length} artifacts, v${currentVersion})`,
+  );
 
   if (keyData !== null) {
     const keyId = Buffer.from(keyData.keyId, 'hex');
@@ -332,7 +332,9 @@ export function runPackage(argv = process.argv.slice(2), { root = rootDir } = {}
   rmSync(currentReleaseDir, { recursive: true, force: true });
   renameSync(stageDir, currentReleaseDir);
 
-  console.log(`[package] publish: gh release create v${version} release/* --title "v${version}"`);
+  console.log(
+    `[package] publish: gh release create v${currentVersion} release/* --title "v${currentVersion}"`,
+  );
   return 0;
 }
 
