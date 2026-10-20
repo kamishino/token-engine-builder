@@ -202,7 +202,200 @@ export function composeStyleSpec(evidence: ExtractionEvidence): ComposedSpec | n
   return { spec, notes };
 }
 
-type Candidate = ColorCandidate;
+export interface ScanState {
+  candidates: Map<string, ColorCandidate>;
+  fontFamily: string | undefined;
+  radiusCounts: Map<number, number>;
+  tailwindColors: Map<string, { role: string; color: OklchColor }>;
+  frontmatter: DesignFrontmatter | undefined;
+}
+
+export function createScanState(): ScanState {
+  return {
+    candidates: new Map(),
+    fontFamily: undefined,
+    radiusCounts: new Map(),
+    tailwindColors: new Map(),
+    frontmatter: undefined,
+  };
+}
+
+const NAMED_COLOR =
+  /([A-Za-z0-9_-]+)["']?\s*:\s*["']?(#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b|oklch\([^)]*\)|rgba?\([^)]*\))/g;
+const BARE_COLOR = /(#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b|oklch\([^)]*\))/g;
+
+export function nameScore(name: string): number {
+  const n = name.toLowerCase();
+  if (/(brand|primary|accent)/.test(n)) return 60;
+  if (/(main|cta|link|button)/.test(n)) return 20;
+  if (/(bg|background|surface|text|border|base)/.test(n)) return -40;
+  return 0;
+}
+
+export function parseDesignFrontmatter(text: string, rel: string): DesignFrontmatter | undefined {
+  const block = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
+  if (block?.[1] === undefined) return undefined;
+  const fm = block[1];
+  const pick = (pattern: RegExp): string | undefined => pattern.exec(fm)?.[1];
+  const colorOf = (key: string): string | undefined =>
+    pick(new RegExp(`"?${key}"?\\s*:\\s*"((?:#[0-9a-fA-F]{3,8})|oklch\\([^)]*\\))"`));
+  const rounded: DesignFrontmatter['rounded'] = (() => {
+    const sm = pick(/"?sm"?\s*:\s*"([0-9.]+)px"/);
+    const md = pick(/"?md"?\s*:\s*"([0-9.]+)px"/);
+    const lg = pick(/"?lg"?\s*:\s*"([0-9.]+)px"/);
+    return sm !== undefined && md !== undefined && lg !== undefined
+      ? { sm: Number(sm), md: Number(md), lg: Number(lg) }
+      : undefined;
+  })();
+  const componentsRaw = pick(/components:\s*\[([^\]]*)\]/);
+  const primary = colorOf('primary');
+  const secondary = colorOf('secondary');
+  const fontSans = pick(/"?fontSans"?\s*:\s*"([^"]+)"/);
+  const scaleRaw = Number(pick(/"?scale"?\s*:\s*"?([0-9.]+)/)) || undefined;
+  const density = pick(/"?density"?\s*:\s*"(\w+)"/);
+  return {
+    ...(primary === undefined ? {} : { primary }),
+    ...(secondary === undefined ? {} : { secondary }),
+    ...(fontSans === undefined ? {} : { fontSans }),
+    ...(scaleRaw === undefined ? {} : { scale: scaleRaw }),
+    ...(rounded === undefined ? {} : { rounded }),
+    ...(density === undefined ? {} : { density }),
+    components:
+      componentsRaw === undefined
+        ? []
+        : componentsRaw
+            .split(',')
+            .map((s) => s.trim().replaceAll(/["']/g, ''))
+            .filter(Boolean),
+    source: rel,
+  };
+}
+
+export function recordCandidate(
+  state: ScanState,
+  raw: string,
+  name: string,
+  relSource: string,
+): void {
+  let color: OklchColor;
+  try {
+    color = parseToOklch(raw);
+  } catch {
+    return;
+  }
+  const key = formatOklch(color);
+  const existing = state.candidates.get(key);
+  const score =
+    nameScore(name) +
+    (color.c < 0.03 ? -50 : color.c * 100) +
+    (color.l >= 0.35 && color.l <= 0.75 ? 20 : -20);
+  if (existing === undefined) {
+    state.candidates.set(key, { color, score, count: 1, source: relSource, name });
+  } else {
+    existing.count += 1;
+    existing.score = Math.max(existing.score, score);
+  }
+}
+
+export function captureTypographySignals(state: ScanState, text: string): void {
+  if (state.fontFamily === undefined) {
+    const font = /font-family\s*:\s*([^;}{]+)/i.exec(text);
+    if (font?.[1] !== undefined) state.fontFamily = font[1].replaceAll(/["']/g, '').trim();
+  }
+  for (const match of text.matchAll(/border-radius\s*:\s*([0-9.]+)px/g)) {
+    if (match[1] !== undefined) {
+      const value = Number(match[1]);
+      state.radiusCounts.set(value, (state.radiusCounts.get(value) ?? 0) + 1);
+    }
+  }
+}
+
+function recordRoleColor(
+  state: ScanState,
+  roleOrName: string,
+  color: OklchColor,
+): void {
+  const role = roleForColorName(roleOrName);
+  if (role !== undefined) rememberRole(role, color, state.tailwindColors);
+}
+
+function extractTailwindConfig(text: string, relSource: string, state: ScanState): void {
+  const colorBlockMatch = /colors\s*:\s*\{((?:[^{}]|\{[^{}]*\})*)\}/s.exec(text);
+  if (colorBlockMatch?.[1] !== undefined) {
+    const block = colorBlockMatch[1];
+    const entryRegex = /([a-zA-Z0-9_-]+)\s*:\s*(?:\{([^}]+)\}|["']([^"']+)["'])/g;
+    for (const match of block.matchAll(entryRegex)) {
+      const roleOrName = (match[1] || '').toLowerCase();
+      const nested = match[2];
+      const direct = match[3];
+      if (direct) {
+        try {
+          const col = parseToOklch(direct);
+          recordCandidate(state, direct, roleOrName, relSource);
+          recordRoleColor(state, roleOrName, col);
+        } catch {
+          /* skip */
+        }
+      } else if (nested) {
+        const shade500 = /(?:500|DEFAULT)\s*:\s*["']([^"']+)["']/.exec(nested);
+        const anyShade = /(?:[0-9]{2,3})\s*:\s*["']([^"']+)["']/.exec(nested);
+        const target = shade500?.[1] || anyShade?.[1];
+        if (target) {
+          try {
+            const col = parseToOklch(target);
+            recordCandidate(state, target, roleOrName, relSource);
+            recordRoleColor(state, roleOrName, col);
+          } catch {
+            /* skip */
+          }
+        }
+      }
+    }
+  }
+}
+
+function extractTailwindV4Theme(text: string, relSource: string, state: ScanState): void {
+  const themeMatch = /@theme\s*\{([^}]+)\}/s.exec(text);
+  if (themeMatch?.[1] !== undefined) {
+    const block = themeMatch[1];
+    for (const match of block.matchAll(/--color-([a-zA-Z0-9_-]+)\s*:\s*([^;]+);/g)) {
+      const varName = (match[1] || '').toLowerCase();
+      const val = (match[2] || '').trim();
+      try {
+        const col = parseToOklch(val);
+        recordCandidate(state, val, varName, relSource);
+        recordRoleColor(state, varName, col);
+      } catch {
+        /* skip */
+      }
+    }
+  }
+}
+
+export function scanTextColors(text: string, relSource: string, state: ScanState): void {
+  for (const match of text.matchAll(NAMED_COLOR)) {
+    if (match[1] !== undefined && match[2] !== undefined)
+      recordCandidate(state, match[2], match[1], relSource);
+  }
+  for (const match of text.matchAll(BARE_COLOR)) {
+    if (match[1] !== undefined) recordCandidate(state, match[1], '', relSource);
+  }
+  captureTypographySignals(state, text);
+}
+
+export function scanFile(text: string, relSource: string, state: ScanState): void {
+  if (relSource.includes('tailwind.config')) extractTailwindConfig(text, relSource, state);
+  if (relSource.endsWith('.css') || relSource.endsWith('.scss'))
+    extractTailwindV4Theme(text, relSource, state);
+  if (relSource.endsWith('.md')) {
+    const parsed = parseDesignFrontmatter(text, relSource);
+    if (parsed !== undefined && parsed.primary !== undefined) {
+      if (state.frontmatter === undefined) state.frontmatter = parsed;
+      return;
+    }
+  }
+  scanTextColors(text, relSource, state);
+}
 
 export async function runExtract(argv = process.argv.slice(2)): Promise<number> {
   if (hasFlag(argv, '--help')) {
@@ -219,9 +412,6 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
   const force = hasFlag(argv, '--force');
   const dryRun = hasFlag(argv, '--dry-run');
   const outPath = fromCwd(outArg);
-  if (rootArg === undefined && urlArg === undefined && htmlArg === undefined) {
-    // Default to scanning current directory if no mode specified
-  }
   const rootDir = fromCwd(rootArg ?? '.');
   if (rootArg !== undefined && !existsSync(rootDir)) {
     console.error(`root not found: ${rootDir}`);
@@ -259,156 +449,7 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
       });
   }
 
-  const NAMED_COLOR =
-    /([A-Za-z0-9_-]+)["']?\s*:\s*["']?(#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b|oklch\([^)]*\)|rgba?\([^)]*\))/g;
-  const BARE_COLOR = /(#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b|oklch\([^)]*\))/g;
-
-  const candidates = new Map<string, Candidate>();
-  let fontFamily: string | undefined;
-  const radiusCounts = new Map<number, number>();
-  const tailwindColors = new Map<string, { role: string; color: OklchColor }>();
-
-  function captureTypographySignals(text: string): void {
-    if (fontFamily === undefined) {
-      const font = /font-family\s*:\s*([^;}{]+)/i.exec(text);
-      if (font?.[1] !== undefined) fontFamily = font[1].replaceAll(/["']/g, '').trim();
-    }
-    for (const match of text.matchAll(/border-radius\s*:\s*([0-9.]+)px/g)) {
-      if (match[1] !== undefined) {
-        const value = Number(match[1]);
-        radiusCounts.set(value, (radiusCounts.get(value) ?? 0) + 1);
-      }
-    }
-  }
-
-  function extractTailwindConfig(text: string, relSource: string): void {
-    // Tailwind v3: colors: { primary: { 500: '#...' } or primary: '#...' }
-    const colorBlockMatch = /colors\s*:\s*\{([^}]+(?:\{[^}]+\}[^}]+)*)\}/s.exec(text);
-    if (colorBlockMatch?.[1] !== undefined) {
-      const block = colorBlockMatch[1];
-      // Look for roles or names with hex/oklch values
-      const entryRegex = /([a-zA-Z0-9_-]+)\s*:\s*(?:\{([^}]+)\}|["']([^"']+)["'])/g;
-      for (const match of block.matchAll(entryRegex)) {
-        const roleOrName = (match[1] || '').toLowerCase();
-        const nested = match[2];
-        const direct = match[3];
-        if (direct) {
-          try {
-            const col = parseToOklch(direct);
-            record(direct, roleOrName, relSource);
-            const role = roleForColorName(roleOrName);
-            if (role !== undefined) rememberRole(role, col, tailwindColors);
-          } catch {
-            /* skip */
-          }
-        } else if (nested) {
-          // Look for 500 shade first, or any first valid shade
-          const shade500 = /(?:500|DEFAULT)\s*:\s*["']([^"']+)["']/.exec(nested);
-          const anyShade = /(?:[0-9]{2,3})\s*:\s*["']([^"']+)["']/.exec(nested);
-          const target = shade500?.[1] || anyShade?.[1];
-          if (target) {
-            try {
-              const col = parseToOklch(target);
-              record(target, roleOrName, relSource);
-              const role = roleForColorName(roleOrName);
-              if (role !== undefined) rememberRole(role, col, tailwindColors);
-            } catch {
-              /* skip */
-            }
-          }
-        }
-      }
-    }
-  }
-
-  function extractTailwindV4Theme(text: string, relSource: string): void {
-    // Tailwind v4: @theme { --color-primary: #...; --color-primary-500: #...; }
-    const themeMatch = /@theme\s*\{([^}]+)\}/s.exec(text);
-    if (themeMatch?.[1] !== undefined) {
-      const block = themeMatch[1];
-      for (const match of block.matchAll(/--color-([a-zA-Z0-9_-]+)\s*:\s*([^;]+);/g)) {
-        const varName = (match[1] || '').toLowerCase();
-        const val = (match[2] || '').trim();
-        try {
-          const col = parseToOklch(val);
-          record(val, varName, relSource);
-          const role = roleForColorName(varName);
-          if (role !== undefined) rememberRole(role, col, tailwindColors);
-        } catch {
-          /* skip */
-        }
-      }
-    }
-  }
-  function nameScore(name: string): number {
-    const n = name.toLowerCase();
-    if (/(brand|primary|accent)/.test(n)) return 60;
-    if (/(main|cta|link|button)/.test(n)) return 20;
-    if (/(bg|background|surface|text|border|base)/.test(n)) return -40;
-    return 0;
-  }
-
-  function record(raw: string, name: string, relSource: string): void {
-    let color: OklchColor;
-    try {
-      color = parseToOklch(raw);
-    } catch {
-      return;
-    }
-    const key = formatOklch(color);
-    const existing = candidates.get(key);
-    const score =
-      nameScore(name) +
-      (color.c < 0.03 ? -50 : color.c * 100) +
-      (color.l >= 0.35 && color.l <= 0.75 ? 20 : -20);
-    if (existing === undefined) {
-      candidates.set(key, { color, score, count: 1, source: relSource, name });
-    } else {
-      existing.count += 1;
-      existing.score = Math.max(existing.score, score);
-    }
-  }
-
-  let designFrontmatter: DesignFrontmatter | undefined;
-
-  function parseDesignFrontmatter(text: string, rel: string): DesignFrontmatter | undefined {
-    const block = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
-    if (block?.[1] === undefined) return undefined;
-    const fm = block[1];
-    const pick = (pattern: RegExp): string | undefined => pattern.exec(fm)?.[1];
-    const colorOf = (key: string): string | undefined =>
-      pick(new RegExp(`"?${key}"?\\s*:\\s*"((?:#[0-9a-fA-F]{3,8})|oklch\\([^)]*\\))"`));
-    const rounded: DesignFrontmatter['rounded'] = (() => {
-      const sm = pick(/"?sm"?\s*:\s*"([0-9.]+)px"/);
-      const md = pick(/"?md"?\s*:\s*"([0-9.]+)px"/);
-      const lg = pick(/"?lg"?\s*:\s*"([0-9.]+)px"/);
-      return sm !== undefined && md !== undefined && lg !== undefined
-        ? { sm: Number(sm), md: Number(md), lg: Number(lg) }
-        : undefined;
-    })();
-    const componentsRaw = pick(/components:\s*\[([^\]]*)\]/);
-    const primary = colorOf('primary');
-    const secondary = colorOf('secondary');
-    const fontSans = pick(/"?fontSans"?\s*:\s*"([^"]+)"/);
-    const scaleRaw = Number(pick(/"?scale"?\s*:\s*"?([0-9.]+)/)) || undefined;
-    const density = pick(/"?density"?\s*:\s*"(\w+)"/);
-    return {
-      ...(primary === undefined ? {} : { primary }),
-      ...(secondary === undefined ? {} : { secondary }),
-      ...(fontSans === undefined ? {} : { fontSans }),
-      ...(scaleRaw === undefined ? {} : { scale: scaleRaw }),
-      ...(rounded === undefined ? {} : { rounded }),
-      ...(density === undefined ? {} : { density }),
-      components:
-        componentsRaw === undefined
-          ? []
-          : componentsRaw
-              .split(',')
-              .map((s) => s.trim().replaceAll(/["']/g, ''))
-              .filter(Boolean),
-      source: rel,
-    };
-  }
+  const state = createScanState();
 
   if (urlArg !== undefined || htmlArg !== undefined) {
     // Rendered mode: run headless browser or load HTML file to evaluate computed styles
@@ -472,27 +513,20 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
       await browser.close();
 
       for (const [col] of renderedData.colors) {
-        record(col, 'rendered', sourceName);
+        recordCandidate(state, col, 'rendered', sourceName);
       }
       if (renderedData.fonts[0] !== undefined) {
-        fontFamily = renderedData.fonts[0][0].replaceAll(/["']/g, '').trim();
+        state.fontFamily = renderedData.fonts[0][0].replaceAll(/["']/g, '').trim();
       }
       for (const [rStr, count] of renderedData.radii) {
         const rVal = parseFloat(rStr);
-        radiusCounts.set(rVal, (radiusCounts.get(rVal) || 0) + count);
+        state.radiusCounts.set(rVal, (state.radiusCounts.get(rVal) || 0) + count);
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       // If Playwright is not installed or headless launch fails, fall back to regex scan of HTML text
       if (htmlContent) {
-        for (const match of htmlContent.matchAll(NAMED_COLOR)) {
-          if (match[1] !== undefined && match[2] !== undefined)
-            record(match[2], match[1], sourceName);
-        }
-        for (const match of htmlContent.matchAll(BARE_COLOR)) {
-          if (match[1] !== undefined) record(match[1], '', sourceName);
-        }
-        captureTypographySignals(htmlContent);
+        scanTextColors(htmlContent, sourceName, state);
       } else {
         console.error(`rendered extraction error: ${message}`);
         return 1;
@@ -507,30 +541,11 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
       } catch {
         continue;
       }
-      if (file.includes('tailwind.config')) {
-        extractTailwindConfig(text, rel);
-      }
-      if (file.endsWith('.css') || file.endsWith('.scss')) {
-        extractTailwindV4Theme(text, rel);
-      }
-      if (file.endsWith('.md')) {
-        const parsed = parseDesignFrontmatter(text, rel);
-        if (parsed !== undefined && parsed.primary !== undefined) {
-          if (designFrontmatter === undefined) designFrontmatter = parsed;
-          continue; // frontmatter is the machine-readable contract; prose is not scanned for colors
-        }
-      }
-      for (const match of text.matchAll(NAMED_COLOR)) {
-        if (match[1] !== undefined && match[2] !== undefined) record(match[2], match[1], rel);
-      }
-      for (const match of text.matchAll(BARE_COLOR)) {
-        if (match[1] !== undefined) record(match[1], '', rel);
-      }
-      captureTypographySignals(text);
+      scanFile(text, rel, state);
     }
   }
 
-  const ranked = [...candidates.values()].sort(
+  const ranked = [...state.candidates.values()].sort(
     (a, b) => b.score + b.count * 2 - (a.score + a.count * 2),
   );
   const evidenceSummary = ranked.slice(0, 5).map((candidate) => ({
@@ -552,11 +567,11 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
   }
 
   const composed = composeStyleSpec({
-    candidates: [...candidates.values()],
-    tailwindColors,
-    ...(fontFamily === undefined ? {} : { fontFamily }),
-    radiusCounts,
-    ...(designFrontmatter === undefined ? {} : { frontmatter: designFrontmatter }),
+    candidates: [...state.candidates.values()],
+    tailwindColors: state.tailwindColors,
+    ...(state.fontFamily === undefined ? {} : { fontFamily: state.fontFamily }),
+    radiusCounts: state.radiusCounts,
+    ...(state.frontmatter === undefined ? {} : { frontmatter: state.frontmatter }),
     projectName,
   });
   if (composed === null) {
