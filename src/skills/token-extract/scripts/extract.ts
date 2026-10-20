@@ -48,8 +48,19 @@ export interface ComposedSpec {
   notes: string[];
 }
 
+export type ColorRole = 'primary' | 'secondary' | 'accent';
+
+/** Classify a Tailwind colour name (v3 config key or v4 custom-property name) into a palette role. */
+export function roleForColorName(name: string): ColorRole | undefined {
+  const n = name.toLowerCase();
+  if (n === 'primary' || n === 'brand' || n === 'primary-500') return 'primary';
+  if (n === 'secondary' || n === 'secondary-500') return 'secondary';
+  if (n === 'accent' || n === 'accent-500') return 'accent';
+  return undefined;
+}
+
 function rememberRole(
-  role: 'primary' | 'secondary' | 'accent',
+  role: ColorRole,
   color: OklchColor,
   map: Map<string, { role: string; color: OklchColor }>,
 ): void {
@@ -257,6 +268,19 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
   const radiusCounts = new Map<number, number>();
   const tailwindColors = new Map<string, { role: string; color: OklchColor }>();
 
+  function captureTypographySignals(text: string): void {
+    if (fontFamily === undefined) {
+      const font = /font-family\s*:\s*([^;}{]+)/i.exec(text);
+      if (font?.[1] !== undefined) fontFamily = font[1].replaceAll(/["']/g, '').trim();
+    }
+    for (const match of text.matchAll(/border-radius\s*:\s*([0-9.]+)px/g)) {
+      if (match[1] !== undefined) {
+        const value = Number(match[1]);
+        radiusCounts.set(value, (radiusCounts.get(value) ?? 0) + 1);
+      }
+    }
+  }
+
   function extractTailwindConfig(text: string, relSource: string): void {
     // Tailwind v3: colors: { primary: { 500: '#...' } or primary: '#...' }
     const colorBlockMatch = /colors\s*:\s*\{([^}]+(?:\{[^}]+\}[^}]+)*)\}/s.exec(text);
@@ -272,11 +296,8 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
           try {
             const col = parseToOklch(direct);
             record(direct, roleOrName, relSource);
-            if (['primary', 'brand'].includes(roleOrName)) {
-              rememberRole('primary', col, tailwindColors);
-            } else if (['secondary', 'accent'].includes(roleOrName)) {
-              rememberRole('secondary', col, tailwindColors);
-            }
+            const role = roleForColorName(roleOrName);
+            if (role !== undefined) rememberRole(role, col, tailwindColors);
           } catch {
             /* skip */
           }
@@ -289,11 +310,8 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
             try {
               const col = parseToOklch(target);
               record(target, roleOrName, relSource);
-              if (['primary', 'brand'].includes(roleOrName)) {
-                rememberRole('primary', col, tailwindColors);
-              } else if (['secondary', 'accent'].includes(roleOrName)) {
-                rememberRole('secondary', col, tailwindColors);
-              }
+              const role = roleForColorName(roleOrName);
+              if (role !== undefined) rememberRole(role, col, tailwindColors);
             } catch {
               /* skip */
             }
@@ -314,13 +332,8 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
         try {
           const col = parseToOklch(val);
           record(val, varName, relSource);
-          if (varName === 'primary' || varName.startsWith('primary-500') || varName === 'brand') {
-            rememberRole('primary', col, tailwindColors);
-          } else if (varName === 'secondary' || varName.startsWith('secondary-500')) {
-            rememberRole('secondary', col, tailwindColors);
-          } else if (varName === 'accent' || varName.startsWith('accent-500')) {
-            rememberRole('accent', col, tailwindColors);
-          }
+          const role = roleForColorName(varName);
+          if (role !== undefined) rememberRole(role, col, tailwindColors);
         } catch {
           /* skip */
         }
@@ -479,16 +492,7 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
         for (const match of htmlContent.matchAll(BARE_COLOR)) {
           if (match[1] !== undefined) record(match[1], '', sourceName);
         }
-        const fontMatch = /font-family\s*:\s*([^;}{]+)/i.exec(htmlContent);
-        if (fontMatch?.[1] !== undefined) {
-          fontFamily = fontMatch[1].replaceAll(/["']/g, '').trim();
-        }
-        for (const match of htmlContent.matchAll(/border-radius\s*:\s*([0-9.]+)px/g)) {
-          if (match[1] !== undefined) {
-            const value = Number(match[1]);
-            radiusCounts.set(value, (radiusCounts.get(value) || 0) + 1);
-          }
-        }
+        captureTypographySignals(htmlContent);
       } else {
         console.error(`rendered extraction error: ${message}`);
         return 1;
@@ -522,18 +526,7 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
       for (const match of text.matchAll(BARE_COLOR)) {
         if (match[1] !== undefined) record(match[1], '', rel);
       }
-      if (fontFamily === undefined) {
-        const font = /font-family\s*:\s*([^;}{]+)/i.exec(text);
-        if (font?.[1] !== undefined) {
-          fontFamily = font[1].replaceAll(/["']/g, '').trim();
-        }
-      }
-      for (const match of text.matchAll(/border-radius\s*:\s*([0-9.]+)px/g)) {
-        if (match[1] !== undefined) {
-          const value = Number(match[1]);
-          radiusCounts.set(value, (radiusCounts.get(value) ?? 0) + 1);
-        }
-      }
+      captureTypographySignals(text);
     }
   }
 
