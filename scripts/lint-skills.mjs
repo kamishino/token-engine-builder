@@ -10,7 +10,8 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const skillsDir = join(resolve(dirname(fileURLToPath(import.meta.url)), '..'), 'src', 'skills');
+const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const skillsDir = join(rootDir, 'src', 'skills');
 const failures = [];
 
 const FORBIDDEN_LITERALS = [
@@ -91,6 +92,18 @@ for (const entry of readdirSync(skillsDir, { withFileTypes: true })) {
         }
       }
     }
+  }
+}
+
+// Check plugin.json manifest version parity
+const pluginJsonPath = join(rootDir, '.claude', 'plugin.json');
+if (existsSync(pluginJsonPath)) {
+  const pluginJson = JSON.parse(readFileSync(pluginJsonPath, 'utf8'));
+  const packageJson = JSON.parse(readFileSync(join(rootDir, 'package.json'), 'utf8'));
+  if (pluginJson.version !== packageJson.version) {
+    failures.push(
+      `.claude/plugin.json: version "${pluginJson.version}" drifted from package.json version "${packageJson.version}"`,
+    );
   }
 }
 

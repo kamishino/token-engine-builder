@@ -1,6 +1,6 @@
 {
   "name": "token-engine-builder",
-  "version": "0.13.0",
+  "version": "1.4.0",
   "description": "5-skill agent pipeline for 3-tier W3C DTCG design tokens (OKLCH, WCAG+APCA, Style Dictionary v5, UI profiles)",
   "buckets": {
     "creation": ["token-style", "token-extract", "token-math"],
