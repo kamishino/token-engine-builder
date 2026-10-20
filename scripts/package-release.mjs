@@ -159,6 +159,25 @@ writeZip(bundleEntries, bundle);
 artifacts.push(bundle);
 console.log(`[package] bundle → release/${basename(bundle)}`);
 
+// L5 Skill Grouping: functional bucket bundles
+const BUCKETS = {
+  creation: ['token-style', 'token-extract', 'token-math'],
+  governance: ['token-audit', 'token-build'],
+};
+for (const [bucketName, bucketSkills] of Object.entries(BUCKETS)) {
+  const bucketEntries = [];
+  for (const s of bucketSkills) {
+    if (skills.includes(s)) bucketEntries.push(...entriesFor(s));
+  }
+  if (existsSync(claudePlugin)) {
+    bucketEntries.push({ path: claudePlugin, arc: '.claude/plugin.json' });
+  }
+  const bucketZip = join(releaseDir, `token-engine-${bucketName}-v${version}.zip`);
+  writeZip(bucketEntries, bucketZip);
+  artifacts.push(bucketZip);
+  console.log(`[package] bucket:${bucketName} → release/${basename(bucketZip)}`);
+}
+
 // CycloneDX 1.5 JSON SBOM covering inlined packages in shipped bundles
 const lockPath = join(rootDir, 'package-lock.json');
 if (existsSync(lockPath)) {

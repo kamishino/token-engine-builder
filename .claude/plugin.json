@@ -1,7 +1,11 @@
 {
   "name": "token-engine-builder",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "5-skill agent pipeline for 3-tier W3C DTCG design tokens (OKLCH, WCAG+APCA, Style Dictionary v5, UI profiles)",
+  "buckets": {
+    "creation": ["token-style", "token-extract", "token-math"],
+    "governance": ["token-audit", "token-build"]
+  },
   "author": {
     "name": "kamishino"
   },
@@ -14,26 +18,31 @@
     {
       "name": "token-style",
       "path": "dist/token-style",
+      "bucket": "creation",
       "description": "Interview for brand aesthetic, then record the anchor as style-spec.json"
     },
     {
       "name": "token-extract",
       "path": "dist/token-extract",
+      "bucket": "creation",
       "description": "Extract candidate style-spec from existing projects, HTML documents, or rendered URLs"
     },
     {
       "name": "token-math",
       "path": "dist/token-math",
+      "bucket": "creation",
       "description": "Deterministic OKLCH ramps and 3-tier DTCG token scaffold generator"
     },
     {
       "name": "token-audit",
       "path": "dist/token-audit",
+      "bucket": "governance",
       "description": "Dual WCAG 2.1 and APCA contrast gatekeeper and provenance manifest validator"
     },
     {
       "name": "token-build",
       "path": "dist/token-build",
+      "bucket": "governance",
       "description": "Compile DTCG token trees to CSS variables, Tailwind v4 @theme, and UI-library profiles"
     }
   ]
