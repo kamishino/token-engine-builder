@@ -9,14 +9,12 @@
  * scripts/build-all.mjs so bundles stay identical to `npm run build`.
  */
 import { execFileSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import {
   cpSync,
   existsSync,
   lstatSync,
   mkdirSync,
   readdirSync,
-  readFileSync,
   readlinkSync,
   rmSync,
   symlinkSync,
@@ -25,6 +23,7 @@ import {
 import { homedir, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isSkillStale } from './build-engine.mjs';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const skillsDir = join(rootDir, 'src', 'skills');
@@ -79,32 +78,7 @@ const sharedNewest = Math.max(
   ...toolchain.map((f) => lstatSync(f).mtimeMs),
 );
 
-function readStamp(skill) {
-  try {
-    const parsed = JSON.parse(readFileSync(join(distDir, skill, '.buildstamp'), 'utf8'));
-    if (typeof parsed.builtAt !== 'number' || typeof parsed.bundleHash !== 'string') return null;
-    return { builtAt: parsed.builtAt, bundleHash: parsed.bundleHash };
-  } catch {
-    return null;
-  }
-}
-
-function bundleHash(skill) {
-  const scriptsDir = join(distDir, skill, 'scripts');
-  if (!existsSync(scriptsDir)) return '';
-  const hash = createHash('sha256');
-  for (const file of readdirSync(scriptsDir).sort()) {
-    if (file.endsWith('.mjs')) hash.update(readFileSync(join(scriptsDir, file)));
-  }
-  return hash.digest('hex');
-}
-
-function isStale(skill) {
-  const stamp = readStamp(skill);
-  if (stamp === null) return true;
-  const sources = Math.max(newestMtime(join(skillsDir, skill)), sharedNewest);
-  return sources > stamp.builtAt || bundleHash(skill) !== stamp.bundleHash;
-}
+const isStale = (skill) => isSkillStale(skill, { skillsDir, distDir, sharedNewest, newestMtime });
 
 function isLink(path) {
   try {

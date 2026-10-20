@@ -1,31 +1,13 @@
 import { chmodSync, cpSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
 import { builtinModules } from 'node:module';
-import { basename, dirname, extname, join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin } from 'vite';
+import { discoverSkillEntries } from './scripts/build-engine.mjs';
 
 const rootDir = dirname(fileURLToPath(import.meta.url));
 const skillsDir = resolve(rootDir, 'src/skills');
 const distDir = resolve(rootDir, 'dist');
-
-/** Auto-discover `src/skills/<skill>/scripts/*.ts` → `dist/<skill>/scripts/<name>.mjs`. */
-function discoverEntries(): Record<string, string> {
-  const entries: Record<string, string> = {};
-  if (!existsSync(skillsDir)) return entries;
-
-  for (const skill of readdirSync(skillsDir, { withFileTypes: true })) {
-    if (!skill.isDirectory()) continue;
-    const scriptsDir = join(skillsDir, skill.name, 'scripts');
-    if (!existsSync(scriptsDir)) continue;
-
-    for (const file of readdirSync(scriptsDir)) {
-      if (extname(file) !== '.ts') continue;
-      const name = basename(file, '.ts');
-      entries[`${skill.name}/scripts/${name}`] = join(scriptsDir, file);
-    }
-  }
-  return entries;
-}
 
 /**
  * Mirrors every `src/skills/<skill>/` package into `dist/<skill>/`:
@@ -67,7 +49,7 @@ function syncSkillPackages(): Plugin {
 // must run standalone after being copied to ~/agents/skills/.
 // A bare `vite build` (all entries, shared chunk) still works for quick checks.
 const onlySkill = process.env['SKILL_ENTRY'];
-const allEntries = discoverEntries();
+const allEntries = discoverSkillEntries(skillsDir);
 const entries =
   onlySkill === undefined
     ? allEntries

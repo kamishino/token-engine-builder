@@ -8,32 +8,17 @@
  * skills build (dist/ is wiped only for full builds, filtered builds append).
  */
 import { execFileSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
-import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { readdirSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { discoverScriptEntries, writeBuildStamp } from './build-engine.mjs';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const skillsDir = join(rootDir, 'src', 'skills');
 const viteBin = join(rootDir, 'node_modules', 'vite', 'bin', 'vite.js');
 
 const only = process.argv.slice(2).filter((arg) => !arg.startsWith('-'));
-const scriptEntries = [];
-for (const entry of readdirSync(skillsDir, { withFileTypes: true })) {
-  if (!entry.isDirectory()) continue;
-  const sDir = join(skillsDir, entry.name, 'scripts');
-  if (existsSync(sDir)) {
-    for (const f of readdirSync(sDir)) {
-      if (f.endsWith('.ts')) {
-        const scriptName = f.replace(/\.ts$/, '');
-        if (only.length === 0 || only.includes(entry.name)) {
-          scriptEntries.push({ skill: entry.name, script: scriptName });
-        }
-      }
-    }
-  }
-}
-const uniqueSkills = [...new Set(scriptEntries.map((e) => e.skill))];
+const { scriptEntries, uniqueSkills } = discoverScriptEntries(skillsDir, only);
 
 for (const name of only) {
   if (!uniqueSkills.includes(name)) {
@@ -68,20 +53,8 @@ console.log(
 // rebuilds when sources are newer than builtAt OR bundle bytes no longer
 // match bundleHash (post-build tampering).
 // (Dist file mtimes cannot signal freshness: copied statics keep source mtimes.)
+const distDir = join(rootDir, 'dist');
 for (const entry of readdirSync(skillsDir, { withFileTypes: true })) {
   if (!entry.isDirectory()) continue;
-  const scriptsDir = join(rootDir, 'dist', entry.name, 'scripts');
-  let bundleHash = '';
-  if (existsSync(scriptsDir)) {
-    const hash = createHash('sha256');
-    for (const file of readdirSync(scriptsDir).sort()) {
-      if (file.endsWith('.mjs')) hash.update(readFileSync(join(scriptsDir, file)));
-    }
-    bundleHash = hash.digest('hex');
-  }
-  writeFileSync(
-    join(rootDir, 'dist', entry.name, '.buildstamp'),
-    `${JSON.stringify({ builtAt: Date.now(), bundleHash })}\n`,
-    'utf8',
-  );
+  writeBuildStamp(distDir, entry.name);
 }
