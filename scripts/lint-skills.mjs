@@ -9,6 +9,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { SCRIPTS } from '../src/shared/cli-flags.ts';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -71,29 +72,24 @@ export function runLint({ root = rootDir } = {}) {
         if (value.includes(': ') && !quoted) fail(`${key} contains an unquoted ": "`);
       }
 
-      // Check flag parity between script --help string and SKILL.md
+      // Flag parity: the declared flag surface must appear in SKILL.md.
       const scriptsSubDir = join(skillDir, 'scripts');
       if (existsSync(scriptsSubDir)) {
         for (const scriptFile of readdirSync(scriptsSubDir)) {
           if (!scriptFile.endsWith('.ts')) continue;
-          const scriptSource = readFileSync(join(scriptsSubDir, scriptFile), 'utf8');
-          const helpBlockMatch =
-            scriptSource.match(
-              /hasFlag\(argv,\s*['"]--help['"]\)[\s\S]*?console\.log\(\s*[`'"]([\s\S]*?)[`'"]\s*\)/,
-            ) ?? scriptSource.match(/Usage:[^\n\r]+/);
-          if (helpBlockMatch === null) {
+          const key = `${entry.name}/scripts/${scriptFile.replace(/\.ts$/, '.mjs')}`;
+          const spec = SCRIPTS[key];
+          if (spec === undefined) {
             failures.push(
-              `${entry.name}: scripts/${scriptFile}: no usage string found (add --help)`,
+              `${entry.name}: scripts/${scriptFile}: not declared in src/shared/cli-flags.ts`,
             );
-          } else {
-            const textToScan = helpBlockMatch[1] ?? helpBlockMatch[0];
-            const flags = [...textToScan.matchAll(/--[a-z-]+/g)].map((m) => m[0]);
-            for (const flag of flags) {
-              if (!new RegExp(`${flag}(?![\\w-])`).test(skillContent)) {
-                failures.push(
-                  `${entry.name}: SKILL.md missing documentation for script flag "${flag}" (from scripts/${scriptFile})`,
-                );
-              }
+            continue;
+          }
+          for (const { flag } of spec.flags) {
+            if (!new RegExp(`${flag}(?![\\w-])`).test(skillContent)) {
+              failures.push(
+                `${entry.name}: SKILL.md missing documentation for script flag "${flag}" (from scripts/${scriptFile})`,
+              );
             }
           }
         }

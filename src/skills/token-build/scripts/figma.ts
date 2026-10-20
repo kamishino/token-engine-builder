@@ -4,13 +4,10 @@
  * Supports bidirectional translation:
  * - Export: W3C DTCG tokens directory → Figma Variables collection JSON (COLOR, FLOAT, STRING)
  * - Import: Figma Variables JSON → W3C DTCG 3-tier token directory
- *
- * Usage:
- *   node ./scripts/figma.mjs --to-figma <tokens-dir> --out figma-variables.json
- *   node ./scripts/figma.mjs --from-figma <figma-variables.json> --out tokens
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { usageText } from '../../../shared/cli-flags.js';
 import { dtcgColorValue, oklchToHex, parseToOklch } from '../../../shared/colors.js';
 import { fromCwd, getArg, hasFlag, isMainModule } from '../../../shared/paths.js';
 import { findTokenFiles, walkTokenLeaves, type JsonObject } from '../../../shared/tokens.js';
@@ -265,17 +262,13 @@ export function figmaVariablesToDtcg(variables: FigmaVariable[]): {
 // -------------------------------------------------------------
 export function runFigma(argv = process.argv.slice(2)): number {
   if (hasFlag(argv, '--help')) {
-    console.log(`Usage:
-  Export to Figma:
-    node figma.mjs --to-figma <tokens-dir> --out <figma-variables.json>
-  Import from Figma:
-    node figma.mjs --from-figma <figma-variables.json> --out <tokens-dir>`);
+    console.log(usageText('token-build/scripts/figma.mjs'));
     return 0;
   }
 
   const toFigmaArg = getArg(argv, '--to-figma');
   const fromFigmaArg = getArg(argv, '--from-figma');
-  const outArg = getArg(argv, '--out', toFigmaArg ? 'figma-variables.json' : 'tokens') as string;
+  const outArg = getArg(argv, '--out', toFigmaArg ? 'figma-variables.json' : 'tokens');
 
   if (!toFigmaArg && !fromFigmaArg) {
     console.error('specify either --to-figma <tokens-dir> or --from-figma <figma-variables.json>');

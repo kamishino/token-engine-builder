@@ -4,11 +4,10 @@
  *
  * Extraction is evidence, not migration: nothing scanned is modified, and
  * the candidate must pass token-style's read-back before token-math runs.
- *
- * Usage: node ./scripts/extract.mjs [--root <dir>] [--url <url>] [--html <file.html>] [--out <style-spec.json>] [--force] [--dry-run]
  */
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, extname, join, relative } from 'node:path';
+import { usageText } from '../../../shared/cli-flags.js';
 import { nearestColorName } from '../../../shared/color-names.js';
 import { buildHarmony, formatOklch, parseToOklch } from '../../../shared/colors.js';
 import { decideWrite } from '../../../shared/guard.js';
@@ -530,16 +529,14 @@ export async function scanRenderedTarget(
 
 export async function runExtract(argv = process.argv.slice(2)): Promise<number> {
   if (hasFlag(argv, '--help')) {
-    console.log(
-      'Usage: extract.mjs [--root <dir>] [--url <url>] [--html <file.html>] [--out <style-spec.json>] [--force] [--dry-run]',
-    );
+    console.log(usageText('token-extract/scripts/extract.mjs'));
     return 0;
   }
 
-  const rootArg = getArg(argv, '--root', undefined) as string | undefined;
-  const urlArg = getArg(argv, '--url', undefined) as string | undefined;
-  const htmlArg = getArg(argv, '--html', undefined) as string | undefined;
-  const outArg = getArg(argv, '--out', 'style-spec.json') as string;
+  const rootArg = getArg(argv, '--root');
+  const urlArg = getArg(argv, '--url');
+  const htmlArg = getArg(argv, '--html');
+  const outArg = getArg(argv, '--out', 'style-spec.json');
   const force = hasFlag(argv, '--force');
   const dryRun = hasFlag(argv, '--dry-run');
   const outPath = fromCwd(outArg);

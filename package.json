@@ -18,7 +18,7 @@
     "test": "node --experimental-strip-types --import ./test/loader.mjs --test test/**/*.test.mjs",
     "lint": "eslint .",
     "lint:css": "node scripts/sample-css.mjs",
-    "lint:skills": "node scripts/lint-skills.mjs",
+    "lint:skills": "node --experimental-strip-types scripts/lint-skills.mjs",
     "format": "prettier --check .",
     "format:write": "prettier --write .",
     "check": "npm run typecheck && npm run lint && npm run lint:skills && npm run test && npm run build && npm run lint:css"

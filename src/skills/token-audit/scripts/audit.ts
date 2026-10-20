@@ -1,26 +1,23 @@
 /**
  * audit — WCAG 2.1 gatekeeper over a 3-tier token tree.
  * Exit 0 = pass, 1 = contrast failure / unresolved alias / raw value above Tier 1.
- *
- * Usage: node ./scripts/audit.mjs --tokens <dir> [--theme light|dark|both] [--min-ratio 4.5] [--min-apca 60] [--spec <style-spec.json>] [--json]
  */
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { auditTokens } from '../../../shared/audit-report.js';
+import { usageText } from '../../../shared/cli-flags.js';
 import { removeAuditStamp, writeAuditStamp } from '../../../shared/guard.js';
 import { fromCwd, getArg, hasFlag, isMainModule } from '../../../shared/paths.js';
 import { loadStyleSpec } from '../../../shared/spec.js';
 
 export function runAudit(argv = process.argv.slice(2)): number {
   if (hasFlag(argv, '--help')) {
-    console.log(
-      'Usage: audit.mjs --tokens <dir> [--theme light|dark|both] [--min-ratio 4.5] [--min-apca 60] [--spec <style-spec.json>] [--json]',
-    );
+    console.log(usageText('token-audit/scripts/audit.mjs'));
     return 0;
   }
 
-  const tokensDir = fromCwd(getArg(argv, '--tokens', 'tokens') as string);
-  const theme = getArg(argv, '--theme', 'both') as string;
+  const tokensDir = fromCwd(getArg(argv, '--tokens', 'tokens'));
+  const theme = getArg(argv, '--theme', 'both');
   const specArg = getArg(argv, '--spec');
   let minRatio = Number(getArg(argv, '--min-ratio', '4.5'));
   if (!argv.includes('--min-ratio') && specArg !== undefined) {

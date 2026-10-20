@@ -23,6 +23,8 @@ export function templatePath(importMetaUrl: string, ...segments: string[]): stri
 }
 
 /** `--flag value` lookup; returns `fallback` when absent. */
+export function getArg(argv: string[], flag: string): string | undefined;
+export function getArg(argv: string[], flag: string, fallback: string): string;
 export function getArg(argv: string[], flag: string, fallback?: string): string | undefined {
   const index = argv.indexOf(flag);
   if (index === -1) return fallback;

@@ -1,11 +1,10 @@
 /**
  * build — compile a 3-tier token tree to CSS custom properties + Tailwind v4 `@theme`
  * via Style Dictionary v5 (programmatic, bundled).
- *
- * Usage: node ./scripts/build.mjs --tokens <dir> --out <dir> [--theme <name>] [--prefix <name>] [--spec <style-spec.json>] [--profile <id>] [--visualizer] [--allow-unaudited] [--force] [--dry-run]
  */
 import { existsSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { usageText } from '../../../shared/cli-flags.js';
 import { ARTIFACT_NAMES, buildTokens, guideFromSpec } from '../../../shared/compiler.js';
 import {
   assertSafeOutDir,
@@ -27,15 +26,13 @@ import {
 
 export async function runBuild(argv = process.argv.slice(2)): Promise<number> {
   if (hasFlag(argv, '--help')) {
-    console.log(
-      'Usage: build.mjs --tokens <dir> --out <dir> [--theme <name>] [--prefix <name>] [--spec <style-spec.json>] [--profile <id>] [--visualizer] [--allow-unaudited] [--force] [--dry-run]',
-    );
+    console.log(usageText('token-build/scripts/build.mjs'));
     return 0;
   }
 
-  const tokensArg = getArg(argv, '--tokens', 'tokens') as string;
-  const outArg = getArg(argv, '--out', 'build') as string;
-  const theme = getArg(argv, '--theme', 'light') as string;
+  const tokensArg = getArg(argv, '--tokens', 'tokens');
+  const outArg = getArg(argv, '--out', 'build');
+  const theme = getArg(argv, '--theme', 'light');
   const prefix = getArg(argv, '--prefix');
   const force = hasFlag(argv, '--force');
   const dryRun = hasFlag(argv, '--dry-run');
