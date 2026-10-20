@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -32,48 +32,56 @@ test('computeBundleHash returns empty string on missing directory', () => {
 });
 
 test('buildstamp writing, reading, and staleness detection round-trip cleanly', () => {
-  const distDir = mkdtempSync(join(tmpdir(), 'build-engine-test-'));
+  const rootDir = mkdtempSync(join(tmpdir(), 'build-engine-test-'));
   try {
     const skill = 'mock-skill';
-    const scriptsDir = join(distDir, skill, 'scripts');
-    mkdirSync(scriptsDir, { recursive: true });
-    writeFileSync(join(scriptsDir, 'script.mjs'), 'console.log("hello");', 'utf8');
+    const distScriptsDir = join(rootDir, 'dist', skill, 'scripts');
+    mkdirSync(distScriptsDir, { recursive: true });
+    writeFileSync(join(distScriptsDir, 'script.mjs'), 'console.log("hello");', 'utf8');
 
-    const stamp = writeBuildStamp(distDir, skill);
+    const srcSkillDir = join(rootDir, 'src', 'skills', skill);
+    mkdirSync(srcSkillDir, { recursive: true });
+    writeFileSync(join(srcSkillDir, 'index.ts'), 'export const a = 1;', 'utf8');
+
+    const sharedDir = join(rootDir, 'src', 'shared');
+    mkdirSync(sharedDir, { recursive: true });
+    writeFileSync(join(sharedDir, 'types.ts'), 'export type X = 1;', 'utf8');
+
+    const stamp = writeBuildStamp(join(rootDir, 'dist'), skill);
     assert.equal(typeof stamp.builtAt, 'number');
     assert.ok(stamp.bundleHash.length === 64);
 
-    const read = readBuildStamp(distDir, skill);
+    const read = readBuildStamp(join(rootDir, 'dist'), skill);
     assert.deepEqual(read, stamp);
 
     // Freshness check: source not newer, bundle untouched
-    const fresh = isSkillStale(skill, {
-      skillsDir: distDir,
-      distDir,
-      sharedNewest: stamp.builtAt - 1000,
-      newestMtime: () => stamp.builtAt - 1000,
-    });
+    const fresh = isSkillStale(skill, { root: rootDir });
     assert.equal(fresh, false);
 
     // Staleness on source modification:
-    const staleSource = isSkillStale(skill, {
-      skillsDir: distDir,
-      distDir,
-      sharedNewest: stamp.builtAt + 1000,
-      newestMtime: () => stamp.builtAt - 1000,
-    });
+    const future = new Date(stamp.builtAt + 5000);
+    utimesSync(join(srcSkillDir, 'index.ts'), future, future);
+    const staleSource = isSkillStale(skill, { root: rootDir });
     assert.equal(staleSource, true);
 
+    // Reset source mtime back to past
+    const past = new Date(stamp.builtAt - 5000);
+    utimesSync(join(srcSkillDir, 'index.ts'), past, past);
+
+    // Staleness on toolchain modification (build-engine.mjs):
+    const scriptsDir = join(rootDir, 'scripts');
+    mkdirSync(scriptsDir, { recursive: true });
+    writeFileSync(join(scriptsDir, 'build-engine.mjs'), '// new code', 'utf8');
+    utimesSync(join(scriptsDir, 'build-engine.mjs'), future, future);
+    const staleToolchain = isSkillStale(skill, { root: rootDir });
+    assert.equal(staleToolchain, true);
+    rmSync(join(scriptsDir, 'build-engine.mjs'));
+
     // Staleness on bundle modification:
-    writeFileSync(join(scriptsDir, 'script.mjs'), 'console.log("tampered");', 'utf8');
-    const staleBundle = isSkillStale(skill, {
-      skillsDir: distDir,
-      distDir,
-      sharedNewest: stamp.builtAt - 1000,
-      newestMtime: () => stamp.builtAt - 1000,
-    });
+    writeFileSync(join(distScriptsDir, 'script.mjs'), 'console.log("tampered");', 'utf8');
+    const staleBundle = isSkillStale(skill, { root: rootDir });
     assert.equal(staleBundle, true);
   } finally {
-    rmSync(distDir, { recursive: true, force: true });
+    rmSync(rootDir, { recursive: true, force: true });
   }
 });

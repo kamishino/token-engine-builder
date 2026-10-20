@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 /** Auto-discover `src/skills/<skill>/scripts/*.ts` → `dist/<skill>/scripts/<name>.mjs` mapping. */
@@ -70,11 +70,43 @@ export function writeBuildStamp(distDir, skill) {
   return { builtAt, bundleHash };
 }
 
+function walkFiles(dir, visit) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) walkFiles(path, visit);
+    else visit(path);
+  }
+}
+
+function newestMtime(dir) {
+  if (!existsSync(dir)) return Number.NEGATIVE_INFINITY;
+  let newest = lstatSync(dir).mtimeMs;
+  walkFiles(dir, (path) => {
+    newest = Math.max(newest, lstatSync(path).mtimeMs);
+  });
+  return newest;
+}
+
+const TOOLCHAIN = [
+  'scripts/build-engine.mjs',
+  'scripts/build-all.mjs',
+  'scripts/link-skills.mjs',
+  'vite.config.ts',
+  'package.json',
+];
+
 /** Check if a built skill is stale relative to its sources or bundle bytes. */
-export function isSkillStale(skill, { skillsDir, distDir, sharedNewest, newestMtime }) {
-  const stamp = readBuildStamp(distDir, skill);
+export function isSkillStale(skill, { root }) {
+  const stamp = readBuildStamp(join(root, 'dist'), skill);
   if (stamp === null) return true;
-  const sources = Math.max(newestMtime(join(skillsDir, skill)), sharedNewest);
-  const currentBundleHash = computeBundleHash(join(distDir, skill, 'scripts'));
+  const sharedNewest = Math.max(
+    newestMtime(join(root, 'src', 'shared')),
+    ...TOOLCHAIN.map((rel) => {
+      const path = join(root, rel);
+      return existsSync(path) ? lstatSync(path).mtimeMs : Number.NEGATIVE_INFINITY;
+    }),
+  );
+  const sources = Math.max(newestMtime(join(root, 'src', 'skills', skill)), sharedNewest);
+  const currentBundleHash = computeBundleHash(join(root, 'dist', skill, 'scripts'));
   return sources > stamp.builtAt || currentBundleHash !== stamp.bundleHash;
 }

@@ -54,42 +54,7 @@ export function runLink(argv = process.argv.slice(2), { root = rootDir } = {}) {
   const skills = readdirSync(currentSkillsDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name);
-  function walk(dir, visit) {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const path = join(dir, entry.name);
-      if (entry.isDirectory()) walk(path, visit);
-      else visit(path);
-    }
-  }
-
-  /** Newest mtime (ms) under dir, or -Infinity when absent. */
-  function newestMtime(dir) {
-    if (!existsSync(dir)) return Number.NEGATIVE_INFINITY;
-    let newest = lstatSync(dir).mtimeMs;
-    walk(dir, (path) => {
-      newest = Math.max(newest, lstatSync(path).mtimeMs);
-    });
-    return newest;
-  }
-
-  const toolchain = [
-    join(root, 'scripts', 'build-all.mjs'),
-    join(root, 'scripts', 'link-skills.mjs'),
-    join(root, 'vite.config.ts'),
-    join(root, 'package.json'),
-  ];
-  const sharedNewest = Math.max(
-    newestMtime(join(root, 'src', 'shared')),
-    ...toolchain.map((f) => (existsSync(f) ? lstatSync(f).mtimeMs : Number.NEGATIVE_INFINITY)),
-  );
-
-  const isStale = (skill) =>
-    isSkillStale(skill, {
-      skillsDir: currentSkillsDir,
-      distDir: currentDistDir,
-      sharedNewest,
-      newestMtime,
-    });
+  const isStale = (skill) => isSkillStale(skill, { root });
 
   function isLink(path) {
     try {
