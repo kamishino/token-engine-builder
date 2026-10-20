@@ -12,10 +12,9 @@ export interface FlattenedToken {
 
 export interface LoadedTokenTree {
   merged: JsonObject;
-  flat: Map<string, FlattenedToken>;
+  flat: ReadonlyMap<string, FlattenedToken>;
   files: Array<{ path: string; tier: string }>;
   resolveColor(path: string, unresolved?: string[], depth?: number): OklchColor | undefined;
-  resolveAlias(path: string, unresolved?: string[], depth?: number): unknown;
   checkRawValueViolations(): string[];
   checkUnresolvedAliases(): string[];
 }
@@ -156,25 +155,6 @@ export function loadTokenTree(tokensDir: string, options?: { theme?: string }): 
     flattenTokens(json, '', file.tier, flat);
   }
 
-  const resolveAlias = (path: string, unresolved: string[] = [], depth = 0): unknown => {
-    if (depth > 16) {
-      unresolved.push(`${path} (alias cycle)`);
-      return undefined;
-    }
-    const entry = flat.get(path);
-    if (entry === undefined) {
-      unresolved.push(path);
-      return undefined;
-    }
-    const val = entry.value;
-    if (typeof val === 'string') {
-      const match = ALIAS.exec(val.trim());
-      if (match?.[1] !== undefined) return resolveAlias(match[1], unresolved, depth + 1);
-      return val;
-    }
-    return val;
-  };
-
   const resolveColor = (
     path: string,
     unresolved: string[] = [],
@@ -233,7 +213,6 @@ export function loadTokenTree(tokensDir: string, options?: { theme?: string }): 
     flat,
     files,
     resolveColor,
-    resolveAlias,
     checkRawValueViolations,
     checkUnresolvedAliases,
   };

@@ -58,16 +58,24 @@ test('loadTokenTree loads tokens and resolves aliases with cycle detection', () 
     assert.ok(resolved !== undefined);
     assert.equal(resolved.h, 250);
 
-    // Cycle detection:
-    tree.flat.set('cycle.a', { value: '{cycle.b}', tier: 'semantic' });
-    tree.flat.set('cycle.b', { value: '{cycle.a}', tier: 'semantic' });
-    const cycleColor = tree.resolveColor('cycle.a', unresolved);
+    // Cycle and violation detection through real token files
+    writeFileSync(
+      join(dir, 'semantic', 'cycle.tokens.json'),
+      JSON.stringify({
+        semantic: {
+          cycleA: { $value: '{semantic.cycleB}', $type: 'color' },
+          cycleB: { $value: '{semantic.cycleA}', $type: 'color' },
+          rawHex: { $value: '#ff0000', $type: 'color' },
+        },
+      }),
+    );
+    const cycleTree = loadTokenTree(dir);
+    const cycleUnresolved = [];
+    const cycleColor = cycleTree.resolveColor('semantic.cycleA', cycleUnresolved);
     assert.equal(cycleColor, undefined);
-    assert.ok(unresolved.some((u) => u.includes('alias cycle')));
+    assert.ok(cycleUnresolved.some((u) => u.includes('alias cycle')));
 
-    // Raw value violations:
-    tree.flat.set('bad.semantic', { value: '#ff0000', tier: 'semantic' });
-    const violations = tree.checkRawValueViolations();
+    const violations = cycleTree.checkRawValueViolations();
     assert.ok(violations.some((v) => v.includes('raw hex forbidden')));
   } finally {
     rmSync(dir, { recursive: true, force: true });
