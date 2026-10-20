@@ -9,6 +9,7 @@
  */
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, extname, join, relative } from 'node:path';
+import { nearestColorName } from '../../../shared/color-names.js';
 import { buildHarmony, formatOklch, parseToOklch } from '../../../shared/colors.js';
 import { fromCwd, getArg, hasFlag } from '../../../shared/paths.js';
 import type { OklchColor, StyleSpec } from '../../../shared/types.js';
@@ -244,42 +245,28 @@ if (designFrontmatter !== undefined) {
 const radiusMd = [...radiusCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 8;
 const anchor: OklchColor = fmPrimary ?? toAnchor((top as Candidate).color);
 
-const HUE_FAMILIES = [
-  'red',
-  'orange',
-  'amber',
-  'yellow',
-  'green',
-  'teal',
-  'cyan',
-  'blue',
-  'indigo',
-  'violet',
-  'magenta',
-  'pink',
-] as const;
-
-function hueFamily(h: number): string {
-  return HUE_FAMILIES[Math.floor((((h % 360) + 360) % 360) / 30) % 12] as string;
-}
-
 const usedNames = new Set<string>();
-function uniqueName(h: number): string {
-  const base = hueFamily(h);
-  const name = usedNames.has(base) ? `${base}-2` : base;
+function uniqueName(color: OklchColor): string {
+  const base = nearestColorName(color);
+  let name = base;
+  let counter = 2;
+  while (usedNames.has(name)) {
+    name = `${base}-${counter}`;
+    counter++;
+  }
   usedNames.add(name);
   return name;
 }
 
 type PaletteEntry = StyleSpec['palette'][number];
-const palette: PaletteEntry[] = [{ role: 'primary', name: uniqueName(anchor.h), anchor }];
+const palette: PaletteEntry[] = [{ role: 'primary', name: uniqueName(anchor), anchor }];
 if (fmSecondary !== undefined)
-  palette.push({ role: 'secondary', name: uniqueName(fmSecondary.h), anchor: fmSecondary });
+  palette.push({ role: 'secondary', name: uniqueName(fmSecondary), anchor: fmSecondary });
 for (const derivedColor of buildHarmony(anchor, 'analogous')) {
   if (palette.length >= 3) break;
   palette.push({
     role: palette.length === 1 ? 'secondary' : 'accent',
-    name: uniqueName(derivedColor.h),
+    name: uniqueName(derivedColor),
     anchor: derivedColor,
   });
 }

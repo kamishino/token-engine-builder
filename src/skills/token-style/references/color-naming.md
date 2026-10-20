@@ -4,7 +4,7 @@ Read when naming palette colors. Every palette color becomes a primitive group k
 
 ## Rules
 
-1. Map each anchor to the nearest name in the [meodai/color-names](https://github.com/meodai/color-names) list: match hue sector first, then lightness/chroma character (a pale blue is a "sky/powder" family name, a deep blue a "navy/midnight" one). This file carries no dataset — your knowledge of common color names plus the sector table below is the mapping.
+1. Map each anchor to the nearest name in the [meodai/color-names](https://github.com/meodai/color-names) list: match hue sector first, then lightness/chroma character (a pale blue is a "sky/powder" family name, a deep blue a "navy/midnight" one). A curated 144-color subset is vendored in `src/shared/color-names.ts` (12 names per sector across lightness/chroma tiers) and used by `token-extract` for deterministic slug assignment.
 2. Slugify: lowercase, spaces → hyphens, strip everything except `a-z0-9-`. (`Cerulean Blue` → `cerulean-blue`.)
 3. Slugs must be unique in the palette; on collision, add a character word (`sky` → `deep-sky`), never a number.
 4. Names describe the color, not the role — roles (`primary`, `secondary`, `accent`, `other`) live in the spec's `role` field. A name that only makes sense for one brand ("acme-blue") is wrong; the same anchor in another brand gets the same name.
