@@ -1,0 +1,26 @@
+{
+  "light": {
+    "colorBrandBackground": "#1c3f62",
+    "colorBrandForeground1": "#f8f8f9",
+    "colorNeutralBackground1": "#f0f2f3",
+    "colorNeutralBackground2": "#f8f8f9",
+    "colorNeutralForeground1": "#27292b",
+    "colorNeutralForeground2": "#4f5357",
+    "colorNeutralStroke1": "#b4b8bc",
+    "colorNeutralStrokeAccessible": "#7b8187",
+    "colorBrandStroke1": "#215586",
+    "borderRadiusMedium": 8
+  },
+  "dark": {
+    "colorBrandBackground": "#e8f3ff",
+    "colorBrandForeground1": "#151617",
+    "colorNeutralBackground1": "#27292b",
+    "colorNeutralBackground2": "#151617",
+    "colorNeutralForeground1": "#f8f8f9",
+    "colorNeutralForeground2": "#b4b8bc",
+    "colorNeutralStroke1": "#4f5357",
+    "colorNeutralStrokeAccessible": "#7b8187",
+    "colorBrandStroke1": "#e8f3ff",
+    "borderRadiusMedium": 8
+  }
+}

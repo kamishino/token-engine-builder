@@ -8,20 +8,17 @@ Read when choosing or adding an output profile (`build.mjs --profile <id>`). Pro
 
 ## Shipped
 
-| Profile     | Target format                                                                           | Why it shipped                                                                                                                                                      |
-| ----------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `shadcn`    | CSS variables, `:root` + `.dark` in one file                                            | The de-facto token consumption shape in the npm ecosystem (shadcn catalogs, Stitch build skills); maps 1:1 from semantic roles; cheapest profile, proves the engine |
-| `bootstrap` | CSS variables (`--bs-*`), `:root` + `[data-bs-theme="dark"]`                            | Second CSS-var system with different names/shape — proves the registry is not a shadcn special case                                                                 |
-| `primevue`  | CSS variables (`--p-*`), `:root` + `.p-dark`                                            | PrimeVue/PrimeReact v4 design-token variables; same renderer family, third mapping                                                                                  |
-| `antd`      | Ant Design theme-token JSON (`{light, dark}` ConfigProvider token maps, hex values)     | First object-theme renderer: proves profiles are not CSS-only                                                                                                       |
-| `mui`       | MUI theme JSON (`{light, dark}` createTheme-ready palette/typography/shape, hex values) | Second object-theme renderer; secondary color comes from the palette's secondary ramp                                                                               |
-| `chakra`    | Chakra v3 semantic-token JSON (`semanticTokens.colors` with `_light`/`_dark` pairs)     | Condition-based semantic tokens: one object carries both themes per token                                                                                           |
+| Profile     | Target format                                                                           | Why it shipped                                                                                                                                                                         |
+| ----------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `shadcn`    | CSS variables, `:root` + `.dark` in one file                                            | The de-facto token consumption shape in the npm ecosystem (shadcn catalogs, Stitch build skills); maps 1:1 from semantic roles; cheapest profile, proves the engine                    |
+| `bootstrap` | CSS variables (`--bs-*`), `:root` + `[data-bs-theme="dark"]`                            | Second CSS-var system with different names/shape — proves the registry is not a shadcn special case                                                                                    |
+| `primevue`  | CSS variables (`--p-*`), `:root` + `.p-dark`                                            | PrimeVue/PrimeReact v4 design-token variables; same renderer family, third mapping                                                                                                     |
+| `antd`      | Ant Design theme-token JSON (`{light, dark}` ConfigProvider token maps, hex values)     | First object-theme renderer: proves profiles are not CSS-only                                                                                                                          |
+| `mui`       | MUI theme JSON (`{light, dark}` createTheme-ready palette/typography/shape, hex values) | Second object-theme renderer; secondary color comes from the palette's secondary ramp                                                                                                  |
+| `chakra`    | Chakra v3 semantic-token JSON (`semanticTokens.colors` with `_light`/`_dark` pairs)     | Condition-based semantic tokens: one object carries both themes per token                                                                                                              |
+| `radix`     | Radix Themes CSS (`--accent-1..12`, `--gray-1..12`, `:root` + `.dark`)                  | Step-scale library: our ramp is interpolated onto the 12 Radix lightness positions (1–2 bg, 3–5 interactive, 6–8 borders, 9–10 solid, 11–12 text) — the explicit step-mapping decision |
+| `fluent`    | Fluent UI 2 theme JSON (`{light, dark}` color-token map, hex values)                    | Enterprise theme shape; brand/neutral role names map 1:1 from semantic roles                                                                                                           |
 
-## Backlog (in priority order)
-
-| Library      | Target format                | Blocker / decision needed                                                                |
-| ------------ | ---------------------------- | ---------------------------------------------------------------------------------------- |
-| Radix Themes | 1–12 accent/gray step scales | Step-scale mismatch: our ramps are 5/9/11 steps; needs an explicit step-mapping decision |
-| Fluent UI 2  | Theme JSON (colorPalette)    | Enterprise audience; lowest priority for this product                                    |
+Registry complete: every candidate from the selection rule ships. New libraries enter only by user request, following the same rule.
 
 Adding a library = one mapping table (+ a renderer only for object-theme formats), a gold example, and a row here. Never rename semantic roles to match a library.

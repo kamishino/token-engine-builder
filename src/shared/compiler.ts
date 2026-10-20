@@ -535,7 +535,8 @@ export async function loadThemeDictionary(
   return (await loadThemeTokens(tokensDir, theme)).values;
 }
 
-export type UiProfileId = 'shadcn' | 'bootstrap' | 'primevue' | 'antd' | 'mui' | 'chakra';
+export type UiProfileId =
+  'shadcn' | 'bootstrap' | 'primevue' | 'antd' | 'mui' | 'chakra' | 'radix' | 'fluent';
 
 export const UI_PROFILE_IDS: readonly UiProfileId[] = [
   'shadcn',
@@ -544,13 +545,17 @@ export const UI_PROFILE_IDS: readonly UiProfileId[] = [
   'antd',
   'mui',
   'chakra',
+  'radix',
+  'fluent',
 ];
 
-/** Output filename per profile (Ant Design/MUI/Chakra are JSON themes, not CSS). */
+/** Output filename per profile (JSON themes are not CSS). */
 export function profileFileName(profile: UiProfileId): string {
   if (profile === 'antd') return 'antd-theme.json';
   if (profile === 'mui') return 'mui-theme.json';
   if (profile === 'chakra') return 'chakra-theme.json';
+  if (profile === 'radix') return 'radix-theme.css';
+  if (profile === 'fluent') return 'fluent-theme.json';
   return `${profile}.css`;
 }
 
@@ -561,7 +566,7 @@ interface ProfileMapping {
 }
 
 const PROFILE_MAPPINGS: Record<
-  Exclude<UiProfileId, 'antd' | 'mui' | 'chakra'>,
+  Exclude<UiProfileId, 'antd' | 'mui' | 'chakra' | 'radix' | 'fluent'>,
   { darkSelector: string; mapping: ProfileMapping[] }
 > = {
   shadcn: {
@@ -635,6 +640,99 @@ export async function buildUiProfile(
   const buildPath = outDir.endsWith('/') ? outDir : `${outDir}/`;
   mkdirSync(buildPath, { recursive: true });
   const destination = `${buildPath}${profileFileName(profile)}`;
+
+  if (profile === 'radix' || profile === 'fluent') {
+    const required = [
+      'semantic.color.action.primary',
+      'semantic.color.action.primary-text',
+      'semantic.color.text.primary',
+      'semantic.color.text.secondary',
+      'semantic.color.bg.canvas',
+      'semantic.color.bg.surface',
+      'semantic.color.border.default',
+      'semantic.color.border.strong',
+      'semantic.color.border.focus',
+      'radius.md',
+    ];
+    for (const source of required) {
+      if (!light.has(source) || !dark.has(source)) {
+        throw new Error(`profile ${profile}: missing token role ${source}`);
+      }
+    }
+    const hex = (values: Map<string, string>, path: string): string =>
+      oklchToHex(parseToOklch(values.get(path) as string));
+
+    if (profile === 'fluent') {
+      const fluentTokens = (values: Map<string, string>): Record<string, string | number> => ({
+        colorBrandBackground: hex(values, 'semantic.color.action.primary'),
+        colorBrandForeground1: hex(values, 'semantic.color.action.primary-text'),
+        colorNeutralBackground1: hex(values, 'semantic.color.bg.surface'),
+        colorNeutralBackground2: hex(values, 'semantic.color.bg.canvas'),
+        colorNeutralForeground1: hex(values, 'semantic.color.text.primary'),
+        colorNeutralForeground2: hex(values, 'semantic.color.text.secondary'),
+        colorNeutralStroke1: hex(values, 'semantic.color.border.default'),
+        colorNeutralStrokeAccessible: hex(values, 'semantic.color.border.strong'),
+        colorBrandStroke1: hex(values, 'semantic.color.border.focus'),
+        borderRadiusMedium: Math.round(Number.parseFloat(values.get('radius.md') as string) * 16),
+      });
+      const content = `${JSON.stringify({ light: fluentTokens(light), dark: fluentTokens(dark) }, null, 2)}\n`;
+      writeFileSync(destination, content, 'utf8');
+      return [destination];
+    }
+
+    // Radix: interpolate our ramp onto the 12 Radix steps by lightness position.
+    const { tokens } = await loadThemeTokens(tokensDir, 'light');
+    const rampPoints = (slug: string): Array<{ l: number; c: number; h: number }> => {
+      const points = tokens
+        .filter((token) => token.path[0] === 'color' && token.path[1] === slug)
+        .map((token) => {
+          const parsed = parseToOklch(String(tokenValue(token)));
+          return { l: parsed.l, c: parsed.c, h: parsed.h };
+        })
+        .sort((a, b) => b.l - a.l);
+      if (points.length < 2) throw new Error(`profile radix: ramp not found for ${slug}`);
+      return points;
+    };
+    const primaryToken = tokens.find(
+      (token) => (token.$description ?? '').startsWith('primary —') && token.path[2] === '500',
+    );
+    if (primaryToken === undefined) throw new Error('profile radix: primary ramp not found');
+    const primarySlug = primaryToken.path[1] as string;
+    const POSITIONS = [0, 0.06, 0.14, 0.23, 0.32, 0.42, 0.52, 0.63, 0.74, 0.84, 0.92, 1];
+    const interpolate = (points: Array<{ l: number; c: number; h: number }>): string[] => {
+      const lMax = points[0]?.l as number;
+      const lMin = points[points.length - 1]?.l as number;
+      return POSITIONS.map((t) => {
+        const targetL = lMax - t * (lMax - lMin);
+        let i = 0;
+        while (i < points.length - 2 && (points[i + 1]?.l as number) > targetL) i++;
+        const a = points[i] as { l: number; c: number; h: number };
+        const b = points[i + 1] as { l: number; c: number; h: number };
+        const span = a.l - b.l;
+        const f = span === 0 ? 0 : (a.l - targetL) / span;
+        const round4 = (v: number): number => Math.round(v * 10000) / 10000;
+        return formatOklch({
+          l: round4(a.l + (b.l - a.l) * f),
+          c: round4(a.c + (b.c - a.c) * f),
+          h: round4(a.h + (b.h - a.h) * f),
+        });
+      });
+    };
+    const accent = interpolate(rampPoints(primarySlug));
+    const gray = interpolate(rampPoints('neutral'));
+    const block = (selector: string): string =>
+      `${selector} {\n` +
+      accent.map((value, i) => `  --accent-${i + 1}: ${value};`).join('\n') +
+      `\n  --accent-contrast: ${light.get('semantic.color.action.primary-text') as string};\n` +
+      gray.map((value, i) => `  --gray-${i + 1}: ${value};`).join('\n') +
+      '\n}\n';
+    const content =
+      `/**\n * Do not edit directly, this file was auto-generated.\n */\n\n` +
+      block(':root') +
+      `\n${block('.dark')}`;
+    writeFileSync(destination, content, 'utf8');
+    return [destination];
+  }
 
   if (profile === 'mui' || profile === 'chakra') {
     const required = [
