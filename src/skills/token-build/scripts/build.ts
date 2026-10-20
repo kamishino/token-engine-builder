@@ -27,7 +27,7 @@ const argv = process.argv.slice(2);
 
 if (hasFlag(argv, '--help')) {
   console.log(
-    'Usage: build.mjs --tokens <dir> --out <dir> [--theme <name>] [--prefix <name>] [--spec <style-spec.json>] [--profile <id>] [--allow-unaudited] [--force] [--dry-run]',
+    'Usage: build.mjs --tokens <dir> --out <dir> [--theme <name>] [--prefix <name>] [--spec <style-spec.json>] [--profile <id>] [--visualizer] [--allow-unaudited] [--force] [--dry-run]',
   );
   process.exit(0);
 }
@@ -38,6 +38,7 @@ const theme = getArg(argv, '--theme', 'light') as string;
 const prefix = getArg(argv, '--prefix');
 const force = hasFlag(argv, '--force');
 const dryRun = hasFlag(argv, '--dry-run');
+const visualizer = hasFlag(argv, '--visualizer');
 const specArg = getArg(argv, '--spec');
 
 interface SpecGuide {
@@ -211,6 +212,7 @@ try {
           label: theme,
           ...(guide === undefined ? {} : { guide }),
           ...(prefix === undefined ? {} : { prefix }),
+          visualizer,
         })
       : await buildUiProfile(profile, tokensDir, outArg.replaceAll('\\', '/'));
   const missing = outputs.filter((path) => !existsSync(fromCwd(path)));
@@ -237,6 +239,9 @@ try {
             'components.md': sha256Hex(readFileSync(fromCwd(outputs[2] as string))),
             'theme.css': sha256Hex(readFileSync(fromCwd(outputs[1] as string))),
             'tokens.css': sha256Hex(readFileSync(fromCwd(outputs[0] as string))),
+            ...(visualizer && outputs[4] !== undefined
+              ? { 'visualizer.html': sha256Hex(readFileSync(fromCwd(outputs[4]))) }
+              : {}),
           }
         : { [profileFileName(profile)]: sha256Hex(readFileSync(fromCwd(outputs[0] as string))) },
   });

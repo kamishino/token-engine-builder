@@ -144,4 +144,6 @@ export interface BuildTokensOptions {
     scale?: number;
     density?: string;
   };
+  /** Whether to emit visualizer.html for interactive visual inspection. */
+  visualizer?: boolean;
 }

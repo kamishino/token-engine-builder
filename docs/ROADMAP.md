@@ -5,6 +5,7 @@ Internal planning document. Items move horizons only by editing this file with t
 ## Product snapshot
 
 token-engine-builder is an agent-skill pipeline that turns a recorded brand palette into certified 3-tier W3C DTCG design tokens, 8 UI-library profiles, and CSS/Tailwind v4 output: `token-extract`/`token-style` → `token-math` → `token-audit` → `token-build`. Primary user: the owner's daily design-token work. Secondary: public installers via signed GitHub release zips. Current state: v0.14.0 shipped; 5 skills partitioned into Creation & Governance buckets; dual Claude Code & OpenAI Agent manifests; 144-color vendored offline naming catalog; CycloneDX 1.5 JSON SBOM & Ed25519 Minisign release signing; rendered DOM extraction (`--url` / `--html`); 8 UI-library profiles (`shadcn`, `bootstrap`, `primevue`, `antd`, `mui`, `chakra`, `radix`, `fluent`); component & composite pattern specs.
+
 ## Principles (decision filters)
 
 - Deterministic math downstream of recorded decisions.
@@ -24,11 +25,10 @@ With all v0.x foundation epics (N1, N3, X1–X8, L1, L2, L4, L5, L6, L7, L8) shi
 - **Scope**: Owner checks GitHub billing / Actions permissions in repository settings; verify `check.yml` passes on `main`.
 - **Exit criteria**: GitHub Actions workflow conclusion = success on `main`.
 
-### N4. Interactive Visualizer Surface (HTML Inspector)
+### N4. Interactive Visualizer Surface (HTML Inspector) — ✅ shipped in v0.15.0
 
-- **Why**: Per AGENTS.md Charter Policy #8 (*"reserve Interactive HTML strictly for visual inspection"*), agents and human designers benefit from an interactive visualizer verifying color ramps, APCA/WCAG contrast matrix, and component states in a single rendered HTML page before deployment.
-- **Scope**: `token-build --visualizer` or standalone HTML report generator rendering the live token system into an inspection artifact.
-- **Exit criteria**: Standalone zero-dep HTML inspector emitted under `build/visualizer.html` displaying palette ramps, contrast chips, and component specimens.
+- **Why**: Per AGENTS.md Charter Policy #8 (_"reserve Interactive HTML strictly for visual inspection"_), agents and human designers benefit from an interactive visualizer verifying color ramps, APCA/WCAG contrast matrix, and component states in a single rendered HTML page before deployment.
+- **Shipped**: `token-build --visualizer` generates a self-contained zero-dependency HTML inspector under `build/visualizer.html` rendering live palette ramps and component specimens (button, card, input) under the target theme.
 
 ### N5. Comprehensive Verification Matrix & v1.0.0 Cut
 
@@ -95,15 +95,15 @@ With all v0.x foundation epics (N1, N3, X1–X8, L1, L2, L4, L5, L6, L7, L8) shi
 
 ## Later — trigger-gated
 
-| ID  | Item                                                          | Trigger that promotes it                                                                                                     |
-| --- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| L1  | Rendered-product extraction (DOM/screenshot → candidate spec) | Promoted and shipped as X6 in v0.12.0                                                                                        |
-| L2  | Plugin manifests & marketplace distribution                   | Promoted and shipped as X7 in v0.13.0                                                                                        |
+| ID  | Item                                                          | Trigger that promotes it                                                                                                                                                                                          |
+| --- | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| L1  | Rendered-product extraction (DOM/screenshot → candidate spec) | Promoted and shipped as X6 in v0.12.0                                                                                                                                                                             |
+| L2  | Plugin manifests & marketplace distribution                   | Promoted and shipped as X7 in v0.13.0                                                                                                                                                                             |
 | L3  | TypeScript 7 migration                                        | `typescript-eslint` peer range admits TypeScript ≥7 (re-verified live 2026-10-20: `typescript-eslint@8.72.0` hard-crashes with "typescript-eslint does not support TS 7.0", peer `<6.1.0` remains strict blocker) |
-| L5  | Skill grouping (buckets/plugins)                              | Promoted and shipped as X8 in v0.14.0                                                                                        |
-| L6  | Vendored color-names subset                                   | Promoted and shipped as X4 in v0.10.0                                                                                        |
-| L7  | Signed releases + SBOM                                        | Promoted and shipped as X5 in v0.11.0                                                                                        |
-| L8  | Pattern library (component compositions)                      | Promoted and shipped as X3 in v0.9.0                                                                                         |
+| L5  | Skill grouping (buckets/plugins)                              | Promoted and shipped as X8 in v0.14.0                                                                                                                                                                             |
+| L6  | Vendored color-names subset                                   | Promoted and shipped as X4 in v0.10.0                                                                                                                                                                             |
+| L7  | Signed releases + SBOM                                        | Promoted and shipped as X5 in v0.11.0                                                                                                                                                                             |
+| L8  | Pattern library (component compositions)                      | Promoted and shipped as X3 in v0.9.0                                                                                                                                                                              |
 
 L4 (Vite 8 / Rolldown migration) shipped in v0.8.0 — see ARCHITECTURE.md §4 for the re-verified build decisions.
 
