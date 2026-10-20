@@ -7,7 +7,10 @@ import test from 'node:test';
 import {
   crc32,
   planArtifacts,
+  planRelease,
   runPackage,
+  SBOM_ROOTS,
+  sbomComponents,
   SKILL_BUCKETS,
   writeZip,
 } from '../scripts/package-release.mjs';
@@ -79,21 +82,59 @@ test('runPackage packages all buckets, bundle, SBOM, and checksums into isolated
   }
 });
 
-test('planArtifacts returns complete release plan and respects keyPresent', () => {
+test('planRelease returns complete release plan and respects keyPresent', () => {
   const dir = mkdtempSync(join(tmpdir(), 'release-plan-test-'));
   try {
     writeFileSync(join(dir, 'package-lock.json'), '{}', 'utf8');
+    const skills = ['token-style', 'token-extract', 'token-math', 'token-audit', 'token-build'];
+    for (const s of skills) {
+      mkdirSync(join(dir, 'src', 'skills', s), { recursive: true });
+    }
     assert.ok(SKILL_BUCKETS.creation.includes('token-style'));
     assert.ok(SKILL_BUCKETS.governance.includes('token-audit'));
-    const withoutKey = planArtifacts(dir, '1.5.0', { keyPresent: false });
-    assert.equal(withoutKey.length, 10);
-    assert.ok(withoutKey.some((a) => a.kind === 'sbom' && a.name.includes('1.5.0')));
-    assert.ok(!withoutKey.some((a) => a.kind === 'signature'));
+    const planWithoutKey = planRelease(dir, '1.5.0', { keyPresent: false });
+    assert.equal(planWithoutKey.skills.length, 5);
+    assert.equal(planWithoutKey.artifacts.length, 10);
+    assert.ok(planWithoutKey.artifacts.some((a) => a.kind === 'sbom' && a.name.includes('1.5.0')));
+    assert.ok(!planWithoutKey.artifacts.some((a) => a.kind === 'signature'));
+    assert.equal(planArtifacts(dir, '1.5.0', { keyPresent: false }).length, 10);
 
-    const withKey = planArtifacts(dir, '1.5.0', { keyPresent: true });
-    assert.equal(withKey.length, 11);
-    assert.ok(withKey.some((a) => a.kind === 'signature' && a.name.endsWith('.minisig')));
+    const planWithKey = planRelease(dir, '1.5.0', { keyPresent: true });
+    assert.equal(planWithKey.artifacts.length, 11);
+    assert.ok(
+      planWithKey.artifacts.some((a) => a.kind === 'signature' && a.name.endsWith('.minisig')),
+    );
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('planRelease throws on root with no skills', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'release-empty-test-'));
+  try {
+    assert.throws(() => planRelease(dir, '1.5.0'), /no skills found under/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('sbomComponents extracts sorted roots and transitives from lockfile', () => {
+  const mockLock = {
+    packages: {
+      'node_modules/colorjs.io': { version: '0.7.1', license: 'MIT' },
+      'node_modules/style-dictionary': {
+        version: '5.7.0',
+        license: 'Apache-2.0',
+        dependencies: { '@types/node': '^22.0.0' },
+      },
+      'node_modules/@types/node': { version: '22.0.0', license: 'MIT' },
+      'node_modules/eslint': { version: '10.0.0' },
+    },
+  };
+  const components = sbomComponents(mockLock, SBOM_ROOTS);
+  assert.equal(components.length, 3);
+  assert.equal(components[0].name, '@types/node');
+  assert.equal(components[0].purl, 'pkg:npm/@types%2Fnode@22.0.0');
+  assert.equal(components[1].name, 'colorjs.io');
+  assert.equal(components[2].name, 'style-dictionary');
 });

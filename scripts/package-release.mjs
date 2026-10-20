@@ -24,6 +24,7 @@ import {
 } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { listSkills } from './build-engine.mjs';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const distDir = join(rootDir, 'dist');
@@ -123,37 +124,78 @@ export const SKILL_BUCKETS = {
   governance: ['token-audit', 'token-build'],
 };
 
-export function planArtifacts(root, version, { keyPresent = false } = {}) {
+export const SBOM_ROOTS = Object.freeze(['colorjs.io', 'style-dictionary']);
+
+export function sbomComponents(lock, roots = SBOM_ROOTS) {
+  const packages = lock?.packages ?? {};
+  const seen = new Set();
+  function collectDeps(depName) {
+    const key = `node_modules/${depName}`;
+    if (seen.has(key) || !packages[key]) return;
+    seen.add(key);
+    const info = packages[key];
+    for (const d of Object.keys(info.dependencies ?? {})) {
+      collectDeps(d);
+    }
+  }
+  for (const root of roots) {
+    collectDeps(root);
+  }
+
+  return Array.from(seen)
+    .sort()
+    .map((k) => {
+      const name = k.replace(/^node_modules\//, '');
+      const info = packages[k];
+      const encodedName = name.startsWith('@') ? name.replace('/', '%2F') : name;
+      return {
+        type: 'library',
+        name,
+        version: info.version,
+        ...(info.license ? { licenses: [{ license: { id: info.license } }] } : {}),
+        purl: `pkg:npm/${encodedName}@${info.version}`,
+      };
+    });
+}
+
+export function planRelease(root, version, { keyPresent = false } = {}) {
   const distDir = join(root, 'dist');
   const skillsDir = join(root, 'src', 'skills');
   const skills = existsSync(distDir)
-    ? readdirSync(distDir, { withFileTypes: true })
-        .filter((entry) => entry.isDirectory())
-        .map((entry) => entry.name)
-        .sort()
+    ? listSkills(distDir)
     : existsSync(skillsDir)
-      ? readdirSync(skillsDir, { withFileTypes: true })
-          .filter((entry) => entry.isDirectory())
-          .map((entry) => entry.name)
-          .sort()
-      : ['token-style', 'token-extract', 'token-math', 'token-audit', 'token-build'];
+      ? listSkills(skillsDir)
+      : [];
 
-  const planned = [];
-  for (const s of skills) {
-    planned.push({ kind: 'skill', name: `token-engine-${s}-v${version}.zip` });
+  if (skills.length === 0) {
+    throw new Error(`no skills found under ${root}`);
   }
-  planned.push({ kind: 'bundle', name: `token-engine-builder-v${version}.zip` });
+
+  const artifacts = [];
+  for (const s of skills) {
+    artifacts.push({ kind: 'skill', name: `token-engine-${s}-v${version}.zip`, skill: s });
+  }
+  artifacts.push({ kind: 'bundle', name: `token-engine-builder-v${version}.zip` });
   for (const bucket of Object.keys(SKILL_BUCKETS)) {
-    planned.push({ kind: 'bucket', name: `token-engine-${bucket}-v${version}.zip` });
+    artifacts.push({ kind: 'bucket', name: `token-engine-${bucket}-v${version}.zip`, bucket });
   }
   if (existsSync(join(root, 'package-lock.json'))) {
-    planned.push({ kind: 'sbom', name: `token-engine-builder-v${version}.cyclonedx.json` });
+    artifacts.push({ kind: 'sbom', name: `token-engine-builder-v${version}.cyclonedx.json` });
   }
-  planned.push({ kind: 'checksums', name: 'SHA256SUMS.txt' });
+  artifacts.push({ kind: 'checksums', name: 'SHA256SUMS.txt' });
   if (keyPresent) {
-    planned.push({ kind: 'signature', name: 'SHA256SUMS.txt.minisig' });
+    artifacts.push({ kind: 'signature', name: 'SHA256SUMS.txt.minisig' });
   }
-  return planned;
+  return {
+    version,
+    skills,
+    artifacts,
+    hasKey: keyPresent,
+  };
+}
+
+export function planArtifacts(root, version, options) {
+  return planRelease(root, version, options).artifacts;
 }
 
 export function runPackage(argv = process.argv.slice(2), { root = rootDir } = {}) {
@@ -193,12 +235,11 @@ export function runPackage(argv = process.argv.slice(2), { root = rootDir } = {}
   }
 
   if (dryRun) {
-    const planned = planArtifacts(root, currentVersion, { keyPresent: Boolean(keyData) });
-    const skillCount = planned.filter((p) => p.kind === 'skill').length;
+    const plan = planRelease(root, currentVersion, { keyPresent: Boolean(keyData) });
     console.log(
-      `[package] dry-run: would package ${skillCount} skill(s) (v${currentVersion}) → release/`,
+      `[package] dry-run: would package ${plan.skills.length} skill(s) (v${currentVersion}) → release/`,
     );
-    for (const a of planned) console.log(`  ${a.name}`);
+    for (const a of plan.artifacts) console.log(`  ${a.name}`);
     return 0;
   }
 
@@ -213,11 +254,8 @@ export function runPackage(argv = process.argv.slice(2), { root = rootDir } = {}
     return 1;
   }
 
-  const skills = readdirSync(currentDistDir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .sort();
-
+  const plan = planRelease(root, currentVersion, { keyPresent: Boolean(keyData) });
+  const skills = plan.skills;
   const stageDir = join(root, 'release.tmp');
   rmSync(stageDir, { recursive: true, force: true });
   mkdirSync(stageDir, { recursive: true });
@@ -261,35 +299,7 @@ export function runPackage(argv = process.argv.slice(2), { root = rootDir } = {}
   }
 
   if (lock !== null) {
-    const packages = lock.packages ?? {};
-    const seen = new Set();
-    function collectDeps(depName) {
-      const key = `node_modules/${depName}`;
-      if (seen.has(key) || !packages[key]) return;
-      seen.add(key);
-      const info = packages[key];
-      for (const d of Object.keys(info.dependencies ?? {})) {
-        collectDeps(d);
-      }
-    }
-    collectDeps('colorjs.io');
-    collectDeps('style-dictionary');
-
-    const components = Array.from(seen)
-      .sort()
-      .map((k) => {
-        const name = k.replace(/^node_modules\//, '');
-        const info = packages[k];
-        const encodedName = name.startsWith('@') ? name.replace('/', '%2F') : name;
-        return {
-          type: 'library',
-          name,
-          version: info.version,
-          ...(info.license ? { licenses: [{ license: { id: info.license } }] } : {}),
-          purl: `pkg:npm/${encodedName}@${info.version}`,
-        };
-      });
-
+    const components = sbomComponents(lock, SBOM_ROOTS);
     const sbom = {
       bomFormat: 'CycloneDX',
       specVersion: '1.5',
@@ -357,8 +367,7 @@ export function runPackage(argv = process.argv.slice(2), { root = rootDir } = {}
   rmSync(currentReleaseDir, { recursive: true, force: true });
   renameSync(stageDir, currentReleaseDir);
 
-  const planned = planArtifacts(root, currentVersion, { keyPresent: Boolean(keyData) });
-  for (const item of planned) {
+  for (const item of plan.artifacts) {
     const target = join(currentReleaseDir, item.name);
     if (!existsSync(target)) {
       throw new Error(`[package] missing planned release artifact: ${item.name}`);
