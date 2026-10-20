@@ -45,7 +45,7 @@ export interface TokenGroup {
   [key: string]: TokenNode | DtcgTokenType | string | undefined;
 }
 
-/** A DTCG alias string, e.g. `"{color.brand.500}"`. */
+/** A DTCG alias string, e.g. `"{color.cerulean.500}"`. */
 export type TokenAlias = string;
 
 export interface OklchColor {

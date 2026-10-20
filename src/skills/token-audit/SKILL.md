@@ -18,12 +18,12 @@ Binary dual gate: every pair must clear BOTH WCAG ratio (--min-ratio, default 4.
    node ./scripts/audit.mjs --tokens tokens --min-ratio 4.5
    ```
 
-   Checks: every fg/bg role pair (body text, secondary text, action, button, card, input), every alias resolves, zero raw values above Tier 1. Role floors and marginal-pass reading: `references/contrast.md`. Pass `--spec <style-spec.json>` to take the text floor from the spec's recorded `targets.minWcagRatio` when `--min-ratio` is not given explicitly.
+   Checks: every fg/bg role pair (body text, secondary text, action, button, card, input), every alias resolves, zero raw values above Tier 1. Role floors and marginal-pass reading: `references/contrast.md`. Pass `--theme <name>` to check a single theme instead of all discovered themes. Pass `--json` for machine-readable JSON output. Pass `--spec <style-spec.json>` to take the text floor from the spec's recorded `targets.minWcagRatio` when `--min-ratio` is not given explicitly.
    - Done when: the report prints per-theme PASS/FAIL lines and an exit code.
 
 2. **Remediate failures** (no human needed, max 3 loops; ladder in `references/contrast.md`):
    - Contrast shortfall → record the step move as a spec override (`overrides.<theme>.<semantic.path>` in `style-spec.json`, e.g. `semantic.color.text.tertiary` → `{color.neutral.300}`), then re-run `token-math` — never edit a generated semantic file (regeneration would erase it and trip provenance).
-   - Unresolved alias → fix the target path; aliases are dotted from the merged tree root (`{color.brand.500}`).
+   - Unresolved alias → fix the target path; aliases are dotted from the merged tree root (`{color.cerulean.500}`).
    - Raw value above Tier 1 → move it into `primitive/` and alias it.
    - Done when: audit exits 0, or 3 loops elapsed → escalate with the failing pairs table.
 3. **Report**: paste the ratio table; state PASS/FAIL per theme.

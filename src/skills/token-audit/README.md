@@ -16,7 +16,7 @@ Requires Node `>=22.12`. No install step: dependencies are inlined into `scripts
 node ~/agents/skills/token-audit/scripts/audit.mjs --tokens tokens --min-ratio 4.5
 ```
 
-Checks 7 fg/bg role pairs per theme, resolves every alias, and rejects raw values above Tier 1. `--json` prints a machine-readable report (a gold example lives in `examples/audit-report.example.json`). Never lower `--min-ratio` to pass. The full procedure is in [SKILL.md](SKILL.md).
+Checks the canonical contrast pairs per theme, resolves every alias, and rejects raw values above Tier 1. `--json` prints a machine-readable report (a gold example lives in `examples/audit-report.example.json`). Never lower `--min-ratio` to pass. The full procedure is in [SKILL.md](SKILL.md).
 
 ## Next
 

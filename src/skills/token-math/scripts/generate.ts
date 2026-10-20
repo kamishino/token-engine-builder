@@ -69,7 +69,7 @@ export function runGenerate(argv = process.argv.slice(2)): number {
       'primitive/spacing.tokens.json',
       'primitive/radius.tokens.json',
     ]) {
-      console.log(`would write: ${file} (anchor lands on brand.500)`);
+      console.log(`would write: ${file} (anchor lands on step 500)`);
     }
     if (tamper !== null && tamper.status !== 'absent') {
       console.log(`provenance: ${tamper.status}`);

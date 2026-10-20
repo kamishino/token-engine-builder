@@ -464,16 +464,27 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
     fmSecondary ?? (secondaryCand ? toAnchor(secondaryCand) : undefined);
 
   const usedNames = new Set<string>();
+  const PREFIXES = ['deep', 'soft', 'vibrant', 'rich', 'pale', 'bright', 'dark', 'pure'] as const;
   function uniqueName(color: OklchColor): string {
     const base = nearestColorName(color);
-    let name = base;
+    if (!usedNames.has(base)) {
+      usedNames.add(base);
+      return base;
+    }
+    for (const prefix of PREFIXES) {
+      const candidate = `${prefix}-${base}`;
+      if (!usedNames.has(candidate)) {
+        usedNames.add(candidate);
+        return candidate;
+      }
+    }
     let counter = 2;
-    while (usedNames.has(name)) {
-      name = `${base}-${counter}`;
+    while (usedNames.has(`${base}-${counter}`)) {
       counter++;
     }
-    usedNames.add(name);
-    return name;
+    const fallback = `${base}-${counter}`;
+    usedNames.add(fallback);
+    return fallback;
   }
 
   type PaletteEntry = StyleSpec['palette'][number];

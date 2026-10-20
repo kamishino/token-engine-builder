@@ -16,7 +16,7 @@ Requires Node `>=22.12`. No install step: dependencies are inlined into `scripts
 node ~/agents/skills/token-math/scripts/generate.mjs --spec style-spec.json --out tokens
 ```
 
-`--force` overwrites an existing `tokens/` (the agent should ask first). The brand anchor lands exactly on `color.brand.500`; tiers 2–3 stay alias-only. Schema: `assets/style-spec.schema.json`. The full procedure is in [SKILL.md](SKILL.md).
+`--force` overwrites an existing `tokens/` (the agent should ask first). The primary palette anchor lands exactly on `color.<slug>.500` (e.g. `color.cerulean.500`); tiers 2–3 stay alias-only. Schema: `assets/style-spec.schema.json`. The full procedure is in [SKILL.md](SKILL.md).
 
 ## Next
 
