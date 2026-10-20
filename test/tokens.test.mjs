@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
-import { resolve } from 'node:path';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 import { deepMerge, flattenTokens, loadTokenTree } from '../src/shared/tokens.ts';
 
@@ -18,22 +20,56 @@ test('flattenTokens tags owning tier and dotted path', () => {
   assert.deepEqual(flat.get('color.brand'), { value: '{color.neutral.500}', tier: 'semantic' });
 });
 
-test('loadTokenTree loads template tokens and resolves aliases with cycle detection', () => {
-  const tokensDir = resolve('src/skills/token-math/templates/tokens');
-  const tree = loadTokenTree(tokensDir, { theme: 'light' });
-  assert.ok(tree.files.length > 0);
-  assert.ok(tree.flat.size > 0);
+test('loadTokenTree loads tokens and resolves aliases with cycle detection', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'tokens-test-'));
+  try {
+    mkdirSync(join(dir, 'primitive'), { recursive: true });
+    mkdirSync(join(dir, 'semantic'), { recursive: true });
+    mkdirSync(join(dir, 'component'), { recursive: true });
+    writeFileSync(
+      join(dir, 'primitive', 'color.tokens.json'),
+      JSON.stringify({
+        color: { cerulean: { 500: { $value: 'oklch(60% 0.15 250)', $type: 'color' } } },
+      }),
+    );
+    writeFileSync(
+      join(dir, 'semantic', 'light.tokens.json'),
+      JSON.stringify({
+        semantic: {
+          color: { action: { primary: { $value: '{color.cerulean.500}', $type: 'color' } } },
+        },
+      }),
+    );
+    writeFileSync(
+      join(dir, 'component', 'button.tokens.json'),
+      JSON.stringify({
+        component: {
+          button: { bg: { $value: '{semantic.color.action.primary}', $type: 'color' } },
+        },
+      }),
+    );
 
-  // Cycle detection:
-  const unresolved = [];
-  tree.flat.set('cycle.a', { value: '{cycle.b}', tier: 'semantic' });
-  tree.flat.set('cycle.b', { value: '{cycle.a}', tier: 'semantic' });
-  const cycleColor = tree.resolveColor('cycle.a', unresolved);
-  assert.equal(cycleColor, undefined);
-  assert.ok(unresolved.some((u) => u.includes('alias cycle')));
+    const tree = loadTokenTree(dir, { theme: 'light' });
+    assert.equal(tree.files.length, 3);
+    assert.ok(tree.flat.size >= 3);
 
-  // Raw value violations:
-  tree.flat.set('bad.semantic', { value: '#ff0000', tier: 'semantic' });
-  const violations = tree.checkRawValueViolations();
-  assert.ok(violations.some((v) => v.includes('raw hex forbidden')));
+    const unresolved = [];
+    const resolved = tree.resolveColor('component.button.bg', unresolved);
+    assert.ok(resolved !== undefined);
+    assert.equal(resolved.h, 250);
+
+    // Cycle detection:
+    tree.flat.set('cycle.a', { value: '{cycle.b}', tier: 'semantic' });
+    tree.flat.set('cycle.b', { value: '{cycle.a}', tier: 'semantic' });
+    const cycleColor = tree.resolveColor('cycle.a', unresolved);
+    assert.equal(cycleColor, undefined);
+    assert.ok(unresolved.some((u) => u.includes('alias cycle')));
+
+    // Raw value violations:
+    tree.flat.set('bad.semantic', { value: '#ff0000', tier: 'semantic' });
+    const violations = tree.checkRawValueViolations();
+    assert.ok(violations.some((v) => v.includes('raw hex forbidden')));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

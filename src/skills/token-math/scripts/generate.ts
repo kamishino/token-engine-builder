@@ -5,7 +5,7 @@
  * Usage: node ./scripts/generate.mjs --spec style-spec.json --out tokens [--force]
  */
 import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { buildFeedbackColors, buildRamp, dtcgColorValue } from '../../../shared/colors.js';
 import {
   assertSafeOutDir,
@@ -139,7 +139,9 @@ function pickStep(target: number): number {
 }
 
 function writeTokenFile(segments: string[], data: unknown): void {
-  writeFileSync(join(outDir, ...segments), `${JSON.stringify(data, null, 2)}\n`, 'utf8');
+  const filePath = join(outDir, ...segments);
+  mkdirSync(dirname(filePath), { recursive: true });
+  writeFileSync(filePath, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
 }
 
 writeTokenFile(['primitive', 'color.tokens.json'], {
