@@ -17,19 +17,29 @@ import type { OklchColor, StyleSpec } from '../../../shared/types.js';
 const argv = process.argv.slice(2);
 
 if (hasFlag(argv, '--help')) {
-  console.log('Usage: extract.mjs --root <dir> --out <style-spec.json> [--force] [--dry-run]');
+  console.log(
+    'Usage: extract.mjs [--root <dir>] [--url <url>] [--html <file.html>] [--out <style-spec.json>] [--force] [--dry-run]',
+  );
   process.exit(0);
 }
 
-const rootArg = getArg(argv, '--root', '.') as string;
+const rootArg = getArg(argv, '--root', undefined) as string | undefined;
+const urlArg = getArg(argv, '--url', undefined) as string | undefined;
+const htmlArg = getArg(argv, '--html', undefined) as string | undefined;
 const outArg = getArg(argv, '--out', 'style-spec.json') as string;
 const force = hasFlag(argv, '--force');
 const dryRun = hasFlag(argv, '--dry-run');
-const rootDir = fromCwd(rootArg);
 const outPath = fromCwd(outArg);
-
-if (!existsSync(rootDir)) {
+if (rootArg === undefined && urlArg === undefined && htmlArg === undefined) {
+  // Default to scanning current directory if no mode specified
+}
+const rootDir = fromCwd(rootArg ?? '.');
+if (rootArg !== undefined && !existsSync(rootDir)) {
   console.error(`root not found: ${rootDir}`);
+  process.exit(1);
+}
+if (htmlArg !== undefined && !existsSync(fromCwd(htmlArg))) {
+  console.error(`html file not found: ${fromCwd(htmlArg)}`);
   process.exit(1);
 }
 if (existsSync(outPath) && !force && !dryRun) {
@@ -148,37 +158,136 @@ function parseDesignFrontmatter(text: string, rel: string): DesignFrontmatter | 
   };
 }
 
-for (const file of scanFiles(rootDir)) {
-  const rel = relative(rootDir, file).replaceAll('\\', '/');
-  let text: string;
+if (urlArg !== undefined || htmlArg !== undefined) {
+  // Rendered mode: run headless browser or load HTML file to evaluate computed styles
+  let htmlContent = '';
+  let sourceName = 'rendered';
+  if (htmlArg !== undefined) {
+    const filePath = fromCwd(htmlArg);
+    htmlContent = readFileSync(filePath, 'utf8');
+    sourceName = basename(filePath);
+  }
   try {
-    text = readFileSync(file, 'utf8');
-  } catch {
-    continue;
-  }
-  if (file.endsWith('.md')) {
-    const parsed = parseDesignFrontmatter(text, rel);
-    if (parsed !== undefined && parsed.primary !== undefined) {
-      if (designFrontmatter === undefined) designFrontmatter = parsed;
-      continue; // frontmatter is the machine-readable contract; prose is not scanned for colors
+    // Dynamic import string interpolation avoids compile-time module resolution while allowing runtime import
+    const pwModule = 'playwright';
+    const { chromium } = (await import(pwModule)) as {
+      chromium: {
+        launch: (opts: { headless: boolean }) => Promise<{
+          newPage: () => Promise<{
+            goto: (url: string, opts: { waitUntil: string; timeout: number }) => Promise<void>;
+            setContent: (html: string, opts: { waitUntil: string }) => Promise<void>;
+            evaluate: <T>(fn: () => T) => Promise<T>;
+          }>;
+          close: () => Promise<void>;
+        }>;
+      };
+    };
+    const browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage();
+    if (urlArg !== undefined) {
+      sourceName = urlArg;
+      await page.goto(urlArg, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    } else {
+      await page.setContent(htmlContent, { waitUntil: 'domcontentloaded' });
+    }
+    const renderedData = await page.evaluate(() => {
+      const colorCounts = new Map<string, number>();
+      const fontCounts = new Map<string, number>();
+      const radiusCountsMap = new Map<string, number>();
+      const elements = Array.from(document.querySelectorAll('*'));
+      for (const el of elements) {
+        const cs = window.getComputedStyle(el);
+        for (const prop of ['color', 'background-color', 'border-color']) {
+          const val = cs.getPropertyValue(prop);
+          if (val && val !== 'rgba(0, 0, 0, 0)' && val !== 'transparent') {
+            colorCounts.set(val, (colorCounts.get(val) || 0) + 1);
+          }
+        }
+        const ff = cs.getPropertyValue('font-family');
+        if (ff) fontCounts.set(ff, (fontCounts.get(ff) || 0) + 1);
+        const br = cs.getPropertyValue('border-radius');
+        if (br && br.endsWith('px')) {
+          const px = parseFloat(br);
+          if (px > 0) radiusCountsMap.set(String(px), (radiusCountsMap.get(String(px)) || 0) + 1);
+        }
+      }
+      return {
+        colors: Array.from(colorCounts.entries()),
+        fonts: Array.from(fontCounts.entries()).sort((a, b) => b[1] - a[1]),
+        radii: Array.from(radiusCountsMap.entries()).sort((a, b) => b[1] - a[1]),
+      };
+    });
+    await browser.close();
+
+    for (const [col] of renderedData.colors) {
+      record(col, 'rendered', sourceName);
+    }
+    if (renderedData.fonts[0] !== undefined) {
+      fontFamily = renderedData.fonts[0][0].replaceAll(/["']/g, '').trim();
+    }
+    for (const [rStr, count] of renderedData.radii) {
+      const rVal = parseFloat(rStr);
+      radiusCounts.set(rVal, (radiusCounts.get(rVal) || 0) + count);
+    }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    // If Playwright is not installed or headless launch fails, fall back to regex scan of HTML text
+    if (htmlContent) {
+      for (const match of htmlContent.matchAll(NAMED_COLOR)) {
+        if (match[1] !== undefined && match[2] !== undefined)
+          record(match[2], match[1], sourceName);
+      }
+      for (const match of htmlContent.matchAll(BARE_COLOR)) {
+        if (match[1] !== undefined) record(match[1], '', sourceName);
+      }
+      const fontMatch = /font-family\s*:\s*([^;}{]+)/i.exec(htmlContent);
+      if (fontMatch?.[1] !== undefined) {
+        fontFamily = fontMatch[1].replaceAll(/["']/g, '').trim();
+      }
+      for (const match of htmlContent.matchAll(/border-radius\s*:\s*([0-9.]+)px/g)) {
+        if (match[1] !== undefined) {
+          const value = Number(match[1]);
+          radiusCounts.set(value, (radiusCounts.get(value) || 0) + 1);
+        }
+      }
+    } else {
+      console.error(`rendered extraction error: ${message}`);
+      process.exit(1);
     }
   }
-  for (const match of text.matchAll(NAMED_COLOR)) {
-    if (match[1] !== undefined && match[2] !== undefined) record(match[2], match[1], rel);
-  }
-  for (const match of text.matchAll(BARE_COLOR)) {
-    if (match[1] !== undefined) record(match[1], '', rel);
-  }
-  if (fontFamily === undefined) {
-    const font = /font-family\s*:\s*([^;}{]+)/i.exec(text);
-    if (font?.[1] !== undefined) {
-      fontFamily = font[1].replaceAll(/["']/g, '').trim();
+} else {
+  for (const file of scanFiles(rootDir)) {
+    const rel = relative(rootDir, file).replaceAll('\\', '/');
+    let text: string;
+    try {
+      text = readFileSync(file, 'utf8');
+    } catch {
+      continue;
     }
-  }
-  for (const match of text.matchAll(/border-radius\s*:\s*([0-9.]+)px/g)) {
-    if (match[1] !== undefined) {
-      const value = Number(match[1]);
-      radiusCounts.set(value, (radiusCounts.get(value) ?? 0) + 1);
+    if (file.endsWith('.md')) {
+      const parsed = parseDesignFrontmatter(text, rel);
+      if (parsed !== undefined && parsed.primary !== undefined) {
+        if (designFrontmatter === undefined) designFrontmatter = parsed;
+        continue; // frontmatter is the machine-readable contract; prose is not scanned for colors
+      }
+    }
+    for (const match of text.matchAll(NAMED_COLOR)) {
+      if (match[1] !== undefined && match[2] !== undefined) record(match[2], match[1], rel);
+    }
+    for (const match of text.matchAll(BARE_COLOR)) {
+      if (match[1] !== undefined) record(match[1], '', rel);
+    }
+    if (fontFamily === undefined) {
+      const font = /font-family\s*:\s*([^;}{]+)/i.exec(text);
+      if (font?.[1] !== undefined) {
+        fontFamily = font[1].replaceAll(/["']/g, '').trim();
+      }
+    }
+    for (const match of text.matchAll(/border-radius\s*:\s*([0-9.]+)px/g)) {
+      if (match[1] !== undefined) {
+        const value = Number(match[1]);
+        radiusCounts.set(value, (radiusCounts.get(value) ?? 0) + 1);
+      }
     }
   }
 }

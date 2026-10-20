@@ -16,6 +16,9 @@ Extraction is evidence, not migration: the scan is read-only and the candidate i
 
    ```bash
    node ./scripts/extract.mjs --root . --out style-spec.json
+   # Or from a rendered URL / HTML document:
+   node ./scripts/extract.mjs --url https://example.com --out style-spec.json
+   node ./scripts/extract.mjs --html page.html --out style-spec.json
    ```
 
    (`--force` overwrites; preview with `--dry-run`.) A `DESIGN.md` with Stitch frontmatter is parsed through its frontmatter (primary/secondary palette, typography scale, rounded, density preserved as recorded; components noted, not ingested); other Markdown falls through to prose color scanning at lowest confidence. Scoring rules: `references/heuristics.md`.

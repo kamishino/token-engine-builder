@@ -14,6 +14,8 @@ Requires Node `>=22.12`. No install step: dependencies are inlined into `scripts
 
 ```bash
 node ~/agents/skills/token-extract/scripts/extract.mjs --root . --out style-spec.json
+node ~/agents/skills/token-extract/scripts/extract.mjs --url https://example.com --out style-spec.json
+node ~/agents/skills/token-extract/scripts/extract.mjs --html page.html --out style-spec.json
 ```
 
 Prints the top-5 candidate anchors with their source files as evidence. `--dry-run` prints the candidate spec + evidence as JSON (a gold example lives in `examples/extraction-report.example.json`); `--force` overwrites an existing spec. Scoring rules: `references/heuristics.md`. The full procedure is in [SKILL.md](SKILL.md).

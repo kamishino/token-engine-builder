@@ -38,7 +38,7 @@ The v0.3.0 Now items shipped (below); the next Now item is unselected — promot
 - **Scope**: changeset → `npm run release` → `npm run package` → GitHub release with per-skill zips + SHA256SUMS.
 - **Exit criteria**: `v0.3.0` tag and release published; artifacts verified against `SHA256SUMS.txt`.
 
-## Next — target v0.12.0 (unselected)
+## Next — target v0.13.0 (unselected)
 
 ### X1. Human style-guide surface (DESIGN.md, Stitch format) — ✅ shipped in v0.4.0
 
@@ -66,11 +66,16 @@ The v0.3.0 Now items shipped (below); the next Now item is unselected — promot
 - **Why**: External consumers need publisher verification beyond unsigned SHA256SUMS, and inlined bundles need transparent software bill of materials (Audit B1, B4).
 - **Shipped**: CycloneDX 1.5 JSON SBOM (`token-engine-builder-v<version>.cyclonedx.json`) generated automatically by `package-release.mjs`, plus Ed25519 Minisign cryptographic signature (`SHA256SUMS.txt.minisig`) with public key verified in `release.pub`.
 
+### X6. Rendered-product extraction — ✅ shipped in v0.12.0
+
+- **Why**: An existing rendered product must be onboarded where source files are unavailable, or where computed styles in DOM determine actual visual presentation.
+- **Shipped**: `token-extract` extended with `--url <url>` and `--html <file.html>` to evaluate computed styles (colors, fonts, radii) via headless browser automation with graceful DOM parsing fallback, mapping directly to `style-spec.json`.
+
 ## Later — trigger-gated
 
 | ID  | Item                                                          | Trigger that promotes it                                                                                                     |
 | --- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| L1  | Rendered-product extraction (DOM/screenshot → candidate spec) | An existing rendered product must be onboarded that source scanning cannot read                                              |
+| L1  | Rendered-product extraction (DOM/screenshot → candidate spec) | Promoted and shipped as X6 in v0.12.0                                                                                        |
 | L2  | Plugin manifests & marketplace distribution                   | Skills are shared beyond personal installs and the release channel needs an update mechanism                                 |
 | L3  | TypeScript 7 migration                                        | `typescript-eslint` peer range admits TypeScript ≥7 (re-checked 2026-10-20: latest peer is `>=4.8.4 <6.1.0` — still blocked) |
 | L5  | Skill grouping (buckets/plugins)                              | The set reaches ≥8 skills or gains a second install audience                                                                 |

@@ -105,7 +105,7 @@ export default defineConfig({
       // Exception: prettier — style-dictionary lazy-imports it only inside its
       // JS/TS output formats, which this engine never emits (all formats are
       // custom hooks); externalizing keeps ~450 kB of dead parser out.
-      external: [/^node:/, /^prettier(\/.*)?$/, ...builtinModules],
+      external: [/^node:/, /^prettier(\/.*)?$/, /^playwright(-core)?(\/.*)?$/, ...builtinModules],
       // style-dictionary's fs-node entry swaps memfs → node:fs via a top-level
       // setFs() call; Rolldown drops it under a blanket `false`, so that one
       // module keeps its side effects.
