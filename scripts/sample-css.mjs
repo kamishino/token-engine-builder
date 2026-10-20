@@ -125,7 +125,7 @@ try {
     [stylelintEntry, '--config', join(rootDir, 'stylelint.config.mjs'), 'build/**/*.css'],
     { cwd: workDir, stdio: 'inherit' },
   );
-  let drifted = null;
+  const drifted = [];
   for (const [built, gold] of [
     ['build/tokens.css', 'src/skills/token-build/examples/tokens.example.css'],
     ['build/theme.css', 'src/skills/token-build/examples/theme.example.css'],
@@ -143,12 +143,12 @@ try {
     const actual = readFileSync(join(workDir, built), 'utf8').replaceAll('\r\n', '\n');
     const expected = readFileSync(join(rootDir, gold), 'utf8').replaceAll('\r\n', '\n');
     if (actual !== expected) {
-      drifted = `${built} drifted from ${gold} — regenerate the gold standards from the example spec`;
-      break;
+      drifted.push(`${built} drifted from ${gold}`);
     }
   }
-  if (drifted !== null) {
-    console.error(`[lint:css] FAIL ${drifted}`);
+  if (drifted.length > 0) {
+    for (const msg of drifted) console.error(`[lint:css] FAIL ${msg}`);
+    console.error('[lint:css] regenerate the gold standards from the example spec if intentional');
     process.exitCode = 1;
   } else {
     console.log('[lint:css] sample CSS matches gold standards');
