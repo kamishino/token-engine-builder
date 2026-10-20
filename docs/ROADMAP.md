@@ -38,7 +38,7 @@ The v0.3.0 Now items shipped (below); the next Now item is unselected — promot
 - **Scope**: changeset → `npm run release` → `npm run package` → GitHub release with per-skill zips + SHA256SUMS.
 - **Exit criteria**: `v0.3.0` tag and release published; artifacts verified against `SHA256SUMS.txt`.
 
-## Next — target v0.8.0 (unselected)
+## Next — target v0.9.0 (unselected)
 
 ### X1. Human style-guide surface (DESIGN.md, Stitch format) — ✅ shipped in v0.4.0
 
@@ -53,16 +53,18 @@ The v0.3.0 Now items shipped (below); the next Now item is unselected — promot
 
 ## Later — trigger-gated
 
-| ID  | Item                                                          | Trigger that promotes it                                                                                                             |
-| --- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| L1  | Rendered-product extraction (DOM/screenshot → candidate spec) | An existing rendered product must be onboarded that source scanning cannot read                                                      |
-| L2  | Plugin manifests & marketplace distribution                   | Skills are shared beyond personal installs and the release channel needs an update mechanism                                         |
-| L3  | TypeScript 7 migration                                        | `typescript-eslint` peer range admits TypeScript ≥7 (re-check at each deps review; see `docs/research/deps-update-check-2026-10.md`) |
-| L4  | Vite 8 / Rolldown migration                                   | A dedicated migration window after v0.4.0, with build-decision re-verification (ARCHITECTURE.md §4)                                  |
-| L5  | Skill grouping (buckets/plugins)                              | The set reaches ≥8 skills or gains a second install audience                                                                         |
-| L6  | Vendored color-names subset                                   | Offline color naming proves unreliable in practice (ADR-0002 follow-up)                                                              |
-| L7  | Signed releases + SBOM                                        | External consumers need publisher verification beyond unsigned SHA256SUMS                                                            |
-| L8  | Pattern library (component compositions)                      | Component specs in real use reveal repeated compositions worth standardizing                                                         |
+| ID  | Item                                                          | Trigger that promotes it                                                                                                     |
+| --- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| L1  | Rendered-product extraction (DOM/screenshot → candidate spec) | An existing rendered product must be onboarded that source scanning cannot read                                              |
+| L2  | Plugin manifests & marketplace distribution                   | Skills are shared beyond personal installs and the release channel needs an update mechanism                                 |
+| L3  | TypeScript 7 migration                                        | `typescript-eslint` peer range admits TypeScript ≥7 (re-checked 2026-10-20: latest peer is `>=4.8.4 <6.1.0` — still blocked) |
+| L5  | Skill grouping (buckets/plugins)                              | The set reaches ≥8 skills or gains a second install audience                                                                 |
+| L6  | Vendored color-names subset                                   | Offline color naming proves unreliable in practice (ADR-0002 follow-up)                                                      |
+| L7  | Signed releases + SBOM                                        | External consumers need publisher verification beyond unsigned SHA256SUMS                                                    |
+| L7  | Signed releases + SBOM                                        | External consumers need publisher verification beyond unsigned SHA256SUMS                                                    |
+| L8  | Pattern library (component compositions)                      | Component specs in real use reveal repeated compositions worth standardizing                                                 |
+
+L4 (Vite 8 / Rolldown migration) shipped in v0.8.0 — see ARCHITECTURE.md §4 for the re-verified build decisions.
 
 ## Maintenance cadence
 

@@ -86,26 +86,36 @@ export default defineConfig({
   },
   // SSR (Node) build: bundles CLIs for Node, so bare built-ins (`fs`) are
   // treated as built-ins instead of browser shims; noExternal inlines all deps.
-  ssr: { target: 'node', noExternal: true },
+  // The `node` export condition is also scoped to the SSR environment
+  // (Vite 8 environment resolution): style-dictionary's `./fs` export must
+  // resolve to its node:fs entry, not the browser memfs default.
+  ssr: { target: 'node', noExternal: true, resolve: { conditions: ['node'] } },
+  environments: { ssr: { resolve: { conditions: ['node'] } } },
   build: {
     ssr: true,
     outDir: distDir,
     emptyOutDir: process.env['SKILL_EMPTY'] !== '0',
     target: 'node20',
-    minify: 'esbuild',
+    // Vite 8 / Rolldown: default minifier is Oxc (replaces 'esbuild').
     sourcemap: false,
     reportCompressedSize: false,
     rollupOptions: {
       input: entries,
       // Inline every npm dependency; Node built-ins (`node:*` and bare) stay external.
-      external: [/^node:/, ...builtinModules],
-      treeshake: { moduleSideEffects: false },
+      // Exception: prettier — style-dictionary lazy-imports it only inside its
+      // JS/TS output formats, which this engine never emits (all formats are
+      // custom hooks); externalizing keeps ~450 kB of dead parser out.
+      external: [/^node:/, /^prettier(\/.*)?$/, ...builtinModules],
+      // style-dictionary's fs-node entry swaps memfs → node:fs via a top-level
+      // setFs() call; Rolldown drops it under a blanket `false`, so that one
+      // module keeps its side effects.
+      treeshake: { moduleSideEffects: (id: string) => id.endsWith('fs-node.js') },
       output: {
         format: 'es',
         entryFileNames: '[name].mjs',
         chunkFileNames: '_chunks/[name]-[hash].mjs',
         banner: '#!/usr/bin/env node',
-        ...(singleEntry ? { inlineDynamicImports: true } : {}),
+        ...(singleEntry ? { codeSplitting: false } : {}),
       },
     },
   },
