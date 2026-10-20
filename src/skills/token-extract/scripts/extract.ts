@@ -482,48 +482,8 @@ for (const derivedColor of buildHarmony(anchor, 'analogous')) {
   });
 }
 
-const CLUSTERS: ReadonlyArray<{
-  id: string;
-  h: readonly [number, number];
-  c: readonly [number, number];
-  l: readonly [number, number];
-}> = [
-  { id: 'modern-tech', h: [240, 270], c: [0.18, 0.26], l: [0.45, 0.65] },
-  { id: 'zen-minimal', h: [60, 110], c: [0.05, 0.12], l: [0.55, 0.75] },
-  { id: 'vibrant-bento', h: [300, 340], c: [0.22, 0.3], l: [0.5, 0.65] },
-  { id: 'editorial-mono', h: [220, 260], c: [0.02, 0.08], l: [0.35, 0.55] },
-  { id: 'pastel-pretty', h: [340, 20], c: [0.1, 0.18], l: [0.7, 0.88] },
-  { id: 'dreamy-romantic', h: [280, 320], c: [0.06, 0.14], l: [0.65, 0.85] },
-  { id: 'cheerful-casual', h: [30, 60], c: [0.16, 0.24], l: [0.6, 0.75] },
-  { id: 'botanical-fresh', h: [140, 180], c: [0.12, 0.2], l: [0.65, 0.8] },
-  { id: 'luxury-elegant', h: [40, 70], c: [0.04, 0.1], l: [0.7, 0.88] },
-  { id: 'heritage-classic', h: [210, 240], c: [0.08, 0.16], l: [0.3, 0.48] },
-  { id: 'opulent-gorgeous', h: [20, 50], c: [0.18, 0.28], l: [0.5, 0.7] },
-  { id: 'fiery-dynamic', h: [10, 30], c: [0.22, 0.3], l: [0.45, 0.6] },
-  { id: 'glacier-clear', h: [190, 220], c: [0.12, 0.2], l: [0.65, 0.85] },
-  { id: 'tranquil-calm', h: [120, 160], c: [0.04, 0.1], l: [0.5, 0.7] },
-  { id: 'tailored-dandy', h: [30, 50], c: [0.06, 0.14], l: [0.3, 0.5] },
-  { id: 'spiced-ethnic', h: [30, 70], c: [0.14, 0.22], l: [0.45, 0.65] },
-];
-
-function inRange(value: number, [min, max]: readonly [number, number]): boolean {
-  return min <= max ? value >= min && value <= max : value >= min || value <= max;
-}
-const clusterMatches = CLUSTERS.filter(
-  (cluster) =>
-    inRange(anchor.h, cluster.h) && inRange(anchor.c, cluster.c) && inRange(anchor.l, cluster.l),
-);
-const cluster =
-  clusterMatches.length === 1 ? (clusterMatches[0] as (typeof CLUSTERS)[number]).id : undefined;
-if (designFrontmatter !== undefined && fmPrimary !== undefined && cluster === undefined) {
-  frontmatterNotes.push(
-    'no cluster contains the anchor (creative departure to confirm at read-back)',
-  );
-}
-
 const spec: StyleSpec = {
   name: projectName,
-  ...(cluster === undefined ? {} : { cluster }),
   harmony: 'analogous',
   palette,
   rampSteps: 11,
@@ -553,6 +513,9 @@ const spec: StyleSpec = {
 const validation = validateStyleSpec(spec);
 if (!validation.valid) {
   console.error(`warning: candidate style-spec validation: ${validation.errors.join('; ')}`);
+}
+for (const warning of validation.warnings) {
+  console.log(`warning: ${warning}`);
 }
 if (dryRun) {
   console.log(JSON.stringify({ spec, evidence, notes: frontmatterNotes }, null, 2));
