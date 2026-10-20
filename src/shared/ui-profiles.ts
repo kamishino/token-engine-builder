@@ -157,26 +157,35 @@ export async function buildUiProfile(
       writeFileSync(destination, content, 'utf8');
       return [destination];
     }
-
-    const tokens = lightData.tokens;
-    const rampPoints = (slug: string): Array<{ l: number; c: number; h: number }> => {
-      const points = tokens
+    const lightTokens = lightData.tokens;
+    const darkTokens = darkData.tokens;
+    const rampPointsFor = (
+      tokensList: typeof lightTokens,
+      slug: string,
+    ): Array<{ l: number; c: number; h: number }> => {
+      const points = tokensList
         .filter((t) => t.path[0] === 'color' && t.path[1] === slug && /^\d+$/.test(t.path[2] ?? ''))
         .map((t) => parseToOklch(String(tokenValue(t))))
         .sort((a, b) => b.l - a.l);
       if (points.length < 2) throw new Error(`profile radix: ramp not found for ${slug}`);
       return points;
     };
-    const primaryToken = tokens.find(
+    const primaryToken = lightTokens.find(
       (token) => (token.$description ?? '').startsWith('primary —') && token.path[2] === '500',
     );
     if (primaryToken === undefined) throw new Error('profile radix: primary ramp not found');
     const primarySlug = primaryToken.path[1] as string;
-    const POSITIONS = [0, 0.06, 0.14, 0.23, 0.32, 0.42, 0.52, 0.63, 0.74, 0.84, 0.92, 1];
-    const interpolate = (points: Array<{ l: number; c: number; h: number }>): string[] => {
+
+    const LIGHT_POSITIONS = [0, 0.06, 0.14, 0.23, 0.32, 0.42, 0.52, 0.63, 0.74, 0.84, 0.92, 1];
+    const DARK_POSITIONS = [1, 0.94, 0.86, 0.77, 0.68, 0.58, 0.48, 0.37, 0.26, 0.16, 0.08, 0];
+
+    const interpolateRamp = (
+      points: Array<{ l: number; c: number; h: number }>,
+      positions: readonly number[],
+    ): string[] => {
       const lMax = points[0]?.l as number;
       const lMin = points[points.length - 1]?.l as number;
-      return POSITIONS.map((t) => {
+      return positions.map((t) => {
         const targetL = lMax - t * (lMax - lMin);
         let i = 0;
         while (i < points.length - 2 && (points[i + 1]?.l as number) > targetL) i++;
@@ -192,18 +201,39 @@ export async function buildUiProfile(
         });
       });
     };
-    const accent = interpolate(rampPoints(primarySlug));
-    const gray = interpolate(rampPoints('neutral'));
-    const block = (selector: string): string =>
+
+    const lightAccent = interpolateRamp(rampPointsFor(lightTokens, primarySlug), LIGHT_POSITIONS);
+    const lightGray = interpolateRamp(rampPointsFor(lightTokens, 'neutral'), LIGHT_POSITIONS);
+    const darkAccent = interpolateRamp(rampPointsFor(darkTokens, primarySlug), DARK_POSITIONS);
+    const darkGray = interpolateRamp(rampPointsFor(darkTokens, 'neutral'), DARK_POSITIONS);
+
+    const renderRadixBlock = (
+      selector: string,
+      accentList: string[],
+      grayList: string[],
+      contrastText: string,
+    ): string =>
       `${selector} {\n` +
-      accent.map((value, i) => `  --accent-${i + 1}: ${value};`).join('\n') +
-      `\n  --accent-contrast: ${light.get('semantic.color.action.primary-text') as string};\n` +
-      gray.map((value, i) => `  --gray-${i + 1}: ${value};`).join('\n') +
+      accentList.map((value, i) => `  --accent-${i + 1}: ${value};`).join('\n') +
+      `\n  --accent-contrast: ${contrastText};\n` +
+      grayList.map((value, i) => `  --gray-${i + 1}: ${value};`).join('\n') +
       '\n}\n';
+
     const content =
       `/**\n * Do not edit directly, this file was auto-generated.\n */\n\n` +
-      block(':root') +
-      `\n${block('.dark')}`;
+      renderRadixBlock(
+        ':root',
+        lightAccent,
+        lightGray,
+        light.get(SEMANTIC_ROLE_PATHS.ACTION_PRIMARY_TEXT) as string,
+      ) +
+      `\n` +
+      renderRadixBlock(
+        '.dark',
+        darkAccent,
+        darkGray,
+        dark.get(SEMANTIC_ROLE_PATHS.ACTION_PRIMARY_TEXT) as string,
+      );
     writeFileSync(destination, content, 'utf8');
     return [destination];
   }

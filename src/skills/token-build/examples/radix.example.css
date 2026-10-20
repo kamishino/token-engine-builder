@@ -31,29 +31,29 @@
 }
 
 .dark {
-  --accent-1: oklch(98% 0.0098 250deg);
-  --accent-2: oklch(93.32% 0.0332 250deg);
-  --accent-3: oklch(87.08% 0.063 250deg);
-  --accent-4: oklch(80.06% 0.0855 250deg);
-  --accent-5: oklch(73.04% 0.1081 250deg);
-  --accent-6: oklch(65.24% 0.1332 250deg);
-  --accent-7: oklch(57.44% 0.1418 250deg);
-  --accent-8: oklch(48.86% 0.1142 250deg);
-  --accent-9: oklch(40.28% 0.0866 250deg);
-  --accent-10: oklch(32.48% 0.0615 250deg);
-  --accent-11: oklch(26.24% 0.0414 250deg);
-  --accent-12: oklch(20% 0.0214 250deg);
-  --accent-contrast: oklch(98% 0.0012 250deg);
-  --gray-1: oklch(98% 0.0012 250deg);
-  --gray-2: oklch(93.32% 0.0034 250deg);
-  --gray-3: oklch(87.08% 0.005 250deg);
-  --gray-4: oklch(80.06% 0.0069 250deg);
-  --gray-5: oklch(73.04% 0.0087 250deg);
-  --gray-6: oklch(65.24% 0.0107 250deg);
-  --gray-7: oklch(57.44% 0.0113 250deg);
-  --gray-8: oklch(48.86% 0.0091 250deg);
-  --gray-9: oklch(40.28% 0.0069 250deg);
-  --gray-10: oklch(32.48% 0.0049 250deg);
-  --gray-11: oklch(26.24% 0.0033 250deg);
-  --gray-12: oklch(20% 0.0017 250deg);
+  --accent-1: oklch(20% 0.0214 250deg);
+  --accent-2: oklch(24.68% 0.0364 250deg);
+  --accent-3: oklch(30.92% 0.0565 250deg);
+  --accent-4: oklch(37.94% 0.0791 250deg);
+  --accent-5: oklch(44.96% 0.1017 250deg);
+  --accent-6: oklch(52.76% 0.1267 250deg);
+  --accent-7: oklch(60.56% 0.1482 250deg);
+  --accent-8: oklch(69.14% 0.1206 250deg);
+  --accent-9: oklch(77.72% 0.093 250deg);
+  --accent-10: oklch(85.52% 0.068 250deg);
+  --accent-11: oklch(91.76% 0.0411 250deg);
+  --accent-12: oklch(98% 0.0098 250deg);
+  --accent-contrast: oklch(20% 0.0017 250deg);
+  --gray-1: oklch(20% 0.0017 250deg);
+  --gray-2: oklch(24.68% 0.0029 250deg);
+  --gray-3: oklch(30.92% 0.0045 250deg);
+  --gray-4: oklch(37.94% 0.0063 250deg);
+  --gray-5: oklch(44.96% 0.0081 250deg);
+  --gray-6: oklch(52.76% 0.0101 250deg);
+  --gray-7: oklch(60.56% 0.0119 250deg);
+  --gray-8: oklch(69.14% 0.0097 250deg);
+  --gray-9: oklch(77.72% 0.0075 250deg);
+  --gray-10: oklch(85.52% 0.0054 250deg);
+  --gray-11: oklch(91.76% 0.0038 250deg);
+  --gray-12: oklch(98% 0.0012 250deg);
 }
