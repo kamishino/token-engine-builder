@@ -4,7 +4,7 @@ Internal planning document. Items move horizons only by editing this file with t
 
 ## Product snapshot
 
-token-engine-builder is an agent-skill pipeline that turns a recorded brand palette into certified 3-tier W3C DTCG design tokens, 8 UI-library profiles, and CSS/Tailwind v4 output: `token-extract`/`token-style` → `token-math` → `token-audit` → `token-build`. Primary user: the owner's daily design-token work. Secondary: public installers via signed GitHub release zips. Current state: **v1.0.0 Production Release shipped**; 5 skills partitioned into Creation & Governance buckets; dual Claude Code & OpenAI Agent manifests; 144-color vendored offline naming catalog; CycloneDX 1.5 JSON SBOM & Ed25519 Minisign release signing; rendered DOM extraction (`--url` / `--html`); 8 UI-library profiles (`shadcn`, `bootstrap`, `primevue`, `antd`, `mui`, `chakra`, `radix`, `fluent`); component & composite pattern specs; interactive `visualizer.html` surface; automated GitHub Actions CI green on `main`.
+token-engine-builder is an agent-skill pipeline that turns a recorded brand palette into certified 3-tier W3C DTCG design tokens, 8 UI-library profiles, Figma Variable sync payloads, and CSS/Tailwind v4 output: `token-extract`/`token-style` → `token-math` → `token-audit` → `token-build`. Primary user: the owner's daily design-token work. Secondary: public installers via signed GitHub release zips. Current state: **v1.4.0 shipped**; 5 skills partitioned into Creation & Governance buckets; dual Claude Code & OpenAI Agent manifests; 144-color vendored offline naming catalog; CycloneDX 1.5 JSON SBOM & Ed25519 Minisign release signing; rendered DOM extraction (`--url` / `--html`); structured Tailwind v3/v4 & CSS theme ingestion; 8 UI-library profiles (`shadcn`, `bootstrap`, `primevue`, `antd`, `mui`, `chakra`, `radix`, `fluent`); bidirectional Figma sync (`scripts/figma.mjs`); 9 DTCG component specs with 42 contrast pairs; dynamic custom theme authoring; interactive `visualizer.html` surface; automated GitHub Actions CI green on `main`.
 
 ## Principles (decision filters)
 
@@ -15,31 +15,32 @@ token-engine-builder is an agent-skill pipeline that turns a recorded brand pale
 - No reference doc without its engine.
 - Clean cutovers over compatibility shims.
 
-## Now — v1.1 Active Cycle
+## Now — v1.5 Active Cycle
 
-With v1.0.0 production stability achieved, the pipeline focuses on expanding UI system coverage and theme flexibility:
+With core foundation, export profiles, ingestion bridges, and component catalogs complete through v1.4.0, the pipeline focuses on developer experience, visual auditing, and cross-platform design token synchronization:
 
-### C1. Extended Component Catalog (6 additional components) — ✅ shipped in v1.1.0
+### E1. Visual Contrast Heatmap in Visualizer Surface
 
-- **Why**: Expand beyond core button/card/input to cover high-frequency atomic components: badge, alert, dialog, avatar, tooltip, and table.
-- **Shipped**: Added DTCG component token templates under `token-math/templates/tokens/component/`, extended `token-audit` to cover 42 foreground/background and boundary contrast pairs across themes, updated `components.md` and `DESIGN.md` spec outputs, and integrated specimens in `visualizer.html`.
+- **Why**: `visualizer.html` displays color chips and live component specimens, but human designers inspecting a token system need an at-a-glance APCA / WCAG 2.1 contrast matrix heatmap showing exact pass/fail margins across all background-foreground combinations.
+- **Scope**: Extend `visualizerHtmlFormat` in `src/shared/compiler.ts` with a dynamic contrast matrix grid charting all 42 audited pairs, color-coded by APCA $|L_c|$ and WCAG ratio thresholds under the active theme.
+- **Exit criteria**: `build/visualizer.html` includes an interactive contrast heatmap matrix table; verified in gold samples and visualizer test.
 
-### C2. Dynamic Custom Theme Authoring — ✅ shipped in v1.2.0
+### E2. Design Token Package Publishing CLI (`token-build --publish-pack`)
 
-- **Why**: Eliminate the restriction to fixed `light`/`dark`/`high-contrast` themes; allow consumers to specify arbitrary named themes (e.g. `sepia`, `solarized`, brand sub-themes) directly in `style-spec.json`.
-- **Shipped**: Added `themes?: Record<string, CustomThemeConfig>` to `StyleSpec` schema admitting base polarity mode (`light` | `dark`), custom surface steps (`canvas`, `surface`, `subtle`, `raised`), and action step overrides. End-to-end integration across `token-math` (generating `semantic/<theme>.tokens.json`), `token-audit` (dynamic multi-theme contrast verification), and `token-build` (`--theme <name>`).
+- **Why**: Currently, consumer projects copy generated CSS or JSON manually; a standard npm/tarball packager allows design systems teams to bundle generated tokens, Tailwind `@theme`, and TypeScript definitions directly into a private or public npm-ready package.
+- **Scope**: Add `--pack` flag to `build.ts` emitting a self-contained `build/package/` containing `package.json`, `index.css`, `index.d.ts`, and `tokens.json`.
+- **Exit criteria**: `build.mjs --pack` creates an installable npm package folder with validated exports.
 
-## Next — v1.2+ Horizon
+## Next — v2.0 Architecture Horizon
 
-### C3. Figma DTCG Token Sync Bridge — ✅ shipped in v1.3.0
+### E3. W3C DTCG Format 2025/2026 Spec Alignment
 
-- **Why**: Enable bi-directional synchronization between W3C DTCG JSON token files and Figma Variables via the Figma REST API.
-- **Shipped**: Bidirectional sync CLI in `token-build` (`scripts/figma.mjs`) supporting export (`--to-figma <tokens-dir>` generating full COLOR, FLOAT, and STRING variable payloads) and import (`--from-figma <figma.json>` converting to DTCG 3-tier hierarchies).
+- **Why**: Track emerging updates to the W3C Design Tokens Community Group specification (e.g. composite token syntax refinements, formal modifier types).
+- **Depends on**: Upstream W3C DTCG candidate recommendation publication.
 
-### C4. Automated CSS-to-Spec Ingestion Refinement — ✅ shipped in v1.4.0
+### E4. Zero-Runtime React / Web Components Design System Preview
 
-- **Why**: Improve extraction from Tailwind configs and CSS variable definitions into exact candidate `style-spec.json` palettes.
-- **Shipped**: Added structured parsers in `token-extract` for Tailwind v3 configs (`tailwind.config.{js,ts,cjs,mjs}`), Tailwind v4 `@theme` blocks (`--color-*`), and CSS root custom properties, preserving primary and secondary color roles into candidate `style-spec.json`.
+- **Why**: Provide automated code snippet generation (JSX/HTML) alongside component specifications in `components.md`.
 
 ## Later — Trigger-Gated
 
@@ -52,7 +53,7 @@ With v1.0.0 production stability achieved, the pipeline focuses on expanding UI 
 - Deps evidence check quarterly: typescript-eslint peer range (L3), the `npm audit` critical-level exception for the stylelint/braces chain, engine floors.
 - A changeset with every user-visible change; research notes in `docs/research/` for external-taxonomy questions; ADRs for foundation decisions (next number: 0005).
 
-## Shipped History (v0.3.0 – v1.0.0)
+## Shipped History (v0.3.0 – v1.4.0)
 
 | Version     | Scope                            | Key Capabilities Shipped                                                                                                              |
 | ----------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
