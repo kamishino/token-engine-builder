@@ -221,12 +221,20 @@ function themeName(type: string, path: string[]): string {
   return `--spacing-${segments.join('-')}`;
 }
 
-/** Tailwind v4 `@theme` format: every token becomes a namespaced custom property. */
-async function tailwindV4ThemeFormat(args: {
-  dictionary: { allTokens: SdToken[] };
+interface TokenFormatArgs {
+  dictionary: { allTokens: ResolvedToken[] };
   file: { destination?: string };
-  options?: Record<string, unknown>;
-}): Promise<string> {
+  options?: Record<string, unknown> & {
+    label?: string;
+    guide?: BuildTokensOptions['guide'];
+    outputReferences?: boolean;
+  };
+}
+
+export type TokenFormat = (args: TokenFormatArgs) => Promise<string>;
+
+/** Tailwind v4 `@theme` format: every token becomes a namespaced custom property. */
+async function tailwindV4ThemeFormat(args: TokenFormatArgs): Promise<string> {
   const header = await fileHeader({ file: args.file as never, options: args.options as never });
   const lines = args.dictionary.allTokens.map((token) => {
     const type = token.$type ?? token.type ?? '';
@@ -239,11 +247,7 @@ async function tailwindV4ThemeFormat(args: {
  * Component-spec format: per-component Markdown tables of resolved token
  * values (state → token → value), grouped by component in dictionary order.
  */
-async function componentSpecsFormat(args: {
-  dictionary: { allTokens: SdToken[] };
-  file: { destination?: string };
-  options?: Record<string, unknown> & { label?: string };
-}): Promise<string> {
+async function componentSpecsFormat(args: TokenFormatArgs): Promise<string> {
   const header = await fileHeader({ file: args.file as never, options: args.options as never });
   const components = new Map<string, SdToken[]>();
   for (const token of args.dictionary.allTokens) {
@@ -289,14 +293,7 @@ async function componentSpecsFormat(args: {
  * dictionary + spec guide data, then the 8 normative sections in Stitch
  * order. A derived view — token files remain the source of truth.
  */
-async function designMdFormat(args: {
-  dictionary: { allTokens: SdToken[] };
-  file: { destination?: string };
-  options?: Record<string, unknown> & {
-    label?: string;
-    guide?: BuildTokensOptions['guide'];
-  };
-}): Promise<string> {
+async function designMdFormat(args: TokenFormatArgs): Promise<string> {
   const header = await fileHeader({ file: args.file as never, options: args.options as never });
   const guide = args.options?.guide;
   const label = args.options?.label ?? 'tokens';
@@ -385,31 +382,62 @@ async function designMdFormat(args: {
  * Zero-dep single-file HTML previewing color ramps, typography, components,
  * and WCAG contrast chips under the reader's theme.
  */
-async function visualizerHtmlFormat(args: {
-  dictionary: { allTokens: SdToken[] };
-  file: { destination?: string };
-  options?: Record<string, unknown> & { label?: string; guide?: BuildTokensOptions['guide'] };
-}): Promise<string> {
-  const label = args.options?.label ?? 'tokens';
-  const name = args.options?.guide?.name ?? 'Design System';
-  const dict = new ResolvedDictionary(args.dictionary.allTokens);
-  const get = (path: string, fallback: string): string => dict.optional(path, fallback);
+export interface VisualizerModel {
+  name: string;
+  label: string;
+  ramps: Array<{ group: string; steps: Array<{ step: string; value: string }> }>;
+  cssVars: {
+    bg: string;
+    surface: string;
+    text: string;
+    textMuted: string;
+    primary: string;
+    primaryText: string;
+    border: string;
+    radius: string;
+    font: string;
+  };
+}
 
-  // Group color ramps
-  const colorTokens = args.dictionary.allTokens.filter(
+export function buildVisualizerModel(
+  dictionary: { allTokens: ResolvedToken[] },
+  options: { label?: string; guide?: BuildTokensOptions['guide'] } = {},
+): VisualizerModel {
+  const label = options.label ?? 'tokens';
+  const name = options.guide?.name ?? 'Design System';
+  const dict = new ResolvedDictionary(dictionary.allTokens);
+
+  const colorTokens = dictionary.allTokens.filter(
     (t) => t.path[0] === 'color' && t.path.length >= 3,
   );
-  const ramps = new Map<string, Array<{ step: string; value: string }>>();
+  const rampsMap = new Map<string, Array<{ step: string; value: string }>>();
   for (const t of colorTokens) {
     const group = t.path[1] as string;
     const step = t.path[2] as string;
-    const list = ramps.get(group) ?? [];
+    const list = rampsMap.get(group) ?? [];
     list.push({ step, value: String(tokenValue(t)) });
-    ramps.set(group, list);
+    rampsMap.set(group, list);
   }
+  const ramps = Array.from(rampsMap.entries()).map(([group, steps]) => ({ group, steps }));
 
-  const rampHtml = Array.from(ramps.entries())
-    .map(([group, steps]) => {
+  const cssVars = {
+    bg: dict.optional('semantic.color.bg.canvas', '#ffffff'),
+    surface: dict.optional('semantic.color.bg.surface', '#f8f9fa'),
+    text: dict.optional('semantic.color.text.primary', '#111827'),
+    textMuted: dict.optional('semantic.color.text.secondary', '#6b7280'),
+    primary: dict.optional('semantic.color.action.primary', '#2563eb'),
+    primaryText: dict.optional('semantic.color.action.primary-text', '#ffffff'),
+    border: dict.optional('semantic.color.border.default', '#e5e7eb'),
+    radius: dict.optional('radius.md', '8px'),
+    font: dict.optional('font-family.sans', 'system-ui, sans-serif'),
+  };
+
+  return { name, label, ramps, cssVars };
+}
+
+function renderVisualizerHtml(model: VisualizerModel): string {
+  const rampHtml = model.ramps
+    .map(({ group, steps }) => {
       const chips = steps
         .map(
           (s) =>
@@ -425,18 +453,18 @@ async function visualizerHtmlFormat(args: {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${name} — Visualizer (${label})</title>
+  <title>${model.name} — Visualizer (${model.label})</title>
   <style>
     :root {
-      --bg: ${get('semantic.color.bg.canvas', '#ffffff')};
-      --surface: ${get('semantic.color.bg.surface', '#f8f9fa')};
-      --text: ${get('semantic.color.text.primary', '#111827')};
-      --text-muted: ${get('semantic.color.text.secondary', '#6b7280')};
-      --primary: ${get('semantic.color.action.primary', '#2563eb')};
-      --primary-text: ${get('semantic.color.action.primary-text', '#ffffff')};
-      --border: ${get('semantic.color.border.default', '#e5e7eb')};
-      --radius: ${get('radius.md', '8px')};
-      --font: ${get('font-family.sans', 'system-ui, sans-serif')};
+      --bg: ${model.cssVars.bg};
+      --surface: ${model.cssVars.surface};
+      --text: ${model.cssVars.text};
+      --text-muted: ${model.cssVars.textMuted};
+      --primary: ${model.cssVars.primary};
+      --primary-text: ${model.cssVars.primaryText};
+      --border: ${model.cssVars.border};
+      --radius: ${model.cssVars.radius};
+      --font: ${model.cssVars.font};
     }
     body {
       background: var(--bg);
@@ -481,8 +509,8 @@ async function visualizerHtmlFormat(args: {
 </head>
 <body>
   <div class="container">
-    <h1>${name} Visualizer</h1>
-    <p style="color:var(--text-muted);margin-top:0;">Theme: <strong>${label}</strong> — generated by token-engine-builder for visual inspection</p>
+    <h1>${model.name} Visualizer</h1>
+    <p style="color:var(--text-muted);margin-top:0;">Theme: <strong>${model.label}</strong> — generated by token-engine-builder for visual inspection</p>
 
     <h2>1. Color Ramps</h2>
     ${rampHtml}
@@ -496,24 +524,24 @@ async function visualizerHtmlFormat(args: {
         <input type="text" class="input-field" placeholder="Input specimen..." value="Sample text" />
       </div>
       <div style="display:flex;gap:0.75rem;align-items:center;margin-top:1rem;flex-wrap:wrap;">
-        <span style="background:${dict.require('semantic.color.bg.raised', 'visualizer')};border:1px solid ${dict.require('semantic.color.border.default', 'visualizer')};color:${dict.require('semantic.color.text.primary', 'visualizer')};padding:0.25rem 0.5rem;border-radius:9999px;font-size:0.75rem;font-weight:600;">Status Badge</span>
-        <div style="background:${dict.require('semantic.color.bg.subtle', 'visualizer')};border:1px solid ${dict.require('semantic.color.border.default', 'visualizer')};color:${dict.require('semantic.color.text.secondary', 'visualizer')};width:32px;height:32px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font-size:0.875rem;font-weight:600;">JD</div>
-        <div style="background:${dict.require('semantic.color.text.primary', 'visualizer')};color:${dict.require('semantic.color.bg.canvas', 'visualizer')};padding:0.25rem 0.5rem;border-radius:${dict.require('radius.sm', 'visualizer')};font-size:0.75rem;">Tooltip helper</div>
+        <span style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:0.25rem 0.5rem;border-radius:9999px;font-size:0.75rem;font-weight:600;">Status Badge</span>
+        <div style="background:var(--bg);border:1px solid var(--border);color:var(--text-muted);width:32px;height:32px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font-size:0.875rem;font-weight:600;">JD</div>
+        <div style="background:var(--text);color:var(--bg);padding:0.25rem 0.5rem;border-radius:var(--radius);font-size:0.75rem;">Tooltip helper</div>
       </div>
-      <div style="background:${dict.require('semantic.color.bg.subtle', 'visualizer')};border-left:4px solid ${dict.require('semantic.color.action.primary', 'visualizer')};padding:0.75rem 1rem;border-radius:${dict.require('radius.md', 'visualizer')};margin-top:1rem;font-size:0.875rem;color:${dict.require('semantic.color.text.primary', 'visualizer')};">
+      <div style="background:var(--bg);border-left:4px solid var(--primary);padding:0.75rem 1rem;border-radius:var(--radius);margin-top:1rem;font-size:0.875rem;color:var(--text);">
         <strong>Alert Banner:</strong> System tokens active and certified.
       </div>
       <table style="width:100%;margin-top:1rem;border-collapse:collapse;font-size:0.875rem;">
         <thead>
-          <tr style="background:${dict.require('semantic.color.bg.surface', 'visualizer')};color:${dict.require('semantic.color.text.secondary', 'visualizer')};border-bottom:1px solid ${dict.require('semantic.color.border.default', 'visualizer')};">
+          <tr style="background:var(--surface);color:var(--text-muted);border-bottom:1px solid var(--border);">
             <th style="padding:0.5rem;text-align:left;">Role</th>
             <th style="padding:0.5rem;text-align:left;">Token</th>
           </tr>
         </thead>
         <tbody>
-          <tr style="border-bottom:1px solid ${dict.require('semantic.color.border.default', 'visualizer')};">
+          <tr style="border-bottom:1px solid var(--border);">
             <td style="padding:0.5rem;">Surface</td>
-            <td style="padding:0.5rem;font-family:monospace;">${dict.require('semantic.color.bg.surface', 'visualizer')}</td>
+            <td style="padding:0.5rem;font-family:monospace;">var(--surface)</td>
           </tr>
         </tbody>
       </table>
@@ -523,11 +551,12 @@ async function visualizerHtmlFormat(args: {
 </html>
 `;
 }
-async function cssVariablesFormat(args: {
-  dictionary: { allTokens: SdToken[] };
-  file: { destination?: string };
-  options?: Record<string, unknown> & { outputReferences?: boolean };
-}): Promise<string> {
+
+async function visualizerHtmlFormat(args: TokenFormatArgs): Promise<string> {
+  return renderVisualizerHtml(buildVisualizerModel(args.dictionary, args.options ?? {}));
+}
+
+async function cssVariablesFormat(args: TokenFormatArgs): Promise<string> {
   const header = await fileHeader({ file: args.file as never, options: args.options as never });
   const variables = formattedVariables({
     format: 'css',
@@ -564,6 +593,7 @@ function engineHooks() {
       ],
     },
     formats: {
+      // SD types its own format signature; FORMATS is checked at the TokenFormat boundary.
       'token-engine/css-variables': cssVariablesFormat as never,
       'tailwind/v4-theme': tailwindV4ThemeFormat as never,
       'token-engine/component-specs': componentSpecsFormat as never,
