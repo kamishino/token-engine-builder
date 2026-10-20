@@ -103,35 +103,46 @@ const PROFILE_MAPPINGS: Record<
  * library's variables for light + dark themes. Fails closed listing any
  * missing mapping target — never emits a partial variable set.
  */
+export function renderProfile(
+  profile: UiProfileId,
+  lightData: ResolvedThemeTokens,
+  darkData: ResolvedThemeTokens,
+): { fileName: string; content: string } {
+  const light = lightData.values;
+  const dark = darkData.values;
+  const fileName = profileFileName(profile);
+  const content =
+    profile === 'fluent'
+      ? renderFluentProfile(light, dark)
+      : profile === 'radix'
+        ? renderRadixProfile(lightData, darkData)
+        : profile === 'mui'
+          ? renderMuiProfile(lightData, darkData)
+          : profile === 'chakra'
+            ? renderChakraProfile(light, dark)
+            : profile === 'antd'
+              ? renderAntdProfile(light, dark)
+              : renderCssMappingProfile(
+                  profile as 'shadcn' | 'bootstrap' | 'primevue',
+                  light,
+                  dark,
+                );
+  return { fileName, content };
+}
+
 export async function buildUiProfile(
   profile: UiProfileId,
   tokensDir: string,
   outDir: string,
-): Promise<string[]> {
+): Promise<string> {
   const lightData = await loadThemeTokens(tokensDir, 'light');
   const darkData = await loadThemeTokens(tokensDir, 'dark');
-  const light = lightData.values;
-  const dark = darkData.values;
+  const rendered = renderProfile(profile, lightData, darkData);
   const buildPath = outDir.endsWith('/') ? outDir : `${outDir}/`;
   mkdirSync(buildPath, { recursive: true });
-  const destination = `${buildPath}${profileFileName(profile)}`;
-
-  if (profile === 'fluent') {
-    return renderFluentProfile(light, dark, destination);
-  }
-  if (profile === 'radix') {
-    return renderRadixProfile(lightData, darkData, light, dark, destination);
-  }
-  if (profile === 'mui') {
-    return renderMuiProfile(lightData, darkData, destination);
-  }
-  if (profile === 'chakra') {
-    return renderChakraProfile(light, dark, destination);
-  }
-  if (profile === 'antd') {
-    return renderAntdProfile(light, dark, destination);
-  }
-  return renderCssMappingProfile(profile, light, dark, destination);
+  const destination = `${buildPath}${rendered.fileName}`;
+  writeFileSync(destination, rendered.content, 'utf8');
+  return destination;
 }
 
 function profileHex(values: Map<string, string>, path: string): string {
@@ -172,11 +183,7 @@ const FLUENT_REQUIRED = [
   'radius.md',
 ] as const;
 
-function renderFluentProfile(
-  light: Map<string, string>,
-  dark: Map<string, string>,
-  destination: string,
-): string[] {
+function renderFluentProfile(light: Map<string, string>, dark: Map<string, string>): string {
   assertRequiredRoles('fluent', FLUENT_REQUIRED, light, dark);
   const fluentTokens = (values: Map<string, string>): Record<string, string | number> => ({
     colorBrandBackground: profileHex(values, SEMANTIC_ROLE_PATHS.ACTION_PRIMARY),
@@ -190,9 +197,7 @@ function renderFluentProfile(
     colorBrandStroke1: profileHex(values, SEMANTIC_ROLE_PATHS.BORDER_FOCUS),
     borderRadiusMedium: profileRemToPx(values, 'radius.md'),
   });
-  const content = `${JSON.stringify({ light: fluentTokens(light), dark: fluentTokens(dark) }, null, 2)}\n`;
-  writeFileSync(destination, content, 'utf8');
-  return [destination];
+  return `${JSON.stringify({ light: fluentTokens(light), dark: fluentTokens(dark) }, null, 2)}\n`;
 }
 
 const RADIX_REQUIRED = [
@@ -215,13 +220,9 @@ const RADIX_DARK_POSITIONS = [
   1, 0.94, 0.86, 0.77, 0.68, 0.58, 0.48, 0.37, 0.26, 0.16, 0.08, 0,
 ] as const;
 
-function renderRadixProfile(
-  lightData: ResolvedThemeTokens,
-  darkData: ResolvedThemeTokens,
-  light: Map<string, string>,
-  dark: Map<string, string>,
-  destination: string,
-): string[] {
+function renderRadixProfile(lightData: ResolvedThemeTokens, darkData: ResolvedThemeTokens): string {
+  const light = lightData.values;
+  const dark = darkData.values;
   assertRequiredRoles('radix', RADIX_REQUIRED, light, dark);
   const rampPointsFor = (
     tokensList: ResolvedToken[],
@@ -288,7 +289,7 @@ function renderRadixProfile(
     grayList.map((value, i) => `  --gray-${i + 1}: ${value};`).join('\n') +
     '\n}\n';
 
-  const content =
+  return (
     `/**\n * Do not edit directly, this file was auto-generated.\n */\n\n` +
     renderRadixBlock(
       ':root',
@@ -302,9 +303,8 @@ function renderRadixProfile(
       darkAccent,
       darkGray,
       dark.get(SEMANTIC_ROLE_PATHS.ACTION_PRIMARY_TEXT) as string,
-    );
-  writeFileSync(destination, content, 'utf8');
-  return [destination];
+    )
+  );
 }
 
 const MUI_CHAKRA_REQUIRED = [
@@ -330,11 +330,7 @@ const MUI_CHAKRA_REQUIRED = [
   'font-size.base',
 ] as const;
 
-function renderMuiProfile(
-  lightData: ResolvedThemeTokens,
-  darkData: ResolvedThemeTokens,
-  destination: string,
-): string[] {
+function renderMuiProfile(lightData: ResolvedThemeTokens, darkData: ResolvedThemeTokens): string {
   assertRequiredRoles('mui', MUI_CHAKRA_REQUIRED, lightData.values, darkData.values);
   const muiTheme = (theme: string): Record<string, unknown> => {
     const { tokens, values } = theme === 'light' ? lightData : darkData;
@@ -376,16 +372,10 @@ function renderMuiProfile(
       shape: { borderRadius: profileRemToPx(values, 'radius.md') },
     };
   };
-  const content = `${JSON.stringify({ light: muiTheme('light'), dark: muiTheme('dark') }, null, 2)}\n`;
-  writeFileSync(destination, content, 'utf8');
-  return [destination];
+  return `${JSON.stringify({ light: muiTheme('light'), dark: muiTheme('dark') }, null, 2)}\n`;
 }
 
-function renderChakraProfile(
-  light: Map<string, string>,
-  dark: Map<string, string>,
-  destination: string,
-): string[] {
+function renderChakraProfile(light: Map<string, string>, dark: Map<string, string>): string {
   assertRequiredRoles('chakra', MUI_CHAKRA_REQUIRED, light, dark);
   const pair = (path: string): { value: { _light: string; _dark: string } } => ({
     value: { _light: light.get(path) as string, _dark: dark.get(path) as string },
@@ -409,8 +399,7 @@ function renderChakraProfile(
       },
     },
   };
-  writeFileSync(destination, `${JSON.stringify(chakra, null, 2)}\n`, 'utf8');
-  return [destination];
+  return `${JSON.stringify(chakra, null, 2)}\n`;
 }
 
 const ANTD_REQUIRED = [
@@ -432,11 +421,7 @@ const ANTD_REQUIRED = [
   'font-size.base',
 ] as const;
 
-function renderAntdProfile(
-  light: Map<string, string>,
-  dark: Map<string, string>,
-  destination: string,
-): string[] {
+function renderAntdProfile(light: Map<string, string>, dark: Map<string, string>): string {
   assertRequiredRoles('antd', ANTD_REQUIRED, light, dark);
   const antdTokens = (values: Map<string, string>): Record<string, string | number> => ({
     colorPrimary: profileHex(values, SEMANTIC_ROLE_PATHS.ACTION_PRIMARY),
@@ -456,17 +441,13 @@ function renderAntdProfile(
     fontFamily: values.get('font-family.sans') as string,
     fontSize: profileRemToPx(values, 'font-size.base'),
   });
-  const content = `${JSON.stringify({ light: { token: antdTokens(light) }, dark: { token: antdTokens(dark) } }, null, 2)}\n`;
-  writeFileSync(destination, content, 'utf8');
-  return [destination];
+  return `${JSON.stringify({ light: { token: antdTokens(light) }, dark: { token: antdTokens(dark) } }, null, 2)}\n`;
 }
-
 function renderCssMappingProfile(
   profile: 'shadcn' | 'bootstrap' | 'primevue',
   light: Map<string, string>,
   dark: Map<string, string>,
-  destination: string,
-): string[] {
+): string {
   const { darkSelector, mapping } = PROFILE_MAPPINGS[profile];
   for (const entry of mapping) {
     if (!light.has(entry.source) || (!entry.lightOnly && !dark.has(entry.source))) {
@@ -478,9 +459,8 @@ function renderCssMappingProfile(
       .filter((entry) => includeLightOnly || !entry.lightOnly)
       .map((entry) => `  ${entry.variable}: ${values.get(entry.source) as string};`)
       .join('\n');
-  const content =
+  return (
     `/**\n * Do not edit directly, this file was auto-generated.\n */\n\n` +
-    `:root {\n${renderBlock(light, true)}\n}\n\n${darkSelector} {\n${renderBlock(dark, false)}\n}\n`;
-  writeFileSync(destination, content, 'utf8');
-  return [destination];
+    `:root {\n${renderBlock(light, true)}\n}\n\n${darkSelector} {\n${renderBlock(dark, false)}\n}\n`
+  );
 }

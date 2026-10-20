@@ -195,18 +195,17 @@ export async function runBuild(argv = process.argv.slice(2)): Promise<number> {
       return 0;
     }
 
-    const profileOutputs = await buildUiProfile(profile, tokensDir, outArg.replaceAll('\\', '/'));
-    const missing = profileOutputs.filter((path) => !existsSync(fromCwd(path)));
-    if (missing.length > 0) {
-      console.error(`build failed: Style Dictionary produced no tokens for ${missing.join(', ')}`);
+    const profilePath = await buildUiProfile(profile, tokensDir, outArg.replaceAll('\\', '/'));
+    if (!existsSync(fromCwd(profilePath))) {
+      console.error(`build failed: Style Dictionary produced no tokens for ${profilePath}`);
       return 1;
     }
     const inputHash = computeTreeHash(tokensDir);
-    const files: Record<string, string> = {
-      [profileFileName(profile)]: sha256Hex(readFileSync(fromCwd(profileOutputs[0] as string))),
+    const files = {
+      [profileFileName(profile)]: sha256Hex(readFileSync(fromCwd(profilePath))),
     };
     writeCssProvenance(outDir, inputHash, files);
-    console.log(`built profile ${profile} → ${profileOutputs.join(', ')}`);
+    console.log(`built profile ${profile} → ${profilePath}`);
     return 0;
   } catch (error) {
     console.error(`build failed: ${error instanceof Error ? error.message : String(error)}`);

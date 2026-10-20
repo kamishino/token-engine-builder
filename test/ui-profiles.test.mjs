@@ -3,7 +3,13 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { buildUiProfile, profileFileName, UI_PROFILE_IDS } from '../src/shared/ui-profiles.ts';
+import { loadThemeTokens } from '../src/shared/compiler.ts';
+import {
+  buildUiProfile,
+  profileFileName,
+  renderProfile,
+  UI_PROFILE_IDS,
+} from '../src/shared/ui-profiles.ts';
 import { runGenerate } from '../src/skills/token-math/scripts/generate.ts';
 
 test('UI_PROFILE_IDS lists all 8 supported UI profiles', () => {
@@ -68,10 +74,35 @@ test('buildUiProfile builds fluent, antd, mui, chakra, and shadcn profiles succe
     ]);
 
     for (const profile of ['fluent', 'antd', 'mui', 'chakra', 'shadcn']) {
-      const files = await buildUiProfile(profile, tokensDir, outDir);
-      assert.equal(files.length, 1);
-      const content = readFileSync(files[0], 'utf8');
+      const file = await buildUiProfile(profile, tokensDir, outDir);
+      assert.equal(typeof file, 'string');
+      const content = readFileSync(file, 'utf8');
       assert.ok(content.length > 50);
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('renderProfile returns content for all eight profiles without writing files', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'render-prof-test-'));
+  try {
+    const tokensDir = join(dir, 'tokens');
+    runGenerate([
+      '--spec',
+      'src/skills/token-style/assets/style-spec.example.json',
+      '--out',
+      tokensDir,
+    ]);
+    const lightData = await loadThemeTokens(tokensDir, 'light');
+    const darkData = await loadThemeTokens(tokensDir, 'dark');
+
+    for (const profile of UI_PROFILE_IDS) {
+      const { fileName, content } = renderProfile(profile, lightData, darkData);
+      assert.equal(fileName, profileFileName(profile));
+      assert.ok(content.length > 50);
+      if (profile === 'radix') assert.ok(content.includes('.dark'));
+      if (profile === 'fluent') assert.ok(content.includes('colorBrandBackground'));
     }
   } finally {
     rmSync(dir, { recursive: true, force: true });
