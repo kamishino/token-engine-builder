@@ -4,13 +4,13 @@
  *
  * Usage: node ./scripts/audit.mjs --tokens tokens [--theme light|dark|both] [--min-ratio 4.5] [--json]
  */
-import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { checkContrast } from '../../../shared/colors.js';
 import {
-  checkTampered,
-  collectHashes,
-  sha256Hex,
+  checkTokensProvenance,
+  removeAuditStamp,
+  writeAuditStamp,
   type TamperReport,
 } from '../../../shared/guard.js';
 import { fromCwd, getArg, hasFlag } from '../../../shared/paths.js';
@@ -173,10 +173,7 @@ const discoveredThemes = existsSync(semanticDir)
   : [];
 const themes = theme === 'both' ? discoveredThemes : [theme];
 const reports = new Map(themes.map((name) => [name, auditTheme(name)]));
-const MANIFEST_NAME = '.token-engine-tokens-manifest.json';
-const provenance: TamperReport = checkTampered(join(tokensDir, MANIFEST_NAME), tokensDir, [
-  MANIFEST_NAME,
-]);
+const provenance: TamperReport = checkTokensProvenance(tokensDir);
 const provenanceFails = provenance.status === 'tampered' || provenance.status === 'unreadable';
 const overallPass = [...reports.values()].every((report) => report.pass) && !provenanceFails;
 
@@ -212,22 +209,10 @@ if (asJson) {
 }
 
 // Audit stamp: token-build verifies this hash before building (verified gate).
-const STAMP_NAME = '.token-engine-audit.json';
-const stampPath = join(tokensDir, STAMP_NAME);
 if (overallPass) {
-  const hashes = collectHashes(tokensDir, [STAMP_NAME, '.token-engine-tokens-manifest.json']);
-  const treeHash = sha256Hex(
-    Object.entries(hashes)
-      .map(([path, hash]) => `${path}:${hash}`)
-      .join('\n'),
-  );
-  writeFileSync(
-    stampPath,
-    `${JSON.stringify({ version: 1, pass: true, at: Date.now(), treeHash, minRatio, minApca }, null, 2)}\n`,
-    'utf8',
-  );
+  writeAuditStamp(tokensDir, { minRatio, minApca });
 } else {
-  rmSync(stampPath, { force: true });
+  removeAuditStamp(tokensDir);
 }
 
 process.exit(overallPass ? 0 : 1);

@@ -14,10 +14,9 @@ import {
 } from '../../../shared/colors.js';
 import {
   assertSafeOutDir,
-  checkTampered,
-  collectHashes,
+  checkTokensProvenance,
   sha256Hex,
-  writeManifest,
+  writeTokensProvenance,
 } from '../../../shared/guard.js';
 import { fromCwd, getArg, hasFlag, templatePath } from '../../../shared/paths.js';
 import {
@@ -48,9 +47,7 @@ if (!existsSync(specPath)) {
   console.error(`style-spec not found: ${specPath} (run skill token-style first)`);
   process.exit(1);
 }
-const MANIFEST_NAME = '.token-engine-tokens-manifest.json';
-const manifestPath = join(outDir, MANIFEST_NAME);
-const tamper = existsSync(outDir) ? checkTampered(manifestPath, outDir, [MANIFEST_NAME]) : null;
+const tamper = existsSync(outDir) ? checkTokensProvenance(outDir) : null;
 
 const spec = JSON.parse(readFileSync(specPath, 'utf8')) as StyleSpec;
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
@@ -499,13 +496,7 @@ writeTokenFile(['primitive', 'radius.tokens.json'], {
   radius: radiusScale(spec.radius),
 });
 
-writeManifest(manifestPath, {
-  version: 1,
-  kind: 'tokens',
-  generator: 'token-engine-builder',
-  inputHash: sha256Hex(readFileSync(specPath)),
-  files: collectHashes(outDir, [MANIFEST_NAME]),
-});
+writeTokensProvenance(outDir, sha256Hex(readFileSync(specPath)));
 console.log(`generated 3-tier tokens for "${spec.name}" → ${outDir}`);
 console.log(
   'next: node <token-audit>/scripts/audit.mjs --tokens ' + getArg(argv, '--out', 'tokens'),

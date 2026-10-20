@@ -16,10 +16,11 @@ import {
 } from '../../../shared/compiler.js';
 import {
   assertSafeOutDir,
-  checkTampered,
-  collectHashes,
+  checkAuditStamp,
+  checkCssProvenance,
+  computeTreeHash,
   sha256Hex,
-  writeManifest,
+  writeCssProvenance,
 } from '../../../shared/guard.js';
 import { fromCwd, getArg, hasFlag, templatePath } from '../../../shared/paths.js';
 
@@ -106,9 +107,7 @@ if (profileArg !== undefined && !(UI_PROFILE_IDS as readonly string[]).includes(
 }
 const profile = profileArg as UiProfileId | undefined;
 
-const MANIFEST_NAME = '.token-engine-css-manifest.json';
 const outDir = fromCwd(outArg);
-const manifestPath = join(outDir, MANIFEST_NAME);
 const outputPaths =
   profile === undefined
     ? [
@@ -119,7 +118,7 @@ const outputPaths =
       ]
     : [join(outDir, profileFileName(profile))];
 const outputsExist = outputPaths.some((path) => existsSync(path));
-const tamper = checkTampered(manifestPath, outDir, [MANIFEST_NAME]);
+const tamper = checkCssProvenance(outDir);
 
 if (dryRun) {
   console.log(
@@ -128,7 +127,7 @@ if (dryRun) {
       : `would build profile ${profile} (light + dark) → ${outDir}`,
   );
   if (outputsExist) console.log(`provenance: ${tamper.status}`);
-  console.log(`audit stamp: ${auditStampStatus()}`);
+  console.log(`audit stamp: ${checkAuditStamp(tokensDir)}`);
   process.exit(0);
 }
 
@@ -153,37 +152,13 @@ if (outputsExist && force && (tamper.status === 'tampered' || tamper.status === 
   console.log('overwriting hand-edited CSS (--force)');
 }
 
-/** Audit stamp status for this exact token tree: missing | fail | stale | pass. */
-function auditStampStatus(): string {
-  const stampPath = join(tokensDir, '.token-engine-audit.json');
-  try {
-    const stamp = JSON.parse(readFileSync(stampPath, 'utf8')) as {
-      pass?: unknown;
-      treeHash?: unknown;
-    };
-    if (stamp.pass !== true || typeof stamp.treeHash !== 'string') return 'fail';
-    const hashes = collectHashes(tokensDir, [
-      '.token-engine-audit.json',
-      '.token-engine-tokens-manifest.json',
-    ]);
-    const current = sha256Hex(
-      Object.entries(hashes)
-        .map(([path, hash]) => `${path}:${hash}`)
-        .join('\n'),
-    );
-    return current === stamp.treeHash ? 'pass' : 'stale';
-  } catch {
-    return 'missing';
-  }
-}
-
 // Verified gate: refuse to build a tree without a fresh passing audit stamp.
 const allowUnaudited = hasFlag(argv, '--allow-unaudited');
 if (allowUnaudited) {
   console.log('warning: building without a fresh audit pass (--allow-unaudited)');
-} else if (auditStampStatus() !== 'pass') {
+} else if (checkAuditStamp(tokensDir) !== 'pass') {
   console.error(
-    `refusing to build: no fresh audit pass for this exact tree (stamp: ${auditStampStatus()}). Run token-audit first, or pass --allow-unaudited.`,
+    `refusing to build: no fresh audit pass for this exact tree (stamp: ${checkAuditStamp(tokensDir)}). Run token-audit first, or pass --allow-unaudited.`,
   );
   process.exit(1);
 }
@@ -220,31 +195,20 @@ try {
     console.error(`build failed: Style Dictionary produced no tokens for ${missing.join(', ')}`);
     process.exit(1);
   }
-  const tokenHashes = collectHashes(tokensDir, []);
-  const inputHash = sha256Hex(
-    Object.entries(tokenHashes)
-      .filter(([path]) => path.endsWith('.tokens.json'))
-      .map(([path, hash]) => `${path}:${hash}`)
-      .join('\n'),
-  );
-  writeManifest(manifestPath, {
-    version: 1,
-    kind: 'css',
-    generator: 'token-engine-builder',
-    inputHash,
-    files:
-      profile === undefined
-        ? {
-            'DESIGN.md': sha256Hex(readFileSync(fromCwd(outputs[3] as string))),
-            'components.md': sha256Hex(readFileSync(fromCwd(outputs[2] as string))),
-            'theme.css': sha256Hex(readFileSync(fromCwd(outputs[1] as string))),
-            'tokens.css': sha256Hex(readFileSync(fromCwd(outputs[0] as string))),
-            ...(visualizer && outputs[4] !== undefined
-              ? { 'visualizer.html': sha256Hex(readFileSync(fromCwd(outputs[4]))) }
-              : {}),
-          }
-        : { [profileFileName(profile)]: sha256Hex(readFileSync(fromCwd(outputs[0] as string))) },
-  });
+  const inputHash = computeTreeHash(tokensDir);
+  const files: Record<string, string> =
+    profile === undefined
+      ? {
+          'DESIGN.md': sha256Hex(readFileSync(fromCwd(outputs[3] as string))),
+          'components.md': sha256Hex(readFileSync(fromCwd(outputs[2] as string))),
+          'theme.css': sha256Hex(readFileSync(fromCwd(outputs[1] as string))),
+          'tokens.css': sha256Hex(readFileSync(fromCwd(outputs[0] as string))),
+          ...(visualizer && outputs[4] !== undefined
+            ? { 'visualizer.html': sha256Hex(readFileSync(fromCwd(outputs[4]))) }
+            : {}),
+        }
+      : { [profileFileName(profile)]: sha256Hex(readFileSync(fromCwd(outputs[0] as string))) };
+  writeCssProvenance(outDir, inputHash, files);
   console.log(
     profile === undefined
       ? `built (${theme}) → ${outputs.join(', ')}`

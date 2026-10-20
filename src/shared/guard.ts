@@ -8,7 +8,7 @@
  * Extra user files (`added`) never block — they survive generation.
  */
 import { createHash } from 'node:crypto';
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, join, relative, resolve, sep } from 'node:path';
 
@@ -32,6 +32,9 @@ export interface TamperReport {
 export function sha256Hex(data: string | Buffer): string {
   return createHash('sha256').update(data).digest('hex');
 }
+export const TOKENS_MANIFEST_NAME = '.token-engine-tokens-manifest.json';
+export const CSS_MANIFEST_NAME = '.token-engine-css-manifest.json';
+export const AUDIT_STAMP_NAME = '.token-engine-audit.json';
 
 function walkFiles(dir: string, visit: (path: string) => void): void {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -116,4 +119,89 @@ export function assertSafeOutDir(outDir: string, cwd: string): string | null {
     return `refusing to write into an ancestor of the working directory: ${out}`;
   if (out === resolve(homedir())) return `refusing to write into the home directory: ${out}`;
   return null;
+}
+
+/** Compute the aggregate tree hash for a tokens directory (excluding stamp & manifest). */
+export function computeTreeHash(tokensDir: string): string {
+  const hashes = collectHashes(tokensDir, [AUDIT_STAMP_NAME, TOKENS_MANIFEST_NAME]);
+  return sha256Hex(
+    Object.entries(hashes)
+      .map(([path, hash]) => `${path}:${hash}`)
+      .join('\n'),
+  );
+}
+
+/** Check if the audit stamp exists, is fresh, stale, or failing for tokensDir. */
+export function checkAuditStamp(tokensDir: string): 'pass' | 'stale' | 'fail' | 'missing' {
+  const stampPath = join(tokensDir, AUDIT_STAMP_NAME);
+  try {
+    const stamp = JSON.parse(readFileSync(stampPath, 'utf8')) as {
+      pass?: unknown;
+      treeHash?: unknown;
+    };
+    if (stamp.pass !== true || typeof stamp.treeHash !== 'string') return 'fail';
+    const current = computeTreeHash(tokensDir);
+    return current === stamp.treeHash ? 'pass' : 'stale';
+  } catch {
+    return 'missing';
+  }
+}
+
+/** Record a passing audit stamp with the current tree hash. */
+export function writeAuditStamp(
+  tokensDir: string,
+  data: { minRatio: number; minApca: number },
+): void {
+  const treeHash = computeTreeHash(tokensDir);
+  const stampPath = join(tokensDir, AUDIT_STAMP_NAME);
+  writeFileSync(
+    stampPath,
+    `${JSON.stringify({ version: 1, pass: true, at: Date.now(), treeHash, ...data }, null, 2)}\n`,
+    'utf8',
+  );
+}
+
+/** Remove the audit stamp when an audit fails. */
+export function removeAuditStamp(tokensDir: string): void {
+  rmSync(join(tokensDir, AUDIT_STAMP_NAME), { force: true });
+}
+
+/** Verify provenance of a generated tokens directory. */
+export function checkTokensProvenance(tokensDir: string): TamperReport {
+  return checkTampered(join(tokensDir, TOKENS_MANIFEST_NAME), tokensDir, [
+    TOKENS_MANIFEST_NAME,
+    AUDIT_STAMP_NAME,
+  ]);
+}
+
+/** Write provenance manifest for a generated tokens directory. */
+export function writeTokensProvenance(tokensDir: string, inputHash: string | null): void {
+  const hashes = collectHashes(tokensDir, [TOKENS_MANIFEST_NAME, AUDIT_STAMP_NAME]);
+  writeManifest(join(tokensDir, TOKENS_MANIFEST_NAME), {
+    version: 1,
+    kind: 'tokens',
+    generator: 'token-engine-builder',
+    inputHash,
+    files: hashes,
+  });
+}
+
+/** Verify provenance of a generated CSS directory. */
+export function checkCssProvenance(cssDir: string): TamperReport {
+  return checkTampered(join(cssDir, CSS_MANIFEST_NAME), cssDir, [CSS_MANIFEST_NAME]);
+}
+
+/** Write provenance manifest for a generated CSS directory. */
+export function writeCssProvenance(
+  cssDir: string,
+  inputHash: string | null,
+  files: Record<string, string>,
+): void {
+  writeManifest(join(cssDir, CSS_MANIFEST_NAME), {
+    version: 1,
+    kind: 'css',
+    generator: 'token-engine-builder',
+    inputHash,
+    files,
+  });
 }
