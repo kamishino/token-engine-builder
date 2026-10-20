@@ -13,10 +13,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { dtcgColorValue, oklchToHex, parseToOklch } from '../../../shared/colors.js';
 import { fromCwd, getArg, hasFlag, isMainModule } from '../../../shared/paths.js';
-import { findTokenFiles } from '../../../shared/tokens.js';
+import { findTokenFiles, walkTokenLeaves, type JsonObject } from '../../../shared/tokens.js';
 import type { DtcgColorValue } from '../../../shared/types.js';
-
-type JsonObject = Record<string, unknown>;
 
 function hexToFigmaRgb(hex: string): { r: number; g: number; b: number; a: number } {
   const clean = hex.replace('#', '');
@@ -61,86 +59,75 @@ export function dtcgTokensToFigma(
   const defaultModeId = options.defaultModeId ?? '1:0';
   const variables: FigmaVariable[] = [];
   const losses: string[] = [];
-  function flatten(node: JsonObject, prefix: string): void {
-    for (const [key, value] of Object.entries(node)) {
-      if (key.startsWith('$')) continue;
-      if (value === null || typeof value !== 'object') continue;
-      const path = prefix === '' ? key : `${prefix}/${key}`;
-      const rec = value as JsonObject;
+  const visitLeaf = (path: string, rec: JsonObject): void => {
+    const val = rec['$value'];
+    const type = (rec['$type'] as string) || '';
+    const desc = (rec['$description'] as string) || '';
 
-      if ('$value' in rec) {
-        const val = rec['$value'];
-        const type = (rec['$type'] as string) || '';
-        const desc = (rec['$description'] as string) || '';
-
-        if (typeof val === 'string' && val.startsWith('{')) {
-          losses.push(`alias "${path}" exported as literal STRING: ${val}`);
-          variables.push({
-            id: `VariableID:${variables.length + 1}`,
-            name: path,
-            key: path.replaceAll('/', '_'),
-            variableCollectionId: collectionId,
-            resolvedType: 'STRING',
-            description: `Alias to ${val}`,
-            valuesByMode: { [defaultModeId]: val },
-          });
-          continue;
-        }
-
-        if (type === 'color' || (typeof val === 'object' && val && 'colorSpace' in val)) {
-          let hex = '#000000';
-          if (typeof val === 'object' && val && 'hex' in val) {
-            hex = String((val as DtcgColorValue).hex);
-          } else if (typeof val === 'string') {
-            hex = oklchToHex(parseToOklch(val));
-          }
-          variables.push({
-            id: `VariableID:${variables.length + 1}`,
-            name: path,
-            key: path.replaceAll('/', '_'),
-            variableCollectionId: collectionId,
-            resolvedType: 'COLOR',
-            description: desc,
-            valuesByMode: { [defaultModeId]: hexToFigmaRgb(hex) },
-          });
-        } else if (type === 'dimension' || typeof val === 'number' || hasNumericValue(val)) {
-          let num = typeof val === 'number' ? val : 0;
-          if (hasNumericValue(val)) {
-            num = val.value;
-          } else if (typeof val === 'string') {
-            if (val.endsWith('rem')) num = Math.round(Number.parseFloat(val) * 16);
-            else if (val.endsWith('px')) num = Number.parseFloat(val);
-          }
-          variables.push({
-            id: `VariableID:${variables.length + 1}`,
-            name: path,
-            key: path.replaceAll('/', '_'),
-            variableCollectionId: collectionId,
-            resolvedType: 'FLOAT',
-            description: desc,
-            valuesByMode: { [defaultModeId]: num },
-          });
-        } else {
-          variables.push({
-            id: `VariableID:${variables.length + 1}`,
-            name: path,
-            key: path.replaceAll('/', '_'),
-            variableCollectionId: collectionId,
-            resolvedType: 'STRING',
-            description: desc,
-            valuesByMode: { [defaultModeId]: String(val) },
-          });
-        }
-      } else {
-        flatten(rec, path);
-      }
+    if (typeof val === 'string' && val.startsWith('{')) {
+      losses.push(`alias "${path}" exported as literal STRING: ${val}`);
+      variables.push({
+        id: `VariableID:${variables.length + 1}`,
+        name: path,
+        key: path.replaceAll('/', '_'),
+        variableCollectionId: collectionId,
+        resolvedType: 'STRING',
+        description: `Alias to ${val}`,
+        valuesByMode: { [defaultModeId]: val },
+      });
+      return;
     }
-  }
+
+    if (type === 'color' || (typeof val === 'object' && val && 'colorSpace' in val)) {
+      let hex = '#000000';
+      if (typeof val === 'object' && val && 'hex' in val) {
+        hex = String((val as DtcgColorValue).hex);
+      } else if (typeof val === 'string') {
+        hex = oklchToHex(parseToOklch(val));
+      }
+      variables.push({
+        id: `VariableID:${variables.length + 1}`,
+        name: path,
+        key: path.replaceAll('/', '_'),
+        variableCollectionId: collectionId,
+        resolvedType: 'COLOR',
+        description: desc,
+        valuesByMode: { [defaultModeId]: hexToFigmaRgb(hex) },
+      });
+    } else if (type === 'dimension' || typeof val === 'number' || hasNumericValue(val)) {
+      let num = typeof val === 'number' ? val : 0;
+      if (hasNumericValue(val)) {
+        num = val.value;
+      } else if (typeof val === 'string') {
+        if (val.endsWith('rem')) num = Math.round(Number.parseFloat(val) * 16);
+        else if (val.endsWith('px')) num = Number.parseFloat(val);
+      }
+      variables.push({
+        id: `VariableID:${variables.length + 1}`,
+        name: path,
+        key: path.replaceAll('/', '_'),
+        variableCollectionId: collectionId,
+        resolvedType: 'FLOAT',
+        description: desc,
+        valuesByMode: { [defaultModeId]: num },
+      });
+    } else {
+      variables.push({
+        id: `VariableID:${variables.length + 1}`,
+        name: path,
+        key: path.replaceAll('/', '_'),
+        variableCollectionId: collectionId,
+        resolvedType: 'STRING',
+        description: desc,
+        valuesByMode: { [defaultModeId]: String(val) },
+      });
+    }
+  };
 
   if (Array.isArray(sources)) {
     for (const file of sources) {
       try {
-        flatten(JSON.parse(readFileSync(file, 'utf8')) as JsonObject, '');
+        walkTokenLeaves(JSON.parse(readFileSync(file, 'utf8')) as JsonObject, '/', visitLeaf);
       } catch (err) {
         losses.push(
           `unreadable token file "${file}": ${err instanceof Error ? err.message : String(err)}`,
@@ -148,7 +135,7 @@ export function dtcgTokensToFigma(
       }
     }
   } else {
-    flatten(sources, '');
+    walkTokenLeaves(sources, '/', visitLeaf);
   }
 
   return {

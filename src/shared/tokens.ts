@@ -97,6 +97,23 @@ export function loadTokenSources(sources: string[]): JsonObject {
   return merged;
 }
 
+/** Walk a DTCG tree, visiting every leaf that carries `$value` with its joined path. */
+export function walkTokenLeaves(
+  node: JsonObject,
+  separator: string,
+  visit: (path: string, record: JsonObject) => void,
+  prefix = '',
+): void {
+  for (const [key, value] of Object.entries(node)) {
+    if (key.startsWith('$')) continue;
+    if (value === null || typeof value !== 'object') continue;
+    const path = prefix === '' ? key : `${prefix}${separator}${key}`;
+    const record = value as JsonObject;
+    if ('$value' in record) visit(path, record);
+    else walkTokenLeaves(record, separator, visit, path);
+  }
+}
+
 /** Flatten a token tree to dotted paths → raw `$value`, recording the owning tier. */
 export function flattenTokens(
   node: JsonObject,
@@ -104,17 +121,14 @@ export function flattenTokens(
   tier = 'unknown',
   out: Map<string, FlattenedToken> = new Map(),
 ): Map<string, FlattenedToken> {
-  for (const [key, value] of Object.entries(node)) {
-    if (key.startsWith('$')) continue;
-    if (value === null || typeof value !== 'object') continue;
-    const path = prefix === '' ? key : `${prefix}.${key}`;
-    const record = value as JsonObject;
-    if ('$value' in record) {
+  walkTokenLeaves(
+    node,
+    '.',
+    (path, record) => {
       out.set(path, { value: record['$value'], tier });
-    } else {
-      flattenTokens(record, path, tier, out);
-    }
-  }
+    },
+    prefix,
+  );
   return out;
 }
 

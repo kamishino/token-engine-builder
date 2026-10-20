@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { deepMerge, flattenTokens, loadTokenTree } from '../src/shared/tokens.ts';
+import { deepMerge, flattenTokens, loadTokenTree, walkTokenLeaves } from '../src/shared/tokens.ts';
 
 test('deepMerge merges objects without mutating source', () => {
   const target = { a: { b: 1 }, c: 2 };
@@ -18,6 +18,29 @@ test('flattenTokens tags owning tier and dotted path', () => {
   const flat = flattenTokens(tree, '', 'semantic');
   assert.equal(flat.has('color.brand'), true);
   assert.deepEqual(flat.get('color.brand'), { value: '{color.neutral.500}', tier: 'semantic' });
+});
+
+test('walkTokenLeaves visits leaves with custom separator', () => {
+  const tree = {
+    color: {
+      brand: {
+        500: { $value: '#ffffff', $type: 'color' },
+      },
+      $type: 'color',
+    },
+  };
+
+  const slashPaths = [];
+  walkTokenLeaves(tree, '/', (path, rec) => {
+    slashPaths.push({ path, val: rec.$value });
+  });
+  assert.deepEqual(slashPaths, [{ path: 'color/brand/500', val: '#ffffff' }]);
+
+  const dotPaths = [];
+  walkTokenLeaves(tree, '.', (path, rec) => {
+    dotPaths.push({ path, val: rec.$value });
+  });
+  assert.deepEqual(dotPaths, [{ path: 'color.brand.500', val: '#ffffff' }]);
 });
 
 test('loadTokenTree loads tokens and resolves aliases with cycle detection', () => {
