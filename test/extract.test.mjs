@@ -36,3 +36,14 @@ test('runExtract extracts palette with primary, secondary, and accent roles from
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('runExtract returns 1 on project with no color signals without terminating process', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'extract-empty-'));
+  try {
+    const outSpecPath = join(dir, 'style-spec.json');
+    const exitCode = await runExtract(['--root', dir, '--out', outSpecPath, '--force']);
+    assert.equal(exitCode, 1);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

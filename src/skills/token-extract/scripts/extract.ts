@@ -348,7 +348,7 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
         }
       } else {
         console.error(`rendered extraction error: ${message}`);
-        process.exit(1);
+        return 1;
       }
     }
   } else {
@@ -400,7 +400,7 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
   const top = ranked[0];
   if (top === undefined && designFrontmatter?.primary === undefined) {
     console.error('no color signals found — fall back to the token-style interview');
-    process.exit(1);
+    return 1;
   }
 
   const evidence = ranked.slice(0, 5).map((candidate) => ({
