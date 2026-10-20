@@ -9,10 +9,11 @@
  *   node ./scripts/figma.mjs --to-figma <tokens-dir> --out figma-variables.json
  *   node ./scripts/figma.mjs --from-figma <figma-variables.json> --out tokens
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { dtcgColorValue, oklchToHex, parseToOklch } from '../../../shared/colors.js';
 import { fromCwd, getArg, hasFlag } from '../../../shared/paths.js';
+import { findTokenFiles } from '../../../shared/tokens.js';
 import type { DtcgColorValue } from '../../../shared/types.js';
 
 const argv = process.argv.slice(2);
@@ -36,15 +37,6 @@ if (!toFigmaArg && !fromFigmaArg) {
 }
 
 type JsonObject = Record<string, unknown>;
-
-function findTokenFiles(dir: string): string[] {
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) return findTokenFiles(path);
-    return entry.name.endsWith('.tokens.json') ? [path] : [];
-  });
-}
 
 function hexToFigmaRgb(hex: string): { r: number; g: number; b: number; a: number } {
   const clean = hex.replace('#', '');

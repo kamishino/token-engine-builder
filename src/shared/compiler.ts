@@ -10,12 +10,14 @@
  * `tokens`: SD's own glob loader (@bundled-es-modules/glob) does not survive
  * being re-bundled into a standalone .mjs, and this keeps builds portable.
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import StyleDictionary from 'style-dictionary';
 import { fileHeader, formattedVariables, usesReferences } from 'style-dictionary/utils';
 import { dtcgToOklch, formatOklch, oklchToHex, parseToOklch } from './colors.js';
+import { deepMerge, expandSource, loadTokenSources } from './tokens.js';
 import type { BuildTokensOptions, DtcgColorValue } from './types.js';
+
+export { expandSource, deepMerge, loadTokenSources };
 
 interface SdToken {
   $value?: unknown;
@@ -519,73 +521,6 @@ export async function cssVariablesFormat(args: {
     usesDtcg: true,
   });
   return `${header}:root {\n${variables}\n}\n`;
-}
-
-type JsonObject = Record<string, unknown>;
-
-/** Expand one source entry: literal file, or a `**` / `*` glob ending in `.tokens.json`. */
-function expandSource(pattern: string): string[] {
-  const normalized = pattern.replaceAll('\\', '/');
-  const recursive = normalized.indexOf('/**/');
-  if (recursive !== -1) {
-    const base = normalized.slice(0, recursive);
-    const suffix = normalized.slice(recursive + 5).replace('*', '');
-    if (!existsSync(base)) return [];
-    const found: string[] = [];
-    const walk = (dir: string): void => {
-      for (const entry of readdirSync(dir, { withFileTypes: true })) {
-        const path = join(dir, entry.name);
-        if (entry.isDirectory()) walk(path);
-        else if (entry.name.endsWith(suffix)) found.push(path);
-      }
-    };
-    walk(base);
-    return found.sort();
-  }
-  if (normalized.includes('*')) {
-    const slash = normalized.lastIndexOf('/');
-    const dir = slash === -1 ? '.' : normalized.slice(0, slash);
-    const suffix = normalized.slice(slash + 1).replace('*', '');
-    if (!existsSync(dir)) return [];
-    return readdirSync(dir)
-      .filter((name) => name.endsWith(suffix))
-      .sort()
-      .map((name) => join(dir, name));
-  }
-  return existsSync(normalized) ? [normalized] : [];
-}
-
-function deepMerge(target: JsonObject, source: JsonObject): JsonObject {
-  for (const [key, value] of Object.entries(source)) {
-    const existing = target[key];
-    if (
-      value !== null &&
-      typeof value === 'object' &&
-      !Array.isArray(value) &&
-      existing !== null &&
-      typeof existing === 'object' &&
-      !Array.isArray(existing)
-    ) {
-      deepMerge(existing as JsonObject, value as JsonObject);
-    } else {
-      target[key] = value;
-    }
-  }
-  return target;
-}
-
-/** Load + deep-merge every source file into one DTCG token tree. */
-export function loadTokenSources(sources: string[]): JsonObject {
-  const merged: JsonObject = {};
-  for (const pattern of sources) {
-    for (const file of expandSource(pattern)) {
-      deepMerge(merged, JSON.parse(readFileSync(file, 'utf8')) as JsonObject);
-    }
-  }
-  if (Object.keys(merged).length === 0) {
-    throw new Error(`no token files matched sources: ${sources.join(', ')}`);
-  }
-  return merged;
 }
 
 /**
