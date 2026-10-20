@@ -10,11 +10,13 @@
  * `tokens`: SD's own glob loader (@bundled-es-modules/glob) does not survive
  * being re-bundled into a standalone .mjs, and this keeps builds portable.
  */
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import StyleDictionary from 'style-dictionary';
 import { fileHeader, formattedVariables, usesReferences } from 'style-dictionary/utils';
 import { dtcgToOklch, formatOklch, oklchToHex, parseToOklch } from './colors.js';
 import { SEMANTIC_ROLE_PATHS } from './roles.js';
-import { loadTokenSources } from './tokens.js';
+import { loadTokenSources, tokenSourcePatterns, type JsonObject } from './tokens.js';
 import type { BuildTokensOptions, DtcgColorValue } from './types.js';
 
 export interface ResolvedToken {
@@ -652,26 +654,44 @@ export interface CompiledOutputs {
   artifacts: Record<string, string>;
 }
 
-export async function buildTokens(options: BuildTokensOptions): Promise<CompiledOutputs> {
-  const buildPath = options.outDir.endsWith('/') ? options.outDir : `${options.outDir}/`;
-  const sd = new StyleDictionary({
-    tokens: loadTokenSources(options.source) as never,
+interface EngineFile {
+  destination: string;
+  format: string;
+  options?: Record<string, unknown>;
+}
+
+function createEngine(
+  tokens: JsonObject,
+  files: EngineFile[],
+  options: { buildPath?: string; prefix?: string } = {},
+): StyleDictionary {
+  return new StyleDictionary({
+    tokens: tokens as never,
     hooks: engineHooks(),
     platforms: {
       css: {
         transformGroup: 'token-engine/css',
-        buildPath,
+        buildPath: options.buildPath ?? '',
         ...(options.prefix === undefined ? {} : { prefix: options.prefix }),
-        files: ARTIFACTS.filter(
-          (artifact) => artifact.optional !== true || options.visualizer === true,
-        ).map((artifact) => ({
-          destination: artifact.name,
-          format: artifact.format,
-          ...(artifact.options === undefined ? {} : { options: artifact.options(options) }),
-        })),
+        files,
       },
     },
   });
+}
+
+export async function buildTokens(options: BuildTokensOptions): Promise<CompiledOutputs> {
+  const buildPath = options.outDir.endsWith('/') ? options.outDir : `${options.outDir}/`;
+  const sd = createEngine(
+    loadTokenSources(options.source),
+    ARTIFACTS.filter((artifact) => artifact.optional !== true || options.visualizer === true).map(
+      (artifact) => ({
+        destination: artifact.name,
+        format: artifact.format,
+        ...(artifact.options === undefined ? {} : { options: artifact.options(options) }),
+      }),
+    ),
+    { buildPath, ...(options.prefix === undefined ? {} : { prefix: options.prefix }) },
+  );
   await sd.buildAllPlatforms();
   const artifacts = Object.fromEntries(
     artifactNames(options).map((name) => [name, `${buildPath}${name}`]),
@@ -684,23 +704,14 @@ export async function loadThemeTokens(
   tokensDir: string,
   theme: string,
 ): Promise<ResolvedDictionary> {
-  const base = tokensDir.replaceAll('\\', '/');
-  const merged = loadTokenSources([
-    `${base}/primitive/**/*.tokens.json`,
-    `${base}/semantic/${theme}.tokens.json`,
-    `${base}/component/**/*.tokens.json`,
+  const semanticFile = join(tokensDir, 'semantic', `${theme}.tokens.json`);
+  if (!existsSync(semanticFile)) {
+    throw new Error(`semantic theme file not found: ${semanticFile}`);
+  }
+  const merged = loadTokenSources(tokenSourcePatterns(tokensDir, theme));
+  const sd = createEngine(merged, [
+    { destination: 'tokens.css', format: 'token-engine/css-variables' },
   ]);
-  const sd = new StyleDictionary({
-    tokens: merged as never,
-    hooks: engineHooks(),
-    platforms: {
-      css: {
-        transformGroup: 'token-engine/css',
-        buildPath: '',
-        files: [{ destination: 'tokens.css', format: 'token-engine/css-variables' }],
-      },
-    },
-  });
   const dictionary = (await sd.getPlatformTokens('css')) as unknown as { allTokens: SdToken[] };
   return new ResolvedDictionary(dictionary.allTokens);
 }

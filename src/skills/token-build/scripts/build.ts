@@ -18,6 +18,7 @@ import {
 } from '../../../shared/guard.js';
 import { fromCwd, getArg, hasFlag, isMainModule, templatePath } from '../../../shared/paths.js';
 import { loadStyleSpec } from '../../../shared/spec.js';
+import { tokenSourcePatterns } from '../../../shared/tokens.js';
 import type { BuildTokensOptions } from '../../../shared/types.js';
 import {
   buildUiProfile,
@@ -158,12 +159,7 @@ export async function runBuild(argv = process.argv.slice(2)): Promise<number> {
 
   // Style Dictionary globs: forward slashes on every platform, and cwd-relative
   // patterns (bundled glob engines mishandle absolute Windows drive paths).
-  const globBase = relative(process.cwd(), tokensDir).replaceAll('\\', '/');
-  const source = [
-    `${globBase}/primitive/**/*.tokens.json`,
-    `${globBase}/semantic/${theme}.tokens.json`,
-    `${globBase}/component/**/*.tokens.json`,
-  ];
+  const source = tokenSourcePatterns(relative(process.cwd(), tokensDir), theme);
 
   try {
     if (profile === undefined) {

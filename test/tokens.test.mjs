@@ -3,7 +3,13 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { deepMerge, flattenTokens, loadTokenTree, walkTokenLeaves } from '../src/shared/tokens.ts';
+import {
+  deepMerge,
+  flattenTokens,
+  loadTokenTree,
+  tokenSourcePatterns,
+  walkTokenLeaves,
+} from '../src/shared/tokens.ts';
 
 test('deepMerge merges objects without mutating source', () => {
   const target = { a: { b: 1 }, c: 2 };
@@ -103,4 +109,17 @@ test('loadTokenTree loads tokens and resolves aliases with cycle detection', () 
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('tokenSourcePatterns normalizes separators and trailing slashes', () => {
+  assert.deepEqual(tokenSourcePatterns('C:\\tokens\\', 'light'), [
+    'C:/tokens/primitive/**/*.tokens.json',
+    'C:/tokens/semantic/light.tokens.json',
+    'C:/tokens/component/**/*.tokens.json',
+  ]);
+  assert.deepEqual(tokenSourcePatterns('', 'dark'), [
+    './primitive/**/*.tokens.json',
+    './semantic/dark.tokens.json',
+    './component/**/*.tokens.json',
+  ]);
 });

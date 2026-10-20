@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { buildTokens, ResolvedDictionary } from '../src/shared/compiler.ts';
+import { buildTokens, loadThemeTokens, ResolvedDictionary } from '../src/shared/compiler.ts';
 import { runGenerate } from '../src/skills/token-math/scripts/generate.ts';
 
 test('buildTokens compiles DTCG tokens to CSS, Tailwind @theme, docs, and visualizer', async () => {
@@ -105,6 +105,15 @@ test('buildTokens fails closed when required token is missing', async () => {
         }),
       /missing required token|Some token references/,
     );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('loadThemeTokens fails closed on a missing theme file', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'theme-missing-'));
+  try {
+    await assert.rejects(() => loadThemeTokens(dir, 'light'), /semantic theme file not found/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

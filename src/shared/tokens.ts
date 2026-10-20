@@ -21,6 +21,16 @@ export interface LoadedTokenTree {
 
 const ALIAS = /^\{([^}]+)\}$/;
 
+export function tokenSourcePatterns(base: string, theme: string): string[] {
+  const normalized = base.replaceAll('\\', '/').replace(/\/+$/, '');
+  const prefix = normalized === '' ? '.' : normalized;
+  return [
+    `${prefix}/primitive/**/*.tokens.json`,
+    `${prefix}/semantic/${theme}.tokens.json`,
+    `${prefix}/component/**/*.tokens.json`,
+  ];
+}
+
 /** Expand one source entry: literal file, or a `**` / `*` glob ending in `.tokens.json`. */
 export function expandSource(pattern: string): string[] {
   const normalized = pattern.replaceAll('\\', '/');
