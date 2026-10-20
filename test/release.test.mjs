@@ -4,7 +4,13 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { crc32, runPackage, writeZip } from '../scripts/package-release.mjs';
+import {
+  crc32,
+  planArtifacts,
+  runPackage,
+  SKILL_BUCKETS,
+  writeZip,
+} from '../scripts/package-release.mjs';
 
 test('crc32 matches standard IEEE 802.3 test vector', () => {
   const buf = Buffer.from('123456789', 'utf8');
@@ -68,6 +74,25 @@ test('runPackage packages all buckets, bundle, SBOM, and checksums into isolated
     assert.ok(existsSync(join(dir, 'release', 'token-engine-governance-v2.0.0.zip')));
     assert.ok(existsSync(join(dir, 'release', 'token-engine-builder-v2.0.0.cyclonedx.json')));
     assert.ok(existsSync(join(dir, 'release', 'SHA256SUMS.txt')));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('planArtifacts returns complete release plan and respects keyPresent', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'release-plan-test-'));
+  try {
+    writeFileSync(join(dir, 'package-lock.json'), '{}', 'utf8');
+    assert.ok(SKILL_BUCKETS.creation.includes('token-style'));
+    assert.ok(SKILL_BUCKETS.governance.includes('token-audit'));
+    const withoutKey = planArtifacts(dir, '1.5.0', { keyPresent: false });
+    assert.equal(withoutKey.length, 10);
+    assert.ok(withoutKey.some((a) => a.kind === 'sbom' && a.name.includes('1.5.0')));
+    assert.ok(!withoutKey.some((a) => a.kind === 'signature'));
+
+    const withKey = planArtifacts(dir, '1.5.0', { keyPresent: true });
+    assert.equal(withKey.length, 11);
+    assert.ok(withKey.some((a) => a.kind === 'signature' && a.name.endsWith('.minisig')));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

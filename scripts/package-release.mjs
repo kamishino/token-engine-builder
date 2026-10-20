@@ -118,6 +118,44 @@ function entriesFor(skill, dist = distDir) {
   );
   return entries.sort((a, b) => a.arc.localeCompare(b.arc));
 }
+export const SKILL_BUCKETS = {
+  creation: ['token-style', 'token-extract', 'token-math'],
+  governance: ['token-audit', 'token-build'],
+};
+
+export function planArtifacts(root, version, { keyPresent = false } = {}) {
+  const distDir = join(root, 'dist');
+  const skillsDir = join(root, 'src', 'skills');
+  const skills = existsSync(distDir)
+    ? readdirSync(distDir, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name)
+        .sort()
+    : existsSync(skillsDir)
+      ? readdirSync(skillsDir, { withFileTypes: true })
+          .filter((entry) => entry.isDirectory())
+          .map((entry) => entry.name)
+          .sort()
+      : ['token-style', 'token-extract', 'token-math', 'token-audit', 'token-build'];
+
+  const planned = [];
+  for (const s of skills) {
+    planned.push({ kind: 'skill', name: `token-engine-${s}-v${version}.zip` });
+  }
+  planned.push({ kind: 'bundle', name: `token-engine-builder-v${version}.zip` });
+  for (const bucket of Object.keys(SKILL_BUCKETS)) {
+    planned.push({ kind: 'bucket', name: `token-engine-${bucket}-v${version}.zip` });
+  }
+  if (existsSync(join(root, 'package-lock.json'))) {
+    planned.push({ kind: 'sbom', name: `token-engine-builder-v${version}.cyclonedx.json` });
+  }
+  planned.push({ kind: 'checksums', name: 'SHA256SUMS.txt' });
+  if (keyPresent) {
+    planned.push({ kind: 'signature', name: 'SHA256SUMS.txt.minisig' });
+  }
+  return planned;
+}
+
 export function runPackage(argv = process.argv.slice(2), { root = rootDir } = {}) {
   const dryRun = argv.includes('--dry-run');
   const skipBuild = argv.includes('--skip-build');
@@ -155,21 +193,12 @@ export function runPackage(argv = process.argv.slice(2), { root = rootDir } = {}
   }
 
   if (dryRun) {
-    const plannedSkills = existsSync(currentDistDir)
-      ? readdirSync(currentDistDir, { withFileTypes: true })
-          .filter((entry) => entry.isDirectory())
-          .map((entry) => entry.name)
-          .sort()
-      : ['token-style', 'token-extract', 'token-math', 'token-audit', 'token-build'];
+    const planned = planArtifacts(root, currentVersion, { keyPresent: Boolean(keyData) });
+    const skillCount = planned.filter((p) => p.kind === 'skill').length;
     console.log(
-      `[package] dry-run: would package ${plannedSkills.length} skill(s) (v${currentVersion}) → release/`,
+      `[package] dry-run: would package ${skillCount} skill(s) (v${currentVersion}) → release/`,
     );
-    for (const s of plannedSkills) console.log(`  token-engine-${s}-v${currentVersion}.zip`);
-    console.log(`  token-engine-builder-v${currentVersion}.zip`);
-    console.log(`  token-engine-creation-v${currentVersion}.zip`);
-    console.log(`  token-engine-governance-v${currentVersion}.zip`);
-    console.log(`  SHA256SUMS.txt`);
-    if (keyData) console.log(`  SHA256SUMS.txt.minisig`);
+    for (const a of planned) console.log(`  ${a.name}`);
     return 0;
   }
 
@@ -213,11 +242,7 @@ export function runPackage(argv = process.argv.slice(2), { root = rootDir } = {}
   console.log(`[package] bundle → release/${basename(bundle)}`);
 
   // L5 Skill Grouping: functional bucket bundles
-  const BUCKETS = {
-    creation: ['token-style', 'token-extract', 'token-math'],
-    governance: ['token-audit', 'token-build'],
-  };
-  for (const [bucketName, bucketSkills] of Object.entries(BUCKETS)) {
+  for (const [bucketName, bucketSkills] of Object.entries(SKILL_BUCKETS)) {
     const bucketEntries = [];
     for (const s of bucketSkills) {
       if (!skills.includes(s)) {
@@ -332,6 +357,13 @@ export function runPackage(argv = process.argv.slice(2), { root = rootDir } = {}
   rmSync(currentReleaseDir, { recursive: true, force: true });
   renameSync(stageDir, currentReleaseDir);
 
+  const planned = planArtifacts(root, currentVersion, { keyPresent: Boolean(keyData) });
+  for (const item of planned) {
+    const target = join(currentReleaseDir, item.name);
+    if (!existsSync(target)) {
+      throw new Error(`[package] missing planned release artifact: ${item.name}`);
+    }
+  }
   console.log(
     `[package] publish: gh release create v${currentVersion} release/* --title "v${currentVersion}"`,
   );
