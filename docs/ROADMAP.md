@@ -38,7 +38,7 @@ The v0.3.0 Now items shipped (below); the next Now item is unselected — promot
 - **Scope**: changeset → `npm run release` → `npm run package` → GitHub release with per-skill zips + SHA256SUMS.
 - **Exit criteria**: `v0.3.0` tag and release published; artifacts verified against `SHA256SUMS.txt`.
 
-## Next — target v0.9.0 (unselected)
+## Next — target v0.10.0 (unselected)
 
 ### X1. Human style-guide surface (DESIGN.md, Stitch format) — ✅ shipped in v0.4.0
 
@@ -51,6 +51,11 @@ The v0.3.0 Now items shipped (below); the next Now item is unselected — promot
 - **Why**: The npm ecosystem consumes library-native variable shapes; `token-build --profile` maps the library-neutral semantic roles onto them (see `src/skills/token-build/references/ui-library-profiles.md` for the full list and selection rule).
 - **Shipped**: `shadcn` and `bootstrap` (CSS vars) in v0.4.0; `primevue` and `antd` in v0.5.0; `mui` and `chakra` (object themes) in v0.6.0; `radix` (12-step interpolated scales) and `fluent` (theme JSON) in v0.7.0. **Registry complete** — all eight candidates from the selection rule ship; new libraries enter only by user request.
 
+### X3. Pattern library (composite component specifications) — ✅ shipped in v0.9.0
+
+- **Why**: Multi-component compositions repeatedly appear in consumer applications; standardizing them binds single-component tokens, layout rules, and semantic roles into prescriptive composition contracts.
+- **Shipped**: Form Field (Input + Label + Hint/Error), Card Section (Surface + Header + Body + Actions), and Modal Shell (Backdrop + Panel + Header + Actions) integrated into `components.md` and referenced in `DESIGN.md`.
+
 ## Later — trigger-gated
 
 | ID  | Item                                                          | Trigger that promotes it                                                                                                     |
@@ -61,7 +66,7 @@ The v0.3.0 Now items shipped (below); the next Now item is unselected — promot
 | L5  | Skill grouping (buckets/plugins)                              | The set reaches ≥8 skills or gains a second install audience                                                                 |
 | L6  | Vendored color-names subset                                   | Offline color naming proves unreliable in practice (ADR-0002 follow-up)                                                      |
 | L7  | Signed releases + SBOM                                        | External consumers need publisher verification beyond unsigned SHA256SUMS                                                    |
-| L8  | Pattern library (component compositions)                      | Component specs in real use reveal repeated compositions worth standardizing                                                 |
+| L8  | Pattern library (component compositions)                      | Promoted and shipped as X3 in v0.9.0                                                                                         |
 
 L4 (Vite 8 / Rolldown migration) shipped in v0.8.0 — see ARCHITECTURE.md §4 for the re-verified build decisions.
 

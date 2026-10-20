@@ -123,7 +123,12 @@ Font stack: `Inter, system-ui, sans-serif`
 - card
 - input
 
-See `components.md` for per-component state tables (state → token → resolved value).
+Composite patterns:
+- Form Field: Input + Label + Hint/Error
+- Card Section: Surface + Header + Body + Actions
+- Modal Shell: Overlay + Dialog Panel + Header + Actions
+
+See `components.md` for per-component state tables and composite pattern specs.
 
 ## Do's and Don'ts
 

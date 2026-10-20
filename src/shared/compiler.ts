@@ -246,6 +246,19 @@ export async function componentSpecsFormat(args: {
       'Button carries enabled, hover, focus, and disabled states; input carries enabled, focus, error, and disabled; card carries enabled and hover. ' +
       'Hover, focus, and error state pairs are contrast-gated by token-audit; disabled states are tokenized here but WCAG-exempt from the audit gate.\n',
   );
+  sections.push(
+    '## Composite patterns\n\n' +
+      'Standard multi-component compositions binding components, layout, and semantic tokens:\n\n' +
+      '### Form Field\n\n' +
+      'Composition: Label (`typography.fontFamily`, `fontSize: 0.875rem`, `color: text.primary`) + Input (`component.input.*`) + Hint/Error text (`fontSize: 0.75rem`, `color: text.secondary` or `feedback.danger.text`). ' +
+      'Layout: Vertical stack, `gap: layout.gap.xs` (0.25rem) between label and input, `gap: layout.gap.xs` before helper/error text.\n\n' +
+      '### Card Section\n\n' +
+      'Composition: Card Surface (`component.card.bg`, `radius.lg`, `border: border.default`) + Header (Title `fontSize: 1.25rem` + Subtitle `text.secondary`) + Body (`layout.gap.default`) + Footer actions (`component.button.*` primary/secondary). ' +
+      'Layout: Inset padding `layout.inset.lg` (1.5rem), vertical stack `layout.gap.md` (1rem), action row `justify: flex-end`, `gap: layout.gap.sm` (0.5rem).\n\n' +
+      '### Modal Shell\n\n' +
+      'Composition: Backdrop Overlay (`bg.canvas` at 60% opacity) + Dialog Panel (`bg.raised`, `radius.lg`, `shadow.xl`) + Header (Title `fontSize: 1.5rem` + Close icon button) + Content area + Action footer (`button.bg` primary + secondary). ' +
+      'Layout: Centered container `container.sm` (40rem max-width), panel padding `layout.inset.xl` (2rem), content gap `layout.gap.md` (1rem), sticky footer `layout.gap.sm` (0.5rem).\n',
+  );
   return sections.join('\n');
 }
 
@@ -340,7 +353,7 @@ export async function designMdFormat(args: {
     `## Layout\n\n${[...lines('layout.'), ...lines('breakpoint.'), ...lines('container.'), ...lines('grid.')].join('\n')}\n`,
     `## Elevation & Depth\n\n${lines('shadow.').join('\n')}\n`,
     `## Shapes\n\n${lines('radius.').join('\n')}\n`,
-    `## Components\n\n${componentNames.map((n) => `- ${n}`).join('\n')}\n\nSee \`components.md\` for per-component state tables (state → token → resolved value).\n`,
+    `## Components\n\n${componentNames.map((n) => `- ${n}`).join('\n')}\n\nComposite patterns:\n- Form Field: Input + Label + Hint/Error\n- Card Section: Surface + Header + Body + Actions\n- Modal Shell: Overlay + Dialog Panel + Header + Actions\n\nSee \`components.md\` for per-component state tables and composite pattern specs.\n`,
     `## Do's and Don'ts\n\n${dos.map((d) => `- Do: ${d}`).join('\n')}\n${donts.map((d) => `- Don't: ${d}`).join('\n')}\n`,
   ];
   return sections.join('\n');
