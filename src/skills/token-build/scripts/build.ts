@@ -7,13 +7,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { oklchToHex } from '../../../shared/colors.js';
-import {
-  buildTokens,
-  buildUiProfile,
-  profileFileName,
-  UI_PROFILE_IDS,
-  type UiProfileId,
-} from '../../../shared/compiler.js';
+import { buildTokens } from '../../../shared/compiler.js';
 import {
   assertSafeOutDir,
   checkAuditStamp,
@@ -25,6 +19,12 @@ import {
 import { fromCwd, getArg, hasFlag, templatePath } from '../../../shared/paths.js';
 import { loadStyleSpec } from '../../../shared/spec.js';
 import type { BuildTokensOptions } from '../../../shared/types.js';
+import {
+  buildUiProfile,
+  profileFileName,
+  UI_PROFILE_IDS,
+  type UiProfileId,
+} from '../../../shared/ui-profiles.js';
 
 const argv = process.argv.slice(2);
 

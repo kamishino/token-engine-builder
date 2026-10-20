@@ -108,7 +108,7 @@ export function dtcgColorValue(color: OklchColor): DtcgColorValue {
 }
 
 /** WCAG 2.1 contrast ratio (1–21) between two colors, order-independent. */
-export function contrastRatio(foreground: OklchColor, background: OklchColor): number {
+function contrastRatio(foreground: OklchColor, background: OklchColor): number {
   ensureSpaces();
   return Number(contrastWCAG21(plain(foreground), plain(background)));
 }
@@ -118,7 +118,7 @@ export function contrastRatio(foreground: OklchColor, background: OklchColor): n
  * lightness-difference estimate). APCA is polarity-signed (dark text yields
  * negative Lc); floors compare the absolute value.
  */
-export function apcaContrast(foreground: OklchColor, background: OklchColor): number {
+function apcaContrast(foreground: OklchColor, background: OklchColor): number {
   ensureSpaces();
   return Math.abs(Number(contrastAPCA(plain(foreground), plain(background))));
 }
@@ -155,7 +155,7 @@ const RAMP_SETS: Record<RampStepCount, { steps: readonly number[]; offsets: read
 };
 
 /** True when the color renders inside the sRGB gamut without clipping. */
-export function isInSrgb(color: OklchColor): boolean {
+function isInSrgb(color: OklchColor): boolean {
   ensureSpaces();
   return Boolean(inGamut(plain(color), sRGB));
 }

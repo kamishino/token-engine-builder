@@ -22,10 +22,6 @@ export function templatePath(importMetaUrl: string, ...segments: string[]): stri
   return resolve(skillRoot(importMetaUrl), 'templates', ...segments);
 }
 
-export function assetPath(importMetaUrl: string, ...segments: string[]): string {
-  return resolve(skillRoot(importMetaUrl), 'assets', ...segments);
-}
-
 /** `--flag value` lookup; returns `fallback` when absent. */
 export function getArg(argv: string[], flag: string, fallback?: string): string | undefined {
   const index = argv.indexOf(flag);

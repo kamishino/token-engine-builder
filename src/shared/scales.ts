@@ -9,14 +9,6 @@ const px = (value: number): DtcgDimensionValue => ({
   unit: 'px',
 });
 
-/**
- * Modular scale: `base × ratioⁿ` for each step n.
- * The named non-obvious formula behind every type ramp in the engine.
- */
-export function modularScale(base: number, ratio: number, steps: readonly number[]): number[] {
-  return steps.map((step) => Number((base * ratio ** step).toFixed(3)));
-}
-
 const TYPE_STEPS: ReadonlyArray<readonly [string, number]> = [
   ['xs', -2],
   ['sm', -1],
@@ -75,18 +67,6 @@ export function rhythmScale(baseline: number): TokenGroup {
     group[String(n)] = { $value: px(baseline * n), $type: 'dimension' };
   }
   return group;
-}
-
-/** Fluid `clamp()` between min/max viewport widths for one modular type step. */
-export function fluidClamp(
-  minSizePx: number,
-  maxSizePx: number,
-  minViewportPx = 360,
-  maxViewportPx = 1280,
-): string {
-  const slope = (maxSizePx - minSizePx) / (maxViewportPx - minViewportPx);
-  const intercept = minSizePx - slope * minViewportPx;
-  return `clamp(${minSizePx / 16}rem, ${(slope * 100).toFixed(3)}vw + ${(intercept / 16).toFixed(3)}rem, ${maxSizePx / 16}rem)`;
 }
 
 const SPACING_MULTIPLIERS: ReadonlyArray<readonly [string, number]> = [
