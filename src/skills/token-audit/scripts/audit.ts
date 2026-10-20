@@ -14,6 +14,7 @@ import {
   type TamperReport,
 } from '../../../shared/guard.js';
 import { fromCwd, getArg, hasFlag } from '../../../shared/paths.js';
+import { AUDIT_PAIRS } from '../../../shared/roles.js';
 import { loadStyleSpec } from '../../../shared/spec.js';
 import { loadTokenTree } from '../../../shared/tokens.js';
 import type { AuditReport } from '../../../shared/types.js';
@@ -52,71 +53,11 @@ if (!existsSync(tokensDir)) {
 const BORDER_MIN_RATIO = 3;
 const BORDER_MIN_APCA = 30;
 
-interface AuditPair {
-  fg: string;
-  bg: string;
-  kind: 'text' | 'border' | 'decorative';
-}
-
-const text = (fg: string, bg: string): AuditPair => ({ fg, bg, kind: 'text' });
-const border = (fg: string, bg: string): AuditPair => ({ fg, bg, kind: 'border' });
-/** Decorative hairlines: measured and printed, never gated (WCAG 1.4.11 covers meaningful boundaries only). */
-const decorative = (fg: string, bg: string): AuditPair => ({ fg, bg, kind: 'decorative' });
-
-const PAIRS: readonly AuditPair[] = [
-  // Semantic text on surfaces
-  text('semantic.color.text.primary', 'semantic.color.bg.canvas'),
-  text('semantic.color.text.primary', 'semantic.color.bg.surface'),
-  text('semantic.color.text.primary', 'semantic.color.bg.raised'),
-  text('semantic.color.text.secondary', 'semantic.color.bg.canvas'),
-  text('semantic.color.text.secondary', 'semantic.color.bg.surface'),
-  text('semantic.color.text.tertiary', 'semantic.color.bg.canvas'),
-  text('semantic.color.text.link', 'semantic.color.bg.canvas'),
-  // Action (rest + hover)
-  text('semantic.color.action.primary-text', 'semantic.color.action.primary'),
-  text('semantic.color.action.primary-text', 'semantic.color.action.primary-hover'),
-  // Feedback text on feedback bg
-  ...(['success', 'warning', 'danger', 'info', 'help'] as const).map((role) =>
-    text(`semantic.color.feedback.${role}.text`, `semantic.color.feedback.${role}.bg`),
-  ),
-  // Borders: meaningful boundaries gated; decorative hairlines measured only
-  border('semantic.color.border.strong', 'semantic.color.bg.canvas'),
-  border('semantic.color.border.focus', 'semantic.color.bg.canvas'),
-  decorative('semantic.color.border.default', 'semantic.color.bg.canvas'),
-  decorative('semantic.color.border.default', 'semantic.color.bg.surface'),
-  decorative('semantic.color.border.subtle', 'semantic.color.bg.canvas'),
-  // Components
-  // Components — Core 3
-  text('component.button.text', 'component.button.bg'),
-  text('component.button.text', 'component.button.bg-hover'),
-  text('component.card.text', 'component.card.bg'),
-  text('component.card.text', 'component.card.bg-hover'),
-  text('component.input.text', 'component.input.bg'),
-  border('component.card.border', 'component.card.bg'),
-  border('component.input.border', 'component.input.bg'),
-  border('component.input.focus-border', 'component.input.bg'),
-  border('component.input.error-border', 'component.input.bg'),
-  // Components — Extended 6 (C1)
-  text('component.badge.text', 'component.badge.bg'),
-  text('component.alert.text', 'component.alert.bg'),
-  text('component.dialog.text', 'component.dialog.bg'),
-  text('component.avatar.text', 'component.avatar.bg'),
-  text('component.tooltip.text', 'component.tooltip.bg'),
-  text('component.table.header-text', 'component.table.header-bg'),
-  text('component.table.row-text', 'component.table.row-bg'),
-  text('component.table.row-text', 'component.table.row-hover-bg'),
-  border('component.alert.icon', 'component.alert.bg'),
-  border('component.dialog.border', 'component.dialog.bg'),
-  decorative('component.badge.border', 'component.badge.bg'),
-  decorative('component.alert.border', 'component.alert.bg'),
-  decorative('component.avatar.border', 'component.avatar.bg'),
-  decorative('component.table.border', 'component.table.row-bg'),
-];
 const BORDER_KEYS = new Set(
-  PAIRS.filter((pair) => pair.kind === 'border').map((pair) => `${pair.fg}|${pair.bg}`),
+  AUDIT_PAIRS.filter((pair) => pair.kind === 'border').map((pair) => `${pair.fg}|${pair.bg}`),
 );
 const DECORATIVE_KEYS = new Set(
-  PAIRS.filter((pair) => pair.kind === 'decorative').map((pair) => `${pair.fg}|${pair.bg}`),
+  AUDIT_PAIRS.filter((pair) => pair.kind === 'decorative').map((pair) => `${pair.fg}|${pair.bg}`),
 );
 
 function auditTheme(themeName: string): AuditReport {
@@ -134,7 +75,7 @@ function auditTheme(themeName: string): AuditReport {
 
   const rawValueViolations = tree.checkRawValueViolations();
   const unresolvedAliases: string[] = [];
-  const pairs = PAIRS.flatMap(({ fg, bg, kind }) => {
+  const pairs = AUDIT_PAIRS.flatMap(({ fg, bg, kind }) => {
     const fgColor = tree.resolveColor(fg, unresolvedAliases);
     const bgColor = tree.resolveColor(bg, unresolvedAliases);
     if (fgColor === undefined || bgColor === undefined) return [];
