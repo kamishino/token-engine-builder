@@ -4,7 +4,7 @@ Internal planning document. Items move horizons only by editing this file with t
 
 ## Product snapshot
 
-token-engine-builder is an agent-skill pipeline that turns a recorded brand palette into certified 3-tier W3C DTCG design tokens, 8 UI-library profiles, and CSS/Tailwind v4 output: `token-extract`/`token-style` → `token-math` → `token-audit` → `token-build`. Primary user: the owner's daily design-token work. Secondary: public installers via signed GitHub release zips. Current state: v0.14.0 shipped; 5 skills partitioned into Creation & Governance buckets; dual Claude Code & OpenAI Agent manifests; 144-color vendored offline naming catalog; CycloneDX 1.5 JSON SBOM & Ed25519 Minisign release signing; rendered DOM extraction (`--url` / `--html`); 8 UI-library profiles (`shadcn`, `bootstrap`, `primevue`, `antd`, `mui`, `chakra`, `radix`, `fluent`); component & composite pattern specs.
+token-engine-builder is an agent-skill pipeline that turns a recorded brand palette into certified 3-tier W3C DTCG design tokens, 8 UI-library profiles, and CSS/Tailwind v4 output: `token-extract`/`token-style` → `token-math` → `token-audit` → `token-build`. Primary user: the owner's daily design-token work. Secondary: public installers via signed GitHub release zips. Current state: **v1.0.0 Production Release shipped**; 5 skills partitioned into Creation & Governance buckets; dual Claude Code & OpenAI Agent manifests; 144-color vendored offline naming catalog; CycloneDX 1.5 JSON SBOM & Ed25519 Minisign release signing; rendered DOM extraction (`--url` / `--html`); 8 UI-library profiles (`shadcn`, `bootstrap`, `primevue`, `antd`, `mui`, `chakra`, `radix`, `fluent`); component & composite pattern specs; interactive `visualizer.html` surface; automated GitHub Actions CI green on `main`.
 
 ## Principles (decision filters)
 
@@ -15,114 +15,60 @@ token-engine-builder is an agent-skill pipeline that turns a recorded brand pale
 - No reference doc without its engine.
 - Clean cutovers over compatibility shims.
 
-## Now — Active Cycle (Target: v1.0.0)
+## Now — v1.1 Active Cycle
 
-With all v0.x foundation epics (N1, N3, X1–X8, L1, L2, L4, L5, L6, L7, L8) shipped, the pipeline enters its v1.0 stabilization and consumer adoption cycle.
+With v1.0.0 production stability achieved, the pipeline focuses on expanding UI system coverage and theme flexibility:
 
-### N2. Restore CI trust — ✅ resolved
+### C1. Extended Component Catalog (6 additional components)
 
-- **Why**: GitHub Actions workflow had failed at 0s with no jobs started.
-- **Root cause**: Syntax issue in `.github/workflows/check.yml` where `permissions: contents: read` was authored inline rather than as a mapping block (`permissions:\n  contents: read`), causing GitHub's workflow parser to reject job creation during check suite initialization.
-- **Exit criteria**: `check` workflow passes green on `main`.
+- **Why**: Expand beyond core button/card/input to cover high-frequency atomic components: badge, alert, dialog, avatar, tooltip, and table.
+- **Scope**: Add DTCG component token templates under `token-math/templates/tokens/3-component/`, define state tables and contrast requirements in `token-audit` and `components.md`, and add specimens in `visualizer.html`.
+- **Exit criteria**: 9 total components generate from `token-math`, pass contrast audits, and render in `components.md` and `visualizer.html`.
 
-### N4. Interactive Visualizer Surface (HTML Inspector) — ✅ shipped in v0.15.0
+### C2. Dynamic Custom Theme Authoring
 
-- **Why**: Per AGENTS.md Charter Policy #8 (_"reserve Interactive HTML strictly for visual inspection"_), agents and human designers benefit from an interactive visualizer verifying color ramps, APCA/WCAG contrast matrix, and component states in a single rendered HTML page before deployment.
-- **Shipped**: `token-build --visualizer` generates a self-contained zero-dependency HTML inspector under `build/visualizer.html` rendering live palette ramps and component specimens (button, card, input) under the target theme.
+- **Why**: Eliminate the restriction to fixed `light`/`dark`/`high-contrast` themes; allow consumers to specify arbitrary named themes (e.g. `sepia`, `solarized`, brand sub-themes) directly in `style-spec.json`.
+- **Scope**: Update `StyleSpec` schema to admit `themes?: Record<string, ThemeConfig>`, generate corresponding `semantic/<name>.tokens.json` maps, and audit/build any declared theme dynamically.
+- **Exit criteria**: Custom theme declared in spec generates, passes audit, and builds corresponding CSS / theme files without code modification.
 
-### N5. Comprehensive Verification Matrix & v1.0.0 Cut — ✅ shipped in v1.0.0
+## Next — v1.2+ Horizon
 
-- **Why**: Mark the transition from rapid v0.x capability expansion to production-grade stability guarantee with semantic versioning 1.0.0.
-- **Shipped**: Comprehensive regression pass across all 8 UI profiles, 5 skills, both bucket packages, CycloneDX SBOM validation, and signed v1.0.0 release.
+### C3. Figma DTCG Token Sync Bridge
 
-## Next — v1.x Horizon (unselected)
+- **Why**: Enable bi-directional synchronization between W3C DTCG JSON token files and Figma Variables via the Figma REST API.
+- **Scope**: Script or plugin mapping Figma collections/modes to DTCG 3-tier hierarchies.
 
-### Y1. Extended Component Catalog (6 additional components)
+### C4. Automated CSS-to-Spec Ingestion Refinement
 
-- **Why**: Expand beyond core button/card/input to badge, alert, dialog, avatar, tooltip, and table.
-- **Depends on**: v1.0.0 stabilization.
+- **Why**: Improve AST-level extraction from Tailwind config and CSS variable definitions into exact candidate `style-spec.json` palettes.
 
-### Y2. Figma DTCG Token Sync Bridge
+## Later — Trigger-Gated
 
-- **Why**: Bi-directional translation between W3C DTCG JSON format and Figma Variables REST API.
-
-### Y3. Dynamic Custom Theme Authoring
-
-- **Why**: Move beyond hardcoded `light`/`dark`/`high-contrast` to arbitrary named themes (e.g. `sepia`, `solarized`, brand sub-themes) defined in `style-spec.json`.
-
-## Shipped History (v0.3.0 – v0.14.0)
-
-### X1. Human style-guide surface (DESIGN.md, Stitch format) — ✅ shipped in v0.4.0
-
-- **Why**: The NN/g front-end style-guide child exists only in agent-facing form (SKILL.md, references); the deferred DESIGN.md work (ADR-0001) generates a human usage guide — token usage, do/don't, contrast and layout rules — from tokens + spec. The generated guide adopts the Google Stitch DESIGN.md format (frontmatter + 8 normative sections) because it is the format design AIs already read, while remaining a derived view of the token system, never a source of truth (see `docs/research/design-md-vs-design-system.md`).
-- **Depends on**: N1 (component specs feed the guide).
-- **Exit sketch**: a generated guide document passes a completeness checklist (every semantic role documented with usage); frontmatter colors/typography/rounded/spacing are rendered from the generated token tree (never hand-written), the 8 sections are complete with zero unreplaced slots, and a consistency check proves frontmatter colors equal the corresponding token values — the guide can never drift from the gate.
-
-### X2. UI-library output profiles — ✅ shipped in v0.4.0, completed in v0.7.0
-
-- **Why**: The npm ecosystem consumes library-native variable shapes; `token-build --profile` maps the library-neutral semantic roles onto them (see `src/skills/token-build/references/ui-library-profiles.md` for the full list and selection rule).
-- **Shipped**: `shadcn` and `bootstrap` (CSS vars) in v0.4.0; `primevue` and `antd` in v0.5.0; `mui` and `chakra` (object themes) in v0.6.0; `radix` (12-step interpolated scales) and `fluent` (theme JSON) in v0.7.0. **Registry complete** — all eight candidates from the selection rule ship; new libraries enter only by user request.
-
-### X3. Pattern library (composite component specifications) — ✅ shipped in v0.9.0
-
-- **Why**: Multi-component compositions repeatedly appear in consumer applications; standardizing them binds single-component tokens, layout rules, and semantic roles into prescriptive composition contracts.
-- **Shipped**: Form Field (Input + Label + Hint/Error), Card Section (Surface + Header + Body + Actions), and Modal Shell (Backdrop + Panel + Header + Actions) integrated into `components.md` and referenced in `DESIGN.md`.
-
-### X4. Vendored color-names subset — ✅ shipped in v0.10.0
-
-- **Why**: Eliminates LLM variance in color name slug assignment (ADR-0002 follow-up) by providing an offline lookup of human-recognizable color names.
-- **Shipped**: Curated 144-color subset (12 per hue sector across lightness/chroma tiers) in `src/shared/color-names.ts` with nearest-neighbor OKLCH cylindrical distance matching, wired into `token-extract`.
-
-### X5. Signed releases + CycloneDX SBOM — ✅ shipped in v0.11.0
-
-- **Why**: External consumers need publisher verification beyond unsigned SHA256SUMS, and inlined bundles need transparent software bill of materials (Audit B1, B4).
-- **Shipped**: CycloneDX 1.5 JSON SBOM (`token-engine-builder-v<version>.cyclonedx.json`) generated automatically by `package-release.mjs`, plus Ed25519 Minisign cryptographic signature (`SHA256SUMS.txt.minisig`) with public key verified in `release.pub`.
-
-### X6. Rendered-product extraction — ✅ shipped in v0.12.0
-
-- **Why**: An existing rendered product must be onboarded where source files are unavailable, or where computed styles in DOM determine actual visual presentation.
-- **Shipped**: `token-extract` extended with `--url <url>` and `--html <file.html>` to evaluate computed styles (colors, fonts, radii) via headless browser automation with graceful DOM parsing fallback, mapping directly to `style-spec.json`.
-
-### X7. Plugin manifests & marketplace distribution — ✅ shipped in v0.13.0
-
-- **Why**: Skills are shared across diverse agent runtimes and ecosystems (Anthropic/Claude Code and OpenAI Agent standards) requiring standardized discoverability manifests.
-- **Shipped**: In-tree Claude Code plugin manifest (`.claude/plugin.json`), OpenAI Agent manifests (`agents/openai.yaml` in each skill), bundled into release zips and mirrored into `dist/`.
-
-### X8. Skill grouping (Creation & Governance buckets) — ✅ shipped in v0.14.0
-
-- **Why**: Grouping skills into functional domains streamlines consumption for agents needing only token generation vs auditing and compilation.
-- **Shipped**: 2-bundle partition (`creation`: token-style, token-extract, token-math; `governance`: token-audit, token-build) with bucket metadata in `.claude/plugin.json` and release packages `token-engine-creation-v<version>.zip` and `token-engine-governance-v<version>.zip`.
-
-## Later — trigger-gated
-
-| ID  | Item                                                          | Trigger that promotes it                                                                                                                                                                                          |
-| --- | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| L1  | Rendered-product extraction (DOM/screenshot → candidate spec) | Promoted and shipped as X6 in v0.12.0                                                                                                                                                                             |
-| L2  | Plugin manifests & marketplace distribution                   | Promoted and shipped as X7 in v0.13.0                                                                                                                                                                             |
-| L3  | TypeScript 7 migration                                        | `typescript-eslint` peer range admits TypeScript ≥7 (re-verified live 2026-10-20: `typescript-eslint@8.72.0` hard-crashes with "typescript-eslint does not support TS 7.0", peer `<6.1.0` remains strict blocker) |
-| L5  | Skill grouping (buckets/plugins)                              | Promoted and shipped as X8 in v0.14.0                                                                                                                                                                             |
-| L6  | Vendored color-names subset                                   | Promoted and shipped as X4 in v0.10.0                                                                                                                                                                             |
-| L7  | Signed releases + SBOM                                        | Promoted and shipped as X5 in v0.11.0                                                                                                                                                                             |
-| L8  | Pattern library (component compositions)                      | Promoted and shipped as X3 in v0.9.0                                                                                                                                                                              |
-
-L4 (Vite 8 / Rolldown migration) shipped in v0.8.0 — see ARCHITECTURE.md §4 for the re-verified build decisions.
+| ID  | Item                   | Trigger that promotes it                                                                                                                                                                                           |
+| --- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| L3  | TypeScript 7 Migration | `typescript-eslint` peer range admits TypeScript ≥7 (re-verified live 2026-10-20: `typescript-eslint@8.72.0` hard-crashes with "typescript-eslint does not support TS 7.0", peer `<6.1.0` remains strict blocker) |
 
 ## Maintenance cadence
 
 - Deps evidence check quarterly: typescript-eslint peer range (L3), the `npm audit` critical-level exception for the stylelint/braces chain, engine floors.
-- A changeset with every user-visible change; research notes in `docs/research/` for every external-taxonomy question; ADRs for foundation decisions (next number: 0004).
+- A changeset with every user-visible change; research notes in `docs/research/` for external-taxonomy questions; ADRs for foundation decisions (next number: 0005).
 
-## Deferred register
+## Shipped History (v0.3.0 – v1.0.0)
 
-| Item (source)                                                     | Roadmap home                                                                                              |
-| ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| DESIGN.md contract generation (ADR-0001, not ported)              | X1 (format pinned: Google Stitch, as a derived view)                                                      |
-| Gate B visualizer approval (ADR-0001, not ported)                 | Later — promotes when a human approval step before build is wanted by a real workflow; no trigger met yet |
-| Exemplar-matching style detection (ADR-0001, not ported)          | Not planned — replaces derivation with selection, abandoning the product's differentiator                 |
-| shadcn output profile (ADR-0001, not ported)                      | X2                                                                                                        |
-| APCA dual certification (ADR-0001, not ported)                    | Done — shipped (dual WCAG+APCA gate); no longer deferred                                                  |
-| Vendored color-names subset (ADR-0002)                            | L6                                                                                                        |
-| Semantic accent roles / component accent bindings (ADR-0002)      | N1 — decided inside component specifications                                                              |
-| Disabled-text contrast requirement (ADR-0003)                     | Later — joins the audit's border-floor kind if a consumer contract ever requires it                       |
-| SBOM for shipped bundles (audit B1, partial)                      | L7                                                                                                        |
-| TypeScript 7 / Vite 8 / @types/node 26 holds (deps check 2026-10) | L3 / L4 / maintenance cadence (@types/node moves with the runtime)                                        |
+| Version | Scope | Key Capabilities Shipped |
+| --- | --- | --- |
+| **v1.0.0** | Production Release (N5) | Comprehensive verification across all 8 UI profiles, 5 skills, 2 buckets, CycloneDX SBOM, Minisign signature, and CI green. |
+| **v0.15.0** | Visualizer Surface (N4) | Single-file zero-dep interactive HTML inspector (`build/visualizer.html`) for color ramps and live component specimens. |
+| **v0.14.0** | Skill Grouping (L5 / X8) | 2-bundle partition into `creation` and `governance` functional domains and release packages. |
+| **v0.13.0** | Plugin Manifests (L2 / X7) | Dual Claude Code (`.claude/plugin.json`) and OpenAI Agent (`agents/openai.yaml`) marketplace manifests. |
+| **v0.12.0** | Rendered Extraction (L1 / X6) | Headless browser DOM computed-style extraction (`--url` and `--html`) into candidate `style-spec.json`. |
+| **v0.11.0** | Signed Releases + SBOM (L7 / X5) | CycloneDX 1.5 JSON SBOM + Ed25519 Minisign release signing (`SHA256SUMS.txt.minisig` verified via `release.pub`). |
+| **v0.10.0** | Color Catalog (L6 / X4) | Curated 144-color offline dataset with OKLCH cylindrical distance matching for deterministic naming. |
+| **v0.9.0** | Pattern Library (L8 / X3) | Composite component specifications for Form Field, Card Section, and Modal Shell in `components.md` and `DESIGN.md`. |
+| **v0.8.0** | Toolchain Migration (L4) | Vite 8 / Rolldown migration: Oxc minification, dead Prettier parser externalized (1.64MB → 1.17MB), `setFs()` side-effects preserved. |
+| **v0.7.0** | Profiles: Radix + Fluent (X2) | Radix Themes 12-step interpolated scales (`--accent-*`, `--gray-*`) and Fluent UI 2 theme JSON. |
+| **v0.6.0** | Profiles: MUI + Chakra (X2) | Material UI (`createTheme` palette) and Chakra UI v3 (`_light`/`_dark` pairs) profiles. |
+| **v0.5.0** | Profiles: PrimeVue + AntD (X2) | PrimeVue (`--p-*`) and Ant Design (`antd-theme.json`) profiles. |
+| **v0.4.1** | Skill Improvements | DESIGN.md frontmatter ingestion, durable spec overrides, verified audit stamp gate, cluster bounds warnings. |
+| **v0.4.0** | Style Guide Export (X1) | Google Stitch format human `DESIGN.md` contract generation from tokens + spec. |
+| **v0.3.0** | Component Specs (N1) | Per-component specifications with enabled, hover, focus, and disabled states. |
