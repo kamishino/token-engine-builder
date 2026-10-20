@@ -1,31 +1,8 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { formatOklch, oklchToHex, parseToOklch } from './colors.js';
 import { loadThemeTokens, ResolvedDictionary, tokenValue, type ResolvedToken } from './compiler.js';
+import { profileFileName, type UiProfileId } from './profile-registry.js';
 import { feedbackBgPath, feedbackTextPath, SEMANTIC_ROLE_PATHS } from './roles.js';
-
-export type UiProfileId =
-  'shadcn' | 'bootstrap' | 'primevue' | 'antd' | 'mui' | 'chakra' | 'radix' | 'fluent';
-
-export const UI_PROFILE_IDS: readonly UiProfileId[] = [
-  'shadcn',
-  'bootstrap',
-  'primevue',
-  'antd',
-  'mui',
-  'chakra',
-  'radix',
-  'fluent',
-];
-
-/** Output filename per profile (JSON themes are not CSS). */
-export function profileFileName(profile: UiProfileId): string {
-  if (profile === 'antd') return 'antd-theme.json';
-  if (profile === 'mui') return 'mui-theme.json';
-  if (profile === 'chakra') return 'chakra-theme.json';
-  if (profile === 'radix') return 'radix-theme.css';
-  if (profile === 'fluent') return 'fluent-theme.json';
-  return `${profile}.css`;
-}
 
 interface ProfileMapping {
   variable: string;

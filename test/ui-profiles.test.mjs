@@ -1,16 +1,13 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import { GOLD_PAIRS } from '../scripts/sample-css.mjs';
 import { loadThemeTokens, ResolvedDictionary } from '../src/shared/compiler.ts';
+import { profileFileName, UI_PROFILE_IDS } from '../src/shared/profile-registry.ts';
 import { SEMANTIC_ROLE_PATHS } from '../src/shared/roles.ts';
-import {
-  buildUiProfile,
-  profileFileName,
-  renderProfile,
-  UI_PROFILE_IDS,
-} from '../src/shared/ui-profiles.ts';
+import { buildUiProfile, renderProfile } from '../src/shared/ui-profiles.ts';
 import { runGenerate } from '../src/skills/token-math/scripts/generate.ts';
 
 test('UI_PROFILE_IDS lists all 8 supported UI profiles', () => {
@@ -136,4 +133,18 @@ test('renderProfile renders a Chakra-only dictionary without MUI-only roles', ()
 test('renderProfile fails at the missing read', () => {
   const empty = new ResolvedDictionary([]);
   assert.throws(() => renderProfile('chakra', empty, empty), /missing required token/);
+});
+
+test('every profile id has a filename and a gold example', () => {
+  for (const profile of UI_PROFILE_IDS) {
+    const fileName = profileFileName(profile);
+    assert.ok(fileName.length > 0);
+    const extension = fileName.endsWith('.json') ? 'json' : 'css';
+    assert.ok(
+      existsSync(join('src/skills/token-build/examples', `${profile}.example.${extension}`)),
+      `missing example for ${profile}`,
+    );
+  }
+  assert.equal(GOLD_PAIRS.length, 4 + UI_PROFILE_IDS.length);
+  assert.ok(GOLD_PAIRS.some(([built]) => built === `build/profiles/${profileFileName('radix')}`));
 });

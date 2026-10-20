@@ -10,22 +10,27 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PROFILE_FILE_NAMES, UI_PROFILE_IDS } from '../src/shared/profile-registry.ts';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-export const GOLD_PAIRS = [
+const BASE_PAIRS = [
   ['build/tokens.css', 'src/skills/token-build/examples/tokens.example.css'],
   ['build/theme.css', 'src/skills/token-build/examples/theme.example.css'],
   ['build/components.md', 'src/skills/token-build/examples/components.example.md'],
   ['build/DESIGN.md', 'src/skills/token-build/examples/design.example.md'],
-  ['build/profiles/shadcn.css', 'src/skills/token-build/examples/shadcn.example.css'],
-  ['build/profiles/primevue.css', 'src/skills/token-build/examples/primevue.example.css'],
-  ['build/profiles/antd-theme.json', 'src/skills/token-build/examples/antd.example.json'],
-  ['build/profiles/mui-theme.json', 'src/skills/token-build/examples/mui.example.json'],
-  ['build/profiles/chakra-theme.json', 'src/skills/token-build/examples/chakra.example.json'],
-  ['build/profiles/radix-theme.css', 'src/skills/token-build/examples/radix.example.css'],
-  ['build/profiles/fluent-theme.json', 'src/skills/token-build/examples/fluent.example.json'],
-  ['build/profiles/bootstrap.css', 'src/skills/token-build/examples/bootstrap.example.css'],
+];
+
+export const GOLD_PAIRS = [
+  ...BASE_PAIRS,
+  ...UI_PROFILE_IDS.map((profile) => {
+    const fileName = PROFILE_FILE_NAMES[profile];
+    const extension = fileName.endsWith('.json') ? 'json' : 'css';
+    return [
+      `build/profiles/${fileName}`,
+      `src/skills/token-build/examples/${profile}.example.${extension}`,
+    ];
+  }),
 ];
 
 export function diffGold({ root = rootDir, workDir, pairs = GOLD_PAIRS }) {
@@ -78,17 +83,7 @@ export function runSampleCss({ root = rootDir } = {}) {
       '--theme',
       'dark',
     ]);
-    const UI_PROFILES = [
-      'shadcn',
-      'bootstrap',
-      'primevue',
-      'antd',
-      'mui',
-      'chakra',
-      'radix',
-      'fluent',
-    ];
-    for (const profile of UI_PROFILES) {
+    for (const profile of UI_PROFILE_IDS) {
       run('dist/token-build/scripts/build.mjs', [
         '--tokens',
         'tokens',

@@ -14,15 +14,15 @@ import {
   publishCssOutputs,
 } from '../../../shared/guard.js';
 import { fromCwd, getArg, hasFlag, isMainModule } from '../../../shared/paths.js';
-import { loadStyleSpec } from '../../../shared/spec.js';
-import { tokenSourcePatterns } from '../../../shared/tokens.js';
-import type { BuildTokensOptions } from '../../../shared/types.js';
 import {
-  buildUiProfile,
   profileFileName,
   UI_PROFILE_IDS,
   type UiProfileId,
-} from '../../../shared/ui-profiles.js';
+} from '../../../shared/profile-registry.js';
+import { loadStyleSpec } from '../../../shared/spec.js';
+import { tokenSourcePatterns } from '../../../shared/tokens.js';
+import type { BuildTokensOptions } from '../../../shared/types.js';
+import { buildUiProfile } from '../../../shared/ui-profiles.js';
 
 export async function runBuild(argv = process.argv.slice(2)): Promise<number> {
   if (hasFlag(argv, '--help')) {
