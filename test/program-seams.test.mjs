@@ -3,6 +3,7 @@ import test from 'node:test';
 import { getArg, isMainModule } from '../src/shared/paths.ts';
 import { runAudit } from '../src/skills/token-audit/scripts/audit.ts';
 import { runBuild } from '../src/skills/token-build/scripts/build.ts';
+import { runFigma } from '../src/skills/token-build/scripts/figma.ts';
 import { runExtract } from '../src/skills/token-extract/scripts/extract.ts';
 import { runGenerate } from '../src/skills/token-math/scripts/generate.ts';
 
@@ -17,7 +18,7 @@ test('getArg returns value and treats adjacent flags as absence', () => {
   assert.equal(getArg(['--force'], '--spec', 'fallback.json'), 'fallback.json');
 });
 
-test('runGenerate, runAudit, runBuild, runExtract execute through program seam', async () => {
+test('runGenerate, runAudit, runBuild, runExtract, runFigma execute through program seam', async () => {
   const genCode = runGenerate(['--help']);
   assert.equal(genCode, 0);
 
@@ -29,4 +30,10 @@ test('runGenerate, runAudit, runBuild, runExtract execute through program seam',
 
   const extractCode = await runExtract(['--help']);
   assert.equal(extractCode, 0);
+
+  const figmaCode = runFigma(['--help']);
+  assert.equal(figmaCode, 0);
+
+  const figmaErrCode = runFigma([]);
+  assert.equal(figmaErrCode, 1);
 });
