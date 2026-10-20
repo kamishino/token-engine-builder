@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { buildTokens } from '../src/shared/compiler.ts';
+import { buildTokens, ResolvedDictionary } from '../src/shared/compiler.ts';
 import { runGenerate } from '../src/skills/token-math/scripts/generate.ts';
 
 test('buildTokens compiles DTCG tokens to CSS, Tailwind @theme, docs, and visualizer', async () => {
@@ -57,4 +57,20 @@ test('buildTokens compiles DTCG tokens to CSS, Tailwind @theme, docs, and visual
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('ResolvedDictionary provides lookup and fail-closed require', () => {
+  const dict = new ResolvedDictionary([
+    { name: 'primary', path: ['color', 'brand', '500'], $value: '#2563eb' },
+    { name: 'canvas', path: ['color', 'bg', 'canvas'], value: '#ffffff' },
+  ]);
+
+  assert.equal(dict.get('color.brand.500'), '#2563eb');
+  assert.equal(dict.get('color.bg.canvas'), '#ffffff');
+  assert.equal(dict.get('nonexistent.path'), '');
+
+  assert.equal(dict.require('color.brand.500', 'test-format'), '#2563eb');
+  assert.throws(() => dict.require('nonexistent.path', 'test-format'), {
+    message: /format test-format: missing required token "nonexistent.path"/,
+  });
 });

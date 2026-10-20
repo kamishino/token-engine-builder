@@ -33,6 +33,31 @@ export interface ResolvedThemeTokens {
   tokens: ResolvedToken[];
   values: Map<string, string>;
 }
+export class ResolvedDictionary {
+  readonly tokens: readonly ResolvedToken[];
+  readonly values: Map<string, string>;
+
+  constructor(tokens: readonly ResolvedToken[]) {
+    this.tokens = tokens;
+    const map = new Map<string, string>();
+    for (const token of tokens) {
+      map.set(token.path.join('.'), String(tokenValue(token)));
+    }
+    this.values = map;
+  }
+
+  get(path: string): string {
+    return this.values.get(path) ?? '';
+  }
+
+  require(path: string, formatName: string): string {
+    const val = this.values.get(path);
+    if (!val) {
+      throw new Error(`format ${formatName}: missing required token "${path}"`);
+    }
+    return val;
+  }
+}
 
 export function tokenValue(token: ResolvedToken): unknown {
   return token.$value ?? token.value ?? token.original?.$value ?? token.original?.value;
@@ -285,11 +310,9 @@ async function designMdFormat(args: {
   const guide = args.options?.guide;
   const label = args.options?.label ?? 'tokens';
   const name = guide?.name ?? label;
-  const values = new Map<string, string>();
-  for (const token of args.dictionary.allTokens) {
-    values.set(token.path.join('.'), String(tokenValue(token)));
-  }
-  const get = (path: string): string => values.get(path) ?? '';
+  const dict = new ResolvedDictionary(args.dictionary.allTokens);
+  const values = dict.values;
+  const get = (path: string): string => dict.get(path);
   const hexOf = (value: string): string => {
     try {
       return oklchToHex(parseToOklch(value));
@@ -377,11 +400,8 @@ async function visualizerHtmlFormat(args: {
 }): Promise<string> {
   const label = args.options?.label ?? 'tokens';
   const name = args.options?.guide?.name ?? 'Design System';
-  const values = new Map<string, string>();
-  for (const token of args.dictionary.allTokens) {
-    values.set(token.path.join('.'), String(tokenValue(token)));
-  }
-  const get = (path: string): string => values.get(path) ?? '';
+  const dict = new ResolvedDictionary(args.dictionary.allTokens);
+  const get = (path: string): string => dict.get(path);
 
   // Group color ramps
   const colorTokens = args.dictionary.allTokens.filter(
@@ -630,9 +650,6 @@ export async function loadThemeTokens(
     },
   });
   const dictionary = (await sd.getPlatformTokens('css')) as unknown as { allTokens: SdToken[] };
-  const values = new Map<string, string>();
-  for (const token of dictionary.allTokens) {
-    values.set(token.path.join('.'), String(tokenValue(token)));
-  }
-  return { tokens: dictionary.allTokens, values };
+  const dict = new ResolvedDictionary(dictionary.allTokens);
+  return { tokens: dictionary.allTokens, values: dict.values };
 }
