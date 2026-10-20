@@ -38,7 +38,7 @@ The v0.3.0 Now items shipped (below); the next Now item is unselected — promot
 - **Scope**: changeset → `npm run release` → `npm run package` → GitHub release with per-skill zips + SHA256SUMS.
 - **Exit criteria**: `v0.3.0` tag and release published; artifacts verified against `SHA256SUMS.txt`.
 
-## Next — target v0.11.0 (unselected)
+## Next — target v0.12.0 (unselected)
 
 ### X1. Human style-guide surface (DESIGN.md, Stitch format) — ✅ shipped in v0.4.0
 
@@ -61,6 +61,11 @@ The v0.3.0 Now items shipped (below); the next Now item is unselected — promot
 - **Why**: Eliminates LLM variance in color name slug assignment (ADR-0002 follow-up) by providing an offline lookup of human-recognizable color names.
 - **Shipped**: Curated 144-color subset (12 per hue sector across lightness/chroma tiers) in `src/shared/color-names.ts` with nearest-neighbor OKLCH cylindrical distance matching, wired into `token-extract`.
 
+### X5. Signed releases + CycloneDX SBOM — ✅ shipped in v0.11.0
+
+- **Why**: External consumers need publisher verification beyond unsigned SHA256SUMS, and inlined bundles need transparent software bill of materials (Audit B1, B4).
+- **Shipped**: CycloneDX 1.5 JSON SBOM (`token-engine-builder-v<version>.cyclonedx.json`) generated automatically by `package-release.mjs`, plus Ed25519 Minisign cryptographic signature (`SHA256SUMS.txt.minisig`) with public key verified in `release.pub`.
+
 ## Later — trigger-gated
 
 | ID  | Item                                                          | Trigger that promotes it                                                                                                     |
@@ -70,7 +75,7 @@ The v0.3.0 Now items shipped (below); the next Now item is unselected — promot
 | L3  | TypeScript 7 migration                                        | `typescript-eslint` peer range admits TypeScript ≥7 (re-checked 2026-10-20: latest peer is `>=4.8.4 <6.1.0` — still blocked) |
 | L5  | Skill grouping (buckets/plugins)                              | The set reaches ≥8 skills or gains a second install audience                                                                 |
 | L6  | Vendored color-names subset                                   | Promoted and shipped as X4 in v0.10.0                                                                                        |
-| L7  | Signed releases + SBOM                                        | External consumers need publisher verification beyond unsigned SHA256SUMS                                                    |
+| L7  | Signed releases + SBOM                                        | Promoted and shipped as X5 in v0.11.0                                                                                        |
 | L8  | Pattern library (component compositions)                      | Promoted and shipped as X3 in v0.9.0                                                                                         |
 
 L4 (Vite 8 / Rolldown migration) shipped in v0.8.0 — see ARCHITECTURE.md §4 for the re-verified build decisions.

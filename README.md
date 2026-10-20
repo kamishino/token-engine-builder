@@ -74,9 +74,9 @@ npm run package     # build + write release/ zips + SHA256SUMS.txt
 gh release create v<version> release/* --title "v<version>"
 ```
 
-Artifacts: one zip per skill (`token-engine-<skill>-v<version>.zip`, extract into an agents skills dir and run) plus a full bundle zip. `release/` is gitignored; artifacts attach to the GitHub release.
+Artifacts: one zip per skill (`token-engine-<skill>-v<version>.zip`, extract into an agents skills dir and run), a full bundle zip, and a CycloneDX 1.5 JSON SBOM (`token-engine-builder-v<version>.cyclonedx.json`). `release/` is gitignored; artifacts attach to the GitHub release.
 
-Verify downloads: keep `SHA256SUMS.txt` beside the zips, then run `sha256sum -c SHA256SUMS.txt` (macOS/Linux) or compare `Get-FileHash <zip>` output against the file (Windows). The sums are unsigned — verification proves the bytes match the release, not the publisher's identity.
+Verify downloads: keep `SHA256SUMS.txt` beside the zips, then run `sha256sum -c SHA256SUMS.txt`. Cryptographic authenticity: each release signs `SHA256SUMS.txt` with Ed25519; verify using `minisign -Vm SHA256SUMS.txt -p release.pub` (the public key is checked in at `release.pub`).
 
 ## Contributing
 

@@ -11,7 +11,7 @@
  */
 import { Buffer } from 'node:buffer';
 import { execFileSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { createHash, createPrivateKey, randomUUID, sign } from 'node:crypto';
 import {
   existsSync,
   mkdirSync,
@@ -155,11 +155,101 @@ writeZip(bundleEntries, bundle);
 artifacts.push(bundle);
 console.log(`[package] bundle → release/${basename(bundle)}`);
 
+// CycloneDX 1.5 JSON SBOM covering inlined packages in shipped bundles
+const lockPath = join(rootDir, 'package-lock.json');
+if (existsSync(lockPath)) {
+  const lock = JSON.parse(readFileSync(lockPath, 'utf8'));
+  const packages = lock.packages ?? {};
+  const seen = new Set();
+  function collectDeps(depName) {
+    const key = `node_modules/${depName}`;
+    if (seen.has(key) || !packages[key]) return;
+    seen.add(key);
+    const info = packages[key];
+    for (const d of Object.keys(info.dependencies ?? {})) {
+      collectDeps(d);
+    }
+  }
+  collectDeps('colorjs.io');
+  collectDeps('style-dictionary');
+
+  const components = Array.from(seen)
+    .sort()
+    .map((k) => {
+      const name = k.replace(/^node_modules\//, '');
+      const info = packages[k];
+      const encodedName = name.startsWith('@') ? name.replace('/', '%2F') : name;
+      return {
+        type: 'library',
+        name,
+        version: info.version,
+        ...(info.license ? { licenses: [{ license: { id: info.license } }] } : {}),
+        purl: `pkg:npm/${encodedName}@${info.version}`,
+      };
+    });
+
+  const sbom = {
+    bomFormat: 'CycloneDX',
+    specVersion: '1.5',
+    serialNumber: `urn:uuid:${randomUUID()}`,
+    version: 1,
+    metadata: {
+      timestamp: new Date().toISOString(),
+      tools: [
+        {
+          vendor: 'token-engine-builder',
+          name: 'package-release',
+          version,
+        },
+      ],
+      component: {
+        type: 'application',
+        name: pkg.name,
+        version: pkg.version,
+        licenses: [{ license: { id: pkg.license ?? 'MIT' } }],
+      },
+    },
+    components,
+  };
+
+  const sbomPath = join(releaseDir, `token-engine-builder-v${version}.cyclonedx.json`);
+  writeFileSync(sbomPath, `${JSON.stringify(sbom, null, 2)}\n`, 'utf8');
+  artifacts.push(sbomPath);
+  console.log(`[package] SBOM → release/${basename(sbomPath)} (${components.length} components)`);
+}
+
 const sums = artifacts
   .map(
     (path) => `${createHash('sha256').update(readFileSync(path)).digest('hex')}  ${basename(path)}`,
   )
   .join('\n');
-writeFileSync(join(releaseDir, 'SHA256SUMS.txt'), `${sums}\n`, 'utf8');
+const sumsFile = join(releaseDir, 'SHA256SUMS.txt');
+writeFileSync(sumsFile, `${sums}\n`, 'utf8');
 console.log(`[package] SHA256SUMS.txt written (${artifacts.length} artifacts, v${version})`);
+
+// Cryptographic Minisign signature over SHA256SUMS.txt
+const keyFile = join(rootDir, '.release-key.json');
+if (existsSync(keyFile)) {
+  const keyData = JSON.parse(readFileSync(keyFile, 'utf8'));
+  const keyId = Buffer.from(keyData.keyId, 'hex');
+  // Convert raw 32-byte Ed25519 private key into PKCS#8 DER for node:crypto
+  const pkcs8Prefix = Buffer.from('302e020100300506032b657004220420', 'hex');
+  const pkcs8Der = Buffer.concat([pkcs8Prefix, Buffer.from(keyData.privateKey, 'hex')]);
+  const privKeyObj = createPrivateKey({ key: pkcs8Der, format: 'der', type: 'pkcs8' });
+
+  const sumsBuf = readFileSync(sumsFile);
+  const rawSig = sign(null, sumsBuf, privKeyObj);
+
+  const sigBuf = Buffer.concat([Buffer.from('Ed'), keyId, rawSig]);
+  const sigContent =
+    `untrusted comment: signature from token-engine-builder secret key\n` +
+    `${sigBuf.toString('base64')}\n` +
+    `trusted comment: timestamp:${Math.floor(Date.now() / 1000)}\tfile:SHA256SUMS.txt\n` +
+    `${Buffer.concat([rawSig]).toString('base64')}\n`;
+
+  const sigFile = join(releaseDir, 'SHA256SUMS.txt.minisig');
+  writeFileSync(sigFile, sigContent, 'utf8');
+  console.log(`[package] SHA256SUMS.txt.minisig written (Ed25519 signature)`);
+}
+
 console.log(`[package] publish: gh release create v${version} release/* --title "v${version}"`);

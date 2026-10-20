@@ -22,7 +22,7 @@ Read-only audit performed 2026-10-17 against source (no builds run during the au
 
 ## Remediation status (2026-10-17)
 
-Remediated: A1, A2, A4, A5, A6, A7, B2, B3 (with the recorded critical-level exception), B4 (verification instructions; signing accepted as not-added), B7, C1. Partially remediated: B1 (bundle hash in stamp; no SBOM). Accepted without code change: A3 (exists-guard already fail-closed).
+Remediated: A1, A2, A4, A5, A6, A7, B1 (bundle hash + CycloneDX 1.5 JSON SBOM), B2, B3 (with the recorded critical-level exception), B4 (verification instructions + Ed25519 Minisign signature), B7, C1. Accepted without code change: A3 (exists-guard already fail-closed).
 
 ## Existing protections (verified, for the record)
 
