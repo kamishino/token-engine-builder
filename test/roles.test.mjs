@@ -5,6 +5,7 @@ import {
   FEEDBACK_ROLES,
   feedbackBgPath,
   feedbackTextPath,
+  SEMANTIC_COLOR_ROLES,
   SEMANTIC_ROLE_PATHS,
 } from '../src/shared/roles.ts';
 
@@ -33,4 +34,14 @@ test('FEEDBACK_ROLES and feedback path generators produce canonical paths', () =
   assert.equal(feedbackBgPath('danger'), 'semantic.color.feedback.danger.bg');
   assert.equal(feedbackTextPath('danger'), 'semantic.color.feedback.danger.text');
   assert.equal(SEMANTIC_ROLE_PATHS.TEXT_INVERSE, 'semantic.color.text.inverse');
+});
+
+test('SEMANTIC_COLOR_ROLES covers every semantic path exactly once', () => {
+  const paths = SEMANTIC_COLOR_ROLES.map((role) => role.path).sort();
+  assert.equal(paths.length, 17);
+  assert.equal(new Set(paths).size, paths.length);
+  for (const role of SEMANTIC_COLOR_ROLES) {
+    assert.equal(role.path, `semantic.color.${role.keys.join('.')}`);
+  }
+  assert.deepEqual(paths, Object.values(SEMANTIC_ROLE_PATHS).sort());
 });

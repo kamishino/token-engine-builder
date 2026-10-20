@@ -27,6 +27,50 @@ export const SEMANTIC_ROLE_PATHS = {
   BORDER_FOCUS: 'semantic.color.border.focus',
 } as const;
 
+export interface SemanticColorRole {
+  path: string;
+  /** Nested keys below `semantic.color`; exactly two levels. */
+  keys: readonly [string, string];
+  /** Key in token-math's `THEME_REGISTRY.targets`. */
+  target: string;
+}
+
+export const SEMANTIC_COLOR_ROLES: readonly SemanticColorRole[] = [
+  { path: SEMANTIC_ROLE_PATHS.BG_CANVAS, keys: ['bg', 'canvas'], target: 'canvas' },
+  { path: SEMANTIC_ROLE_PATHS.BG_SURFACE, keys: ['bg', 'surface'], target: 'surface' },
+  { path: SEMANTIC_ROLE_PATHS.BG_SUBTLE, keys: ['bg', 'subtle'], target: 'subtle' },
+  { path: SEMANTIC_ROLE_PATHS.BG_RAISED, keys: ['bg', 'raised'], target: 'raised' },
+  { path: SEMANTIC_ROLE_PATHS.TEXT_PRIMARY, keys: ['text', 'primary'], target: 'textPrimary' },
+  {
+    path: SEMANTIC_ROLE_PATHS.TEXT_SECONDARY,
+    keys: ['text', 'secondary'],
+    target: 'textSecondary',
+  },
+  { path: SEMANTIC_ROLE_PATHS.TEXT_TERTIARY, keys: ['text', 'tertiary'], target: 'textTertiary' },
+  { path: SEMANTIC_ROLE_PATHS.TEXT_DISABLED, keys: ['text', 'disabled'], target: 'textDisabled' },
+  { path: SEMANTIC_ROLE_PATHS.TEXT_INVERSE, keys: ['text', 'inverse'], target: 'textInverse' },
+  { path: SEMANTIC_ROLE_PATHS.TEXT_LINK, keys: ['text', 'link'], target: 'textLink' },
+  { path: SEMANTIC_ROLE_PATHS.ACTION_PRIMARY, keys: ['action', 'primary'], target: 'action' },
+  {
+    path: SEMANTIC_ROLE_PATHS.ACTION_PRIMARY_HOVER,
+    keys: ['action', 'primary-hover'],
+    target: 'actionHover',
+  },
+  {
+    path: SEMANTIC_ROLE_PATHS.ACTION_PRIMARY_TEXT,
+    keys: ['action', 'primary-text'],
+    target: 'actionText',
+  },
+  { path: SEMANTIC_ROLE_PATHS.BORDER_SUBTLE, keys: ['border', 'subtle'], target: 'borderSubtle' },
+  {
+    path: SEMANTIC_ROLE_PATHS.BORDER_DEFAULT,
+    keys: ['border', 'default'],
+    target: 'borderDefault',
+  },
+  { path: SEMANTIC_ROLE_PATHS.BORDER_STRONG, keys: ['border', 'strong'], target: 'borderStrong' },
+  { path: SEMANTIC_ROLE_PATHS.BORDER_FOCUS, keys: ['border', 'focus'], target: 'borderFocus' },
+];
+
 export function feedbackBgPath(role: FeedbackRole): string {
   return `semantic.color.feedback.${role}.bg`;
 }

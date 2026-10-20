@@ -14,7 +14,7 @@ import {
   writeTokensProvenance,
 } from '../../../shared/guard.js';
 import { fromCwd, getArg, hasFlag, isMainModule, templatePath } from '../../../shared/paths.js';
-import { FEEDBACK_ROLES } from '../../../shared/roles.js';
+import { FEEDBACK_ROLES, SEMANTIC_COLOR_ROLES } from '../../../shared/roles.js';
 import {
   baselinePx,
   pairedLineHeights,
@@ -283,55 +283,32 @@ export function runGenerate(argv = process.argv.slice(2)): number {
 
   for (const [theme, config] of Object.entries(allThemes)) {
     const targets = config.targets;
-    const resolveTarget = (key: string): { $value: string; $type: 'color' } => {
-      const target = targets[key];
-      if (target === undefined) throw new Error(`theme ${theme}: unknown semantic target "${key}"`);
-      return colorAlias(target[0] === 'primary' ? primaryEntry.name : target[0], target[1]);
-    };
+    const color: TokenGroup = { $type: 'color' };
+    for (const role of SEMANTIC_COLOR_ROLES) {
+      const target = targets[role.target];
+      if (target === undefined) {
+        throw new Error(`theme ${theme}: unknown semantic target "${role.target}"`);
+      }
+      const [group, leaf] = role.keys;
+      const node = (color[group] as TokenGroup | undefined) ?? {};
+      node[leaf] = colorAlias(target[0] === 'primary' ? primaryEntry.name : target[0], target[1]);
+      color[group] = node;
+    }
+    color.feedback = Object.fromEntries(
+      FEEDBACK_ROLES.map((role) => {
+        const fb = config.feedback;
+        return [
+          role,
+          {
+            bg: colorAlias(`feedback.${role}`, fb[0]),
+            text: colorAlias(`feedback.${role}`, fb[1]),
+          },
+        ];
+      }),
+    ) as TokenGroup;
     writeTokenFile(['semantic', `${theme}.tokens.json`], {
       $description: `Tier 2 — semantic roles, ${theme.toUpperCase()} theme. Generated from the spec palette; aliases only.`,
-      semantic: {
-        color: {
-          $type: 'color',
-          bg: {
-            canvas: resolveTarget('canvas'),
-            surface: resolveTarget('surface'),
-            subtle: resolveTarget('subtle'),
-            raised: resolveTarget('raised'),
-          },
-          text: {
-            primary: resolveTarget('textPrimary'),
-            secondary: resolveTarget('textSecondary'),
-            tertiary: resolveTarget('textTertiary'),
-            disabled: resolveTarget('textDisabled'),
-            inverse: resolveTarget('textInverse'),
-            link: resolveTarget('textLink'),
-          },
-          action: {
-            primary: resolveTarget('action'),
-            'primary-hover': resolveTarget('actionHover'),
-            'primary-text': resolveTarget('actionText'),
-          },
-          border: {
-            subtle: resolveTarget('borderSubtle'),
-            default: resolveTarget('borderDefault'),
-            strong: resolveTarget('borderStrong'),
-            focus: resolveTarget('borderFocus'),
-          },
-          feedback: Object.fromEntries(
-            FEEDBACK_ROLES.map((role) => {
-              const fb = config.feedback;
-              return [
-                role,
-                {
-                  bg: colorAlias(`feedback.${role}`, fb[0]),
-                  text: colorAlias(`feedback.${role}`, fb[1]),
-                },
-              ];
-            }),
-          ),
-        },
-      },
+      semantic: { color },
       layout: {
         $type: 'dimension',
         inset: {
