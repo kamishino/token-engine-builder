@@ -55,5 +55,5 @@ Node `>=22.12`. Pure contracts verified via `npm test` (`node:test` unit tests i
 - Module contracts (exports per shared file): `ARCHITECTURE.md` §2.
 - Token tier + alias rules: `ARCHITECTURE.md` §3.
 - Skill runtime contract (entry conditions, exit codes): each `src/skills/<skill>/SKILL.md`.
-- Token input schema: `src/skills/token-math/assets/style-spec.schema.json`.
+- Token input contract: `src/shared/types.ts` (`StyleSpec`), enforced by `src/shared/spec.ts`.
 - Product priorities and deferred register: `docs/ROADMAP.md`.

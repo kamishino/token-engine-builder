@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { normalizeStyleSpec, validateStyleSpec } from '../src/shared/spec.ts';
 
@@ -24,7 +23,7 @@ test('validateStyleSpec validates valid style-spec and warns on out-of-gamut anc
       { role: 'secondary', name: 'secondary-teal', anchor: { l: 0.7, c: 0.12, h: 180 } },
       { role: 'accent', name: 'accent-orange', anchor: { l: 0.65, c: 0.35, h: 40 } },
     ],
-    typography: { baseSizePx: 16, ratio: 1.25 },
+    typography: { fontFamily: 'Inter, sans-serif', baseSizePx: 16, ratio: 1.25 },
   });
   assert.equal(valid.valid, true);
   assert.ok(valid.warnings.some((w) => w.includes('clamped to sRGB')));
@@ -56,7 +55,7 @@ test('validateStyleSpec rejects invalid custom theme mode and invalid density', 
       { role: 'secondary', name: 's', anchor: { l: 0.6, c: 0.1, h: 150 } },
       { role: 'accent', name: 'a', anchor: { l: 0.7, c: 0.1, h: 100 } },
     ],
-    typography: { baseSizePx: 16, ratio: 1.2 },
+    typography: { fontFamily: 'Inter, sans-serif', baseSizePx: 16, ratio: 1.2 },
     themes: {
       sepia: { mode: 'invalid-mode' },
     },
@@ -71,7 +70,7 @@ test('validateStyleSpec rejects invalid custom theme mode and invalid density', 
       { role: 'secondary', name: 's', anchor: { l: 0.6, c: 0.1, h: 150 } },
       { role: 'accent', name: 'a', anchor: { l: 0.7, c: 0.1, h: 100 } },
     ],
-    typography: { baseSizePx: 16, ratio: 1.2 },
+    typography: { fontFamily: 'Inter, sans-serif', baseSizePx: 16, ratio: 1.2 },
     density: 'ultra-wide',
   });
   assert.equal(invalidDensity.valid, false);
@@ -80,14 +79,30 @@ test('validateStyleSpec rejects invalid custom theme mode and invalid density', 
   );
 });
 
-test('schema parity: style-spec schema properties are checked by runtime validator', () => {
-  const schema = JSON.parse(
-    readFileSync('src/skills/token-math/assets/style-spec.schema.json', 'utf8'),
-  );
-  assert.ok(schema.properties);
-  assert.ok('palette' in schema.properties);
-  assert.ok('typography' in schema.properties);
-  assert.ok('themes' in schema.properties);
-  assert.ok('density' in schema.properties);
-  assert.ok('targets' in schema.properties);
+test('validateStyleSpec rejects an invalid palette role', () => {
+  const result = validateStyleSpec({
+    name: 'test',
+    palette: [
+      { role: 'brand', name: 'p', anchor: { l: 0.5, c: 0.1, h: 200 } },
+      { role: 'secondary', name: 's', anchor: { l: 0.6, c: 0.1, h: 150 } },
+      { role: 'accent', name: 'a', anchor: { l: 0.7, c: 0.1, h: 100 } },
+    ],
+    typography: { fontFamily: 'Inter, sans-serif', baseSizePx: 16, ratio: 1.2 },
+  });
+  assert.equal(result.valid, false);
+  assert.ok(result.errors.some((e) => e.includes('role must be')));
+});
+
+test('validateStyleSpec requires typography.fontFamily', () => {
+  const result = validateStyleSpec({
+    name: 'test',
+    palette: [
+      { role: 'primary', name: 'p', anchor: { l: 0.5, c: 0.1, h: 200 } },
+      { role: 'secondary', name: 's', anchor: { l: 0.6, c: 0.1, h: 150 } },
+      { role: 'accent', name: 'a', anchor: { l: 0.7, c: 0.1, h: 100 } },
+    ],
+    typography: { baseSizePx: 16, ratio: 1.2 },
+  });
+  assert.equal(result.valid, false);
+  assert.ok(result.errors.some((e) => e.includes('fontFamily')));
 });

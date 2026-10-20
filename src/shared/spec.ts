@@ -69,6 +69,11 @@ export function validateStyleSpec(raw: unknown): StyleSpecValidationResult {
         paletteNames.add(name);
       }
 
+      const role = entry['role'];
+      if (role !== 'primary' && role !== 'secondary' && role !== 'accent' && role !== 'other') {
+        errors.push(`palette "${String(name)}" role must be primary, secondary, accent, or other`);
+      }
+
       const a = entry['anchor'] as Record<string, unknown> | undefined;
       if (
         a === null ||
@@ -112,10 +117,15 @@ export function validateStyleSpec(raw: unknown): StyleSpecValidationResult {
     !(typography['baseSizePx'] > 0)
   ) {
     errors.push('typography.baseSizePx > 0 and typography.ratio > 1 required');
-  } else if (typography['baseLineHeight'] !== undefined) {
-    const blh = typography['baseLineHeight'];
-    if (typeof blh !== 'number' || blh < 1 || blh > 2.5) {
-      errors.push('typography.baseLineHeight must be 1–2.5');
+  } else {
+    if (typeof typography['fontFamily'] !== 'string' || typography['fontFamily'].trim() === '') {
+      errors.push('typography.fontFamily must be a non-empty string');
+    }
+    if (typography['baseLineHeight'] !== undefined) {
+      const blh = typography['baseLineHeight'];
+      if (typeof blh !== 'number' || blh < 1 || blh > 2.5) {
+        errors.push('typography.baseLineHeight must be 1–2.5');
+      }
     }
   }
 

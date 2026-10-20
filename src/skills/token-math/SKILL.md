@@ -26,4 +26,4 @@ Deterministic: same spec in, same tokens out. The script does the math (OKLCH ra
 3. **Hand off** to `token-audit` before building anything.
    - Done when: audit has been run against this exact `tokens/` tree.
 
-Schema for the input: `assets/style-spec.schema.json`. Re-running generate after a spec change is safe — Tier-1 files are derived and semantic themes are regenerated with durable overrides applied.
+Input contract: the `StyleSpec` JSON consumed by `scripts/generate.mjs`; see `../token-style/assets/style-spec.example.json` for the canonical example. Re-running generate after a spec change is safe — Tier-1 files are derived and semantic themes are regenerated with durable overrides applied.
