@@ -1,22 +1,19 @@
 /**
  * build — compile a 3-tier token tree to CSS custom properties + Tailwind v4 `@theme`
- * via Style Dictionary v5 (programmatic, bundled; see templates/sd.config.json for shape).
+ * via Style Dictionary v5 (programmatic, bundled).
  *
  * Usage: node ./scripts/build.mjs --tokens <dir> --out <dir> [--theme <name>] [--prefix <name>] [--spec <style-spec.json>] [--profile <id>] [--visualizer] [--allow-unaudited] [--force] [--dry-run]
  */
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { oklchToHex } from '../../../shared/colors.js';
-import { ARTIFACT_NAMES, buildTokens } from '../../../shared/compiler.js';
+import { ARTIFACT_NAMES, buildTokens, guideFromSpec } from '../../../shared/compiler.js';
 import {
   assertSafeOutDir,
   checkAuditStamp,
   checkCssProvenance,
-  computeTreeHash,
-  sha256Hex,
-  writeCssProvenance,
+  publishCssOutputs,
 } from '../../../shared/guard.js';
-import { fromCwd, getArg, hasFlag, isMainModule, templatePath } from '../../../shared/paths.js';
+import { fromCwd, getArg, hasFlag, isMainModule } from '../../../shared/paths.js';
 import { loadStyleSpec } from '../../../shared/spec.js';
 import { tokenSourcePatterns } from '../../../shared/tokens.js';
 import type { BuildTokensOptions } from '../../../shared/types.js';
@@ -51,27 +48,14 @@ export async function runBuild(argv = process.argv.slice(2)): Promise<number> {
       console.error(`style-spec not found: ${specPath}`);
       return 1;
     }
-    let spec;
     try {
-      spec = loadStyleSpec(specPath).spec;
+      guide = guideFromSpec(loadStyleSpec(specPath).spec);
     } catch (error) {
       console.error(
         `style-spec not readable: ${error instanceof Error ? error.message : String(error)}`,
       );
       return 1;
     }
-    const primary = spec.palette.find((entry) => entry.role === 'primary');
-    const secondary = spec.palette.find((entry) => entry.role === 'secondary');
-    guide = {
-      name: spec.name,
-      ...(spec.guide?.overview === undefined ? {} : { overview: spec.guide.overview }),
-      ...(spec.guide?.dos === undefined ? {} : { dos: spec.guide.dos }),
-      ...(spec.guide?.donts === undefined ? {} : { donts: spec.guide.donts }),
-      ...(primary === undefined ? {} : { primaryHex: oklchToHex(primary.anchor) }),
-      ...(secondary === undefined ? {} : { secondaryHex: oklchToHex(secondary.anchor) }),
-      scale: spec.typography.ratio,
-      density: spec.density,
-    };
   }
   const tokensDir = fromCwd(tokensArg);
   if (!existsSync(tokensDir)) {
@@ -86,13 +70,6 @@ export async function runBuild(argv = process.argv.slice(2)): Promise<number> {
     return 1;
   }
 
-  // Portable base-config template ships with the skill; compiler mirrors its shape.
-  const baseConfig = templatePath(import.meta.url, 'sd.config.json');
-  if (!existsSync(baseConfig)) {
-    console.error(`bundled template missing: ${baseConfig} (skill package is incomplete)`);
-    return 1;
-  }
-
   const profileArg = getArg(argv, '--profile');
   if (profileArg !== undefined && !(UI_PROFILE_IDS as readonly string[]).includes(profileArg)) {
     console.error(`unknown profile "${profileArg}" (valid: ${UI_PROFILE_IDS.join(', ')})`);
@@ -101,6 +78,7 @@ export async function runBuild(argv = process.argv.slice(2)): Promise<number> {
   const profile = profileArg as UiProfileId | undefined;
 
   const outDir = fromCwd(outArg);
+  const auditStamp = checkAuditStamp(tokensDir);
   const outputPaths =
     profile === undefined
       ? ARTIFACT_NAMES.map((name) => join(outDir, name))
@@ -115,7 +93,7 @@ export async function runBuild(argv = process.argv.slice(2)): Promise<number> {
         : `would build profile ${profile} (light + dark) → ${outDir}`,
     );
     if (outputsExist) console.log(`provenance: ${tamper.status}`);
-    console.log(`audit stamp: ${checkAuditStamp(tokensDir)}`);
+    console.log(`audit stamp: ${auditStamp}`);
     return 0;
   }
 
@@ -144,9 +122,9 @@ export async function runBuild(argv = process.argv.slice(2)): Promise<number> {
   const allowUnaudited = hasFlag(argv, '--allow-unaudited');
   if (allowUnaudited) {
     console.log('warning: building without a fresh audit pass (--allow-unaudited)');
-  } else if (checkAuditStamp(tokensDir) !== 'pass') {
+  } else if (auditStamp !== 'pass') {
     console.error(
-      `refusing to build: no fresh audit pass for this exact tree (stamp: ${checkAuditStamp(tokensDir)}). Run token-audit first, or pass --allow-unaudited.`,
+      `refusing to build: no fresh audit pass for this exact tree (stamp: ${auditStamp}). Run token-audit first, or pass --allow-unaudited.`,
     );
     return 1;
   }
@@ -172,35 +150,27 @@ export async function runBuild(argv = process.argv.slice(2)): Promise<number> {
         visualizer,
       });
       const outputList = Object.values(outputs.artifacts);
-      const missing = outputList.filter((path) => !existsSync(fromCwd(path)));
-      if (missing.length > 0) {
+      const published = publishCssOutputs(outDir, tokensDir, outputs.artifacts);
+      if (published.missing.length > 0) {
         console.error(
-          `build failed: Style Dictionary produced no tokens for ${missing.join(', ')}`,
+          `build failed: Style Dictionary produced no tokens for ${published.missing.join(', ')}`,
         );
         return 1;
       }
-      const inputHash = computeTreeHash(tokensDir);
-      const files = Object.fromEntries(
-        Object.entries(outputs.artifacts).map(([name, path]) => [
-          name,
-          sha256Hex(readFileSync(fromCwd(path))),
-        ]),
-      );
-      writeCssProvenance(outDir, inputHash, files);
       console.log(`built (${theme}) → ${outputList.join(', ')}`);
       return 0;
     }
 
     const profilePath = await buildUiProfile(profile, tokensDir, outArg.replaceAll('\\', '/'));
-    if (!existsSync(fromCwd(profilePath))) {
-      console.error(`build failed: Style Dictionary produced no tokens for ${profilePath}`);
+    const published = publishCssOutputs(outDir, tokensDir, {
+      [profileFileName(profile)]: profilePath,
+    });
+    if (published.missing.length > 0) {
+      console.error(
+        `build failed: Style Dictionary produced no tokens for ${published.missing.join(', ')}`,
+      );
       return 1;
     }
-    const inputHash = computeTreeHash(tokensDir);
-    const files = {
-      [profileFileName(profile)]: sha256Hex(readFileSync(fromCwd(profilePath))),
-    };
-    writeCssProvenance(outDir, inputHash, files);
     console.log(`built profile ${profile} → ${profilePath}`);
     return 0;
   } catch (error) {

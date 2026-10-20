@@ -17,7 +17,7 @@ import { fileHeader, formattedVariables, usesReferences } from 'style-dictionary
 import { dtcgToOklch, formatOklch, oklchToHex, parseToOklch } from './colors.js';
 import { SEMANTIC_ROLE_PATHS } from './roles.js';
 import { loadTokenSources, tokenSourcePatterns, type JsonObject } from './tokens.js';
-import type { BuildTokensOptions, DtcgColorValue } from './types.js';
+import type { BuildTokensOptions, DtcgColorValue, StyleSpec } from './types.js';
 
 export interface ResolvedToken {
   $value?: unknown;
@@ -677,6 +677,21 @@ function createEngine(
       },
     },
   });
+}
+
+export function guideFromSpec(spec: StyleSpec): NonNullable<BuildTokensOptions['guide']> {
+  const primary = spec.palette.find((entry) => entry.role === 'primary');
+  const secondary = spec.palette.find((entry) => entry.role === 'secondary');
+  return {
+    name: spec.name,
+    ...(spec.guide?.overview === undefined ? {} : { overview: spec.guide.overview }),
+    ...(spec.guide?.dos === undefined ? {} : { dos: spec.guide.dos }),
+    ...(spec.guide?.donts === undefined ? {} : { donts: spec.guide.donts }),
+    ...(primary === undefined ? {} : { primaryHex: oklchToHex(primary.anchor) }),
+    ...(secondary === undefined ? {} : { secondaryHex: oklchToHex(secondary.anchor) }),
+    scale: spec.typography.ratio,
+    density: spec.density,
+  };
 }
 
 export async function buildTokens(options: BuildTokensOptions): Promise<CompiledOutputs> {

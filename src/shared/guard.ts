@@ -205,3 +205,21 @@ export function writeCssProvenance(
     files,
   });
 }
+
+export interface PublishReport {
+  missing: string[];
+}
+
+export function publishCssOutputs(
+  cssDir: string,
+  tokensDir: string,
+  artifacts: Record<string, string>,
+): PublishReport {
+  const missing = Object.values(artifacts).filter((path) => !existsSync(path));
+  if (missing.length > 0) return { missing };
+  const files = Object.fromEntries(
+    Object.entries(artifacts).map(([name, path]) => [name, sha256Hex(readFileSync(path))]),
+  );
+  writeCssProvenance(cssDir, computeTreeHash(tokensDir), files);
+  return { missing: [] };
+}
