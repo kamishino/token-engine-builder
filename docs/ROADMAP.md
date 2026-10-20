@@ -56,6 +56,10 @@ With v1.0.0 production stability achieved, the pipeline focuses on expanding UI 
 
 | Version     | Scope                            | Key Capabilities Shipped                                                                                                              |
 | ----------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| **v1.4.0**  | CSS Ingestion Refinement (C4)    | Structured theme extraction from Tailwind v3 configs, Tailwind v4 `@theme`, and CSS root custom properties into `style-spec.json`.    |
+| **v1.3.0**  | Figma DTCG Sync Bridge (C3)      | Bidirectional sync CLI (`scripts/figma.mjs`) for exporting and importing W3C DTCG tokens to/from Figma Variables REST API format.     |
+| **v1.2.0**  | Custom Theme Authoring (C2)      | Dynamic custom named themes declared in `style-spec.json` with base mode polarity, surface steps, and action step overrides.          |
+| **v1.1.0**  | Extended Component Catalog (C1)  | 6 new DTCG component templates (badge, alert, dialog, avatar, tooltip, table) for 9 total components, with 42 audit contrast pairs.   |
 | **v1.0.0**  | Production Release (N5)          | Comprehensive verification across all 8 UI profiles, 5 skills, 2 buckets, CycloneDX SBOM, Minisign signature, and CI green.           |
 | **v0.15.0** | Visualizer Surface (N4)          | Single-file zero-dep interactive HTML inspector (`build/visualizer.html`) for color ramps and live component specimens.               |
 | **v0.14.0** | Skill Grouping (L5 / X8)         | 2-bundle partition into `creation` and `governance` functional domains and release packages.                                          |
