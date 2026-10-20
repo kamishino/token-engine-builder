@@ -6,7 +6,6 @@
  */
 import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { buildFeedbackColors, buildRamp, dtcgColorValue } from '../../../shared/colors.js';
 import {
   assertSafeOutDir,
   checkTokensProvenance,
@@ -14,17 +13,9 @@ import {
   writeTokensProvenance,
 } from '../../../shared/guard.js';
 import { fromCwd, getArg, hasFlag, isMainModule, templatePath } from '../../../shared/paths.js';
-import {
-  baselinePx,
-  pairedLineHeights,
-  radiusScale,
-  rhythmScale,
-  spacingScale,
-  typographyScale,
-} from '../../../shared/scales.js';
 import { loadStyleSpec } from '../../../shared/spec.js';
-import { planThemes } from '../../../shared/theme-plan.js';
-import type { ColorRamp, StyleSpec, TokenGroup } from '../../../shared/types.js';
+import { planTokenFiles } from '../../../shared/token-plan.js';
+import type { StyleSpec } from '../../../shared/types.js';
 
 export function runGenerate(argv = process.argv.slice(2)): number {
   if (hasFlag(argv, '--help')) {
@@ -58,22 +49,12 @@ export function runGenerate(argv = process.argv.slice(2)): number {
   for (const warning of warnings) {
     console.log(`warning: ${warning}`);
   }
-  const stepCount = spec.rampSteps ?? 11;
-  const baseLineHeight = spec.typography.baseLineHeight ?? 1.5;
   if (dryRun) {
-    const planned = planThemes(spec);
+    const planned = planTokenFiles(spec);
     console.log(`would generate 3-tier tokens for "${spec.name}" → ${outDir}`);
     console.log('would copy: templates/tokens/** (primitive and component templates)');
-    for (const file of [
-      'primitive/color.tokens.json (palette ramps, anchors on step 500)',
-      'primitive/typography.tokens.json',
-      'primitive/spacing.tokens.json',
-      'primitive/radius.tokens.json',
-    ]) {
-      console.log(`would write: ${file}`);
-    }
-    for (const { theme } of planned) {
-      console.log(`would write: semantic/${theme}.tokens.json`);
+    for (const { segments, note } of planned) {
+      console.log(`would write: ${segments.join('/')}${note === undefined ? '' : ` (${note})`}`);
     }
     if (tamper !== null && tamper.status !== 'absent') {
       console.log(`provenance: ${tamper.status}`);
@@ -115,17 +96,6 @@ export function runGenerate(argv = process.argv.slice(2)): number {
   cpSync(templatePath(import.meta.url, 'tokens'), outDir, { recursive: true, force: true });
 
   // 2. Populate Tier-1 primitives from the spec; tiers 2–3 stay alias-only templates.
-  function rampGroup(ramp: ColorRamp, description?: string): TokenGroup {
-    const group: TokenGroup = {};
-    for (const [step, color] of Object.entries(ramp)) {
-      group[step] = {
-        $value: dtcgColorValue(color),
-        $type: 'color',
-        ...(description === undefined ? {} : { $description: description }),
-      };
-    }
-    return group;
-  }
 
   function writeTokenFile(segments: string[], data: unknown): void {
     const filePath = join(outDir, ...segments);
@@ -133,63 +103,9 @@ export function runGenerate(argv = process.argv.slice(2)): number {
     writeFileSync(filePath, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
   }
 
-  writeTokenFile(['primitive', 'color.tokens.json'], {
-    $description: `Tier 1 — palette ramps for "${spec.name}" (${stepCount} steps, anchors on step 500). Generated; do not hand-edit hex.`,
-    color: {
-      $type: 'color',
-      white: { $value: dtcgColorValue({ l: 1, c: 0, h: 0, alpha: 1 }), $type: 'color' },
-      black: { $value: dtcgColorValue({ l: 0, c: 0, h: 0, alpha: 1 }), $type: 'color' },
-      ...Object.fromEntries(
-        spec.palette.map((entry) => [
-          entry.name,
-          rampGroup(buildRamp(entry.anchor, stepCount), `${entry.role} — ${entry.name}`),
-        ]),
-      ),
-      neutral: rampGroup(
-        buildRamp({ l: 0.6, c: spec.neutralChroma, h: spec.neutralHue }, stepCount),
-      ),
-      feedback: Object.fromEntries(
-        Object.entries(buildFeedbackColors()).map(([role, color]) => [
-          role,
-          rampGroup(buildRamp(color, stepCount)),
-        ]),
-      ),
-    },
-  });
-
-  // 3. Semantic themes are generated from the palette role→slug mapping.
-  for (const { theme, data } of planThemes(spec)) {
-    writeTokenFile(['semantic', `${theme}.tokens.json`], data);
+  for (const { segments, data } of planTokenFiles(spec)) {
+    writeTokenFile(segments, data);
   }
-
-  writeTokenFile(['primitive', 'typography.tokens.json'], {
-    $description: `Tier 1 — modular type scale (base ${spec.typography.baseSizePx}px, ratio ${spec.typography.ratio}). Generated.`,
-    'font-family': { $type: 'fontFamily', sans: { $value: spec.typography.fontFamily } },
-    'font-size': typographyScale(spec.typography.baseSizePx, spec.typography.ratio),
-    'font-weight': {
-      $type: 'fontWeight',
-      regular: { $value: 400 },
-      medium: { $value: 500 },
-      semibold: { $value: 600 },
-      bold: { $value: 700 },
-    },
-    'line-height': pairedLineHeights(
-      spec.typography.baseSizePx,
-      spec.typography.ratio,
-      baseLineHeight,
-    ),
-    rhythm: rhythmScale(baselinePx(spec.typography.baseSizePx, baseLineHeight)),
-  });
-
-  writeTokenFile(['primitive', 'spacing.tokens.json'], {
-    $description: `Tier 1 — ${spec.spacingBasePx}px-base spacing (${spec.density}). Generated.`,
-    spacing: spacingScale(spec.spacingBasePx, spec.density),
-  });
-
-  writeTokenFile(['primitive', 'radius.tokens.json'], {
-    $description: 'Tier 1 — corner radii. Generated.',
-    radius: radiusScale(spec.radius),
-  });
 
   writeTokensProvenance(outDir, sha256Hex(readFileSync(specPath)));
   console.log(`generated 3-tier tokens for "${spec.name}" → ${outDir}`);
