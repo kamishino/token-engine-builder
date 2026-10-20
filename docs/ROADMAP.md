@@ -31,10 +31,10 @@ With v1.0.0 production stability achieved, the pipeline focuses on expanding UI 
 
 ## Next — v1.2+ Horizon
 
-### C3. Figma DTCG Token Sync Bridge
+### C3. Figma DTCG Token Sync Bridge — ✅ shipped in v1.3.0
 
 - **Why**: Enable bi-directional synchronization between W3C DTCG JSON token files and Figma Variables via the Figma REST API.
-- **Scope**: Script or plugin mapping Figma collections/modes to DTCG 3-tier hierarchies.
+- **Shipped**: Bidirectional sync CLI in `token-build` (`scripts/figma.mjs`) supporting export (`--to-figma <tokens-dir>` generating full COLOR, FLOAT, and STRING variable payloads) and import (`--from-figma <figma.json>` converting to DTCG 3-tier hierarchies).
 
 ### C4. Automated CSS-to-Spec Ingestion Refinement
 

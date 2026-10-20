@@ -28,4 +28,14 @@ Entry condition: `token-audit` exits 0 on this exact tree — enforced technical
 3. **Report** file paths + how the consumer imports them (`@import` the CSS; Tailwind v4 reads `@theme` automatically).
    - Done when: the user has copy-pasteable import lines for each built theme.
 
-The bundled `templates/sd.config.json` documents the config shape; `build.mjs` applies the same shape programmatically with custom transforms, so no Style Dictionary install is needed in the consumer project.
+### Figma Sync Bridge
+
+Synchronize W3C DTCG tokens with Figma Variables via `./scripts/figma.mjs`:
+
+```bash
+# Export DTCG tokens directory to Figma Variables JSON
+node ./scripts/figma.mjs --to-figma tokens --out figma-variables.json
+
+# Import Figma Variables JSON into DTCG 3-tier tokens
+node ./scripts/figma.mjs --from-figma figma-variables.json --out tokens
+```

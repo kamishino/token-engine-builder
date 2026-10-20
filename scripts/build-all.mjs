@@ -18,16 +18,25 @@ const skillsDir = join(rootDir, 'src', 'skills');
 const viteBin = join(rootDir, 'node_modules', 'vite', 'bin', 'vite.js');
 
 const only = process.argv.slice(2).filter((arg) => !arg.startsWith('-'));
-const skillsWithScripts = readdirSync(skillsDir, { withFileTypes: true })
-  .filter((entry) => entry.isDirectory() && existsSync(join(skillsDir, entry.name, 'scripts')))
-  .map((entry) => entry.name)
-  .filter((name) =>
-    readdirSync(join(skillsDir, name, 'scripts')).some((file) => file.endsWith('.ts')),
-  )
-  .filter((name) => only.length === 0 || only.includes(name));
+const scriptEntries = [];
+for (const entry of readdirSync(skillsDir, { withFileTypes: true })) {
+  if (!entry.isDirectory()) continue;
+  const sDir = join(skillsDir, entry.name, 'scripts');
+  if (existsSync(sDir)) {
+    for (const f of readdirSync(sDir)) {
+      if (f.endsWith('.ts')) {
+        const scriptName = f.replace(/\.ts$/, '');
+        if (only.length === 0 || only.includes(entry.name)) {
+          scriptEntries.push({ skill: entry.name, script: scriptName });
+        }
+      }
+    }
+  }
+}
+const uniqueSkills = [...new Set(scriptEntries.map((e) => e.skill))];
 
 for (const name of only) {
-  if (!skillsWithScripts.includes(name)) {
+  if (!uniqueSkills.includes(name)) {
     console.error(`[build] unknown skill: ${name}`);
     process.exit(1);
   }
@@ -37,16 +46,22 @@ for (const name of only) {
 const wipe = only.length === 0;
 if (wipe) rmSync(join(rootDir, 'dist'), { recursive: true, force: true });
 
-skillsWithScripts.forEach((skill, index) => {
-  console.log(`\n[build] ${skill}`);
+scriptEntries.forEach(({ skill, script }, index) => {
+  console.log(`\n[build] ${skill}/${script}`);
   execFileSync(process.execPath, [viteBin, 'build'], {
     cwd: rootDir,
     stdio: 'inherit',
-    env: { ...process.env, SKILL_ENTRY: skill, SKILL_EMPTY: wipe && index === 0 ? '1' : '0' },
+    env: {
+      ...process.env,
+      SKILL_ENTRY: `${skill}/scripts/${script}`,
+      SKILL_EMPTY: wipe && index === 0 ? '1' : '0',
+    },
   });
 });
 
-console.log(`\n[build] done: ${skillsWithScripts.length} skill(s) → dist/`);
+console.log(
+  `\n[build] done: ${scriptEntries.length} script(s) across ${uniqueSkills.length} skill(s) → dist/`,
+);
 
 // Freshness/integrity stamps for link-skills.mjs: every src skill gets a JSON
 // stamp {builtAt, bundleHash}, including scriptless skills. link-skills

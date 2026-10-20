@@ -72,7 +72,9 @@ const entries =
   onlySkill === undefined
     ? allEntries
     : Object.fromEntries(
-        Object.entries(allEntries).filter(([key]) => key.startsWith(`${onlySkill}/`)),
+        Object.entries(allEntries).filter(
+          ([key]) => key === onlySkill || key.startsWith(`${onlySkill}/`),
+        ),
       );
 const singleEntry = Object.keys(entries).length === 1;
 
