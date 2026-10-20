@@ -458,11 +458,12 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
   const radiusMd = [...radiusCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 8;
   const primaryCand = tailwindColors.get('primary')?.color;
   const secondaryCand = tailwindColors.get('secondary')?.color;
+  const accentCand = tailwindColors.get('accent')?.color;
   const anchor: OklchColor =
     fmPrimary ?? (primaryCand ? toAnchor(primaryCand) : toAnchor((top as Candidate).color));
   const resolvedSecondary: OklchColor | undefined =
     fmSecondary ?? (secondaryCand ? toAnchor(secondaryCand) : undefined);
-
+  const resolvedAccent: OklchColor | undefined = accentCand ? toAnchor(accentCand) : undefined;
   const usedNames = new Set<string>();
   const PREFIXES = ['deep', 'soft', 'vibrant', 'rich', 'pale', 'bright', 'dark', 'pure'] as const;
   function uniqueName(color: OklchColor): string {
@@ -495,6 +496,13 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
       name: uniqueName(resolvedSecondary),
       anchor: resolvedSecondary,
     });
+  if (resolvedAccent !== undefined && palette.length < 3) {
+    palette.push({
+      role: 'accent',
+      name: uniqueName(resolvedAccent),
+      anchor: resolvedAccent,
+    });
+  }
   for (const derivedColor of buildHarmony(anchor, 'analogous')) {
     if (palette.length >= 3) break;
     palette.push({
@@ -534,7 +542,8 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
   };
   const validation = validateStyleSpec(spec);
   if (!validation.valid) {
-    console.error(`warning: candidate style-spec validation: ${validation.errors.join('; ')}`);
+    console.error(`candidate style-spec validation failed: ${validation.errors.join('; ')}`);
+    return 1;
   }
   for (const warning of validation.warnings) {
     console.log(`warning: ${warning}`);
