@@ -4,20 +4,12 @@
  *
  * Usage: node ./scripts/audit.mjs --tokens <dir> [--theme light|dark|both] [--min-ratio 4.5] [--min-apca 60] [--spec <style-spec.json>] [--json]
  */
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { checkContrast } from '../../../shared/colors.js';
-import {
-  checkTokensProvenance,
-  removeAuditStamp,
-  writeAuditStamp,
-  type TamperReport,
-} from '../../../shared/guard.js';
+import { auditTokens } from '../../../shared/audit-report.js';
+import { removeAuditStamp, writeAuditStamp } from '../../../shared/guard.js';
 import { fromCwd, getArg, hasFlag, isMainModule } from '../../../shared/paths.js';
-import { AUDIT_PAIRS } from '../../../shared/roles.js';
 import { loadStyleSpec } from '../../../shared/spec.js';
-import { loadTokenTree } from '../../../shared/tokens.js';
-import type { AuditReport, ContrastKind } from '../../../shared/types.js';
 
 export function runAudit(argv = process.argv.slice(2)): number {
   if (hasFlag(argv, '--help')) {
@@ -48,84 +40,25 @@ export function runAudit(argv = process.argv.slice(2)): number {
     return 1;
   }
 
-  const FLOORS: Record<ContrastKind, { ratio: number; apca: number }> = {
-    text: { ratio: minRatio, apca: minApca },
-    border: { ratio: 3, apca: 30 },
-    decorative: { ratio: 1, apca: 0 },
-  };
-
-  function auditTheme(themeName: string): AuditReport {
-    const semanticFile = join(tokensDir, 'semantic', `${themeName}.tokens.json`);
-    if (!existsSync(semanticFile)) {
-      return {
-        pairs: [],
-        unresolvedAliases: [`missing semantic theme: ${themeName} (${semanticFile})`],
-        rawValueViolations: [],
-        pass: false,
-      };
-    }
-    let tree;
-    try {
-      tree = loadTokenTree(tokensDir, { theme: themeName });
-    } catch (error) {
-      return {
-        pairs: [],
-        unresolvedAliases: [
-          `unreadable token tree for ${themeName}: ${error instanceof Error ? error.message : String(error)}`,
-        ],
-        rawValueViolations: [],
-        pass: false,
-      };
-    }
-
-    const rawValueViolations = tree.checkRawValueViolations();
-    const unresolvedAliases: string[] = [];
-    const pairs = AUDIT_PAIRS.flatMap(({ fg, bg, kind }) => {
-      const fgColor = tree.resolveColor(fg, unresolvedAliases);
-      const bgColor = tree.resolveColor(bg, unresolvedAliases);
-      if (fgColor === undefined || bgColor === undefined) return [];
-      const floor = FLOORS[kind];
-      return [checkContrast(fg, fgColor, bg, bgColor, floor.ratio, floor.apca, kind)];
-    });
-
-    unresolvedAliases.push(...tree.checkUnresolvedAliases());
-    const uniqueUnresolved = [...new Set(unresolvedAliases)];
-    return {
-      pairs,
-      unresolvedAliases: uniqueUnresolved,
-      rawValueViolations,
-      pass:
-        pairs.every((pair) => pair.pass) &&
-        uniqueUnresolved.length === 0 &&
-        rawValueViolations.length === 0,
-    };
-  }
-
+  const result = auditTokens(tokensDir, { theme, minRatio, minApca });
   const semanticDir = join(tokensDir, 'semantic');
-  const discoveredThemes = existsSync(semanticDir)
-    ? readdirSync(semanticDir)
-        .filter((file) => file.endsWith('.tokens.json'))
-        .map((file) => file.replace(/\.tokens\.json$/, ''))
-        .sort()
-    : [];
-  const themes = theme === 'both' ? discoveredThemes : [theme];
-  const reports = new Map(themes.map((name) => [name, auditTheme(name)]));
-  const provenance: TamperReport = checkTokensProvenance(tokensDir);
-  const provenanceFails = provenance.status === 'tampered' || provenance.status === 'unreadable';
-  const noThemes = themes.length === 0;
-  const overallPass =
-    !noThemes && [...reports.values()].every((report) => report.pass) && !provenanceFails;
 
   if (asJson) {
     console.log(
       JSON.stringify(
-        { pass: overallPass, minRatio, minApca, provenance, themes: Object.fromEntries(reports) },
+        {
+          pass: result.pass,
+          minRatio: result.minRatio,
+          minApca: result.minApca,
+          provenance: result.provenance,
+          themes: result.themes,
+        },
         null,
         2,
       ),
     );
   } else {
-    for (const [name, report] of reports) {
+    for (const [name, report] of Object.entries(result.themes)) {
       console.log(`\n[${name}] min WCAG ratio ${minRatio}:1`);
       for (const pair of report.pairs) {
         const suffix =
@@ -141,29 +74,31 @@ export function runAudit(argv = process.argv.slice(2)): number {
       for (const item of report.unresolvedAliases) console.log(`  FAIL  unresolved alias: ${item}`);
       for (const item of report.rawValueViolations) console.log(`  FAIL  ${item}`);
     }
+    const provenanceFails =
+      result.provenance.status === 'tampered' || result.provenance.status === 'unreadable';
     if (provenanceFails) {
       const parts = [
-        ...provenance.changed.map((path) => `changed: ${path}`),
-        ...provenance.missing.map((path) => `missing: ${path}`),
+        ...result.provenance.changed.map((path) => `changed: ${path}`),
+        ...result.provenance.missing.map((path) => `missing: ${path}`),
       ];
-      console.log(`  FAIL  provenance: ${parts.join('; ') || provenance.status}`);
-    } else if (provenance.status === 'absent') {
+      console.log(`  FAIL  provenance: ${parts.join('; ') || result.provenance.status}`);
+    } else if (result.provenance.status === 'absent') {
       console.log('  note: no provenance manifest (tree predates the guard)');
     }
-    if (noThemes) {
+    if (Object.keys(result.themes).length === 0) {
       console.log(`  FAIL  no semantic themes found under ${semanticDir}`);
     }
-    console.log(`\naudit ${overallPass ? 'PASS' : 'FAIL'}`);
+    console.log(`\naudit ${result.pass ? 'PASS' : 'FAIL'}`);
   }
 
   // Audit stamp: token-build verifies this hash before building (verified gate).
-  if (overallPass) {
-    writeAuditStamp(tokensDir, { minRatio, minApca });
+  if (result.pass) {
+    writeAuditStamp(tokensDir, { minRatio: result.minRatio, minApca: result.minApca });
   } else {
     removeAuditStamp(tokensDir);
   }
 
-  return overallPass ? 0 : 1;
+  return result.pass ? 0 : 1;
 }
 
 if (isMainModule(import.meta.url, 'audit.mjs', 'audit.ts')) {
