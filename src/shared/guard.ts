@@ -45,7 +45,7 @@ function walkFiles(dir: string, visit: (path: string) => void): void {
 }
 
 /** Map every file under rootDir (slash-relative, sorted) to its SHA-256, skipping basenames in excludeNames. */
-export function collectHashes(rootDir: string, excludeNames: string[]): Record<string, string> {
+function collectHashes(rootDir: string, excludeNames: string[]): Record<string, string> {
   const files: Record<string, string> = {};
   if (!existsSync(rootDir)) return files;
   const paths: string[] = [];
@@ -59,7 +59,7 @@ export function collectHashes(rootDir: string, excludeNames: string[]): Record<s
   return files;
 }
 
-export function writeManifest(manifestPath: string, manifest: GuardManifest): void {
+function writeManifest(manifestPath: string, manifest: GuardManifest): void {
   const files: Record<string, string> = {};
   for (const key of Object.keys(manifest.files).sort()) {
     const hash = manifest.files[key];
@@ -68,7 +68,7 @@ export function writeManifest(manifestPath: string, manifest: GuardManifest): vo
   writeFileSync(manifestPath, `${JSON.stringify({ ...manifest, files }, null, 2)}\n`, 'utf8');
 }
 
-export function readManifest(manifestPath: string): GuardManifest | null {
+function readManifest(manifestPath: string): GuardManifest | null {
   try {
     const parsed = JSON.parse(readFileSync(manifestPath, 'utf8')) as GuardManifest;
     return parsed.version === 1 ? parsed : null;
@@ -77,7 +77,7 @@ export function readManifest(manifestPath: string): GuardManifest | null {
   }
 }
 
-export function checkTampered(
+function checkTampered(
   manifestPath: string,
   rootDir: string,
   excludeNames: string[],

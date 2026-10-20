@@ -13,10 +13,9 @@
 import StyleDictionary from 'style-dictionary';
 import { fileHeader, formattedVariables, usesReferences } from 'style-dictionary/utils';
 import { dtcgToOklch, formatOklch, oklchToHex, parseToOklch } from './colors.js';
-import { deepMerge, expandSource, loadTokenSources } from './tokens.js';
+import { loadTokenSources } from './tokens.js';
 import type { BuildTokensOptions, DtcgColorValue } from './types.js';
 
-export { expandSource, deepMerge, loadTokenSources };
 export interface ResolvedToken {
   $value?: unknown;
   value?: unknown;
