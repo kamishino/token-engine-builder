@@ -26,7 +26,9 @@ export function templatePath(importMetaUrl: string, ...segments: string[]): stri
 export function getArg(argv: string[], flag: string, fallback?: string): string | undefined {
   const index = argv.indexOf(flag);
   if (index === -1) return fallback;
-  return argv[index + 1] ?? fallback;
+  const next = argv[index + 1];
+  if (next === undefined || next.startsWith('--')) return fallback;
+  return next;
 }
 
 export function hasFlag(argv: string[], flag: string): boolean {
