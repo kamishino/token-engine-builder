@@ -14,6 +14,7 @@ import {
   writeTokensProvenance,
 } from '../../../shared/guard.js';
 import { fromCwd, getArg, hasFlag, templatePath } from '../../../shared/paths.js';
+import { FEEDBACK_ROLES } from '../../../shared/roles.js';
 import {
   baselinePx,
   pairedLineHeights,
@@ -236,7 +237,6 @@ const FEEDBACK_TARGETS: Record<string, readonly [number, number]> = {
   dark: [800, 100],
   'high-contrast': [100, 900],
 };
-const FEEDBACK_ROLES = ['success', 'warning', 'danger', 'info', 'help'] as const;
 
 // Assemble complete themes map: base 3 themes + any custom themes declared in spec
 const ALL_THEMES: Record<

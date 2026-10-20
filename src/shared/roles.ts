@@ -4,26 +4,36 @@ export interface AuditPair {
   kind: 'text' | 'border' | 'decorative';
 }
 
+export const FEEDBACK_ROLES = ['success', 'warning', 'danger', 'info', 'help'] as const;
+export type FeedbackRole = (typeof FEEDBACK_ROLES)[number];
+
 export const SEMANTIC_ROLE_PATHS = {
   BG_CANVAS: 'semantic.color.bg.canvas',
   BG_SURFACE: 'semantic.color.bg.surface',
-  BG_RAISED: 'semantic.color.bg.raised',
   BG_SUBTLE: 'semantic.color.bg.subtle',
+  BG_RAISED: 'semantic.color.bg.raised',
   TEXT_PRIMARY: 'semantic.color.text.primary',
   TEXT_SECONDARY: 'semantic.color.text.secondary',
   TEXT_TERTIARY: 'semantic.color.text.tertiary',
   TEXT_DISABLED: 'semantic.color.text.disabled',
+  TEXT_INVERSE: 'semantic.color.text.inverse',
   TEXT_LINK: 'semantic.color.text.link',
   ACTION_PRIMARY: 'semantic.color.action.primary',
-  ACTION_PRIMARY_TEXT: 'semantic.color.action.primary-text',
   ACTION_PRIMARY_HOVER: 'semantic.color.action.primary-hover',
-  ACTION_PRIMARY_ACTIVE: 'semantic.color.action.primary-active',
-  ACTION_PRIMARY_SUBTLE: 'semantic.color.action.primary-subtle',
-  BORDER_DEFAULT: 'semantic.color.border.default',
+  ACTION_PRIMARY_TEXT: 'semantic.color.action.primary-text',
   BORDER_SUBTLE: 'semantic.color.border.subtle',
+  BORDER_DEFAULT: 'semantic.color.border.default',
   BORDER_STRONG: 'semantic.color.border.strong',
   BORDER_FOCUS: 'semantic.color.border.focus',
 } as const;
+
+export function feedbackBgPath(role: FeedbackRole): string {
+  return `semantic.color.feedback.${role}.bg`;
+}
+
+export function feedbackTextPath(role: FeedbackRole): string {
+  return `semantic.color.feedback.${role}.text`;
+}
 
 const text = (fg: string, bg: string): AuditPair => ({ fg, bg, kind: 'text' });
 const border = (fg: string, bg: string): AuditPair => ({ fg, bg, kind: 'border' });
@@ -32,26 +42,24 @@ const decorative = (fg: string, bg: string): AuditPair => ({ fg, bg, kind: 'deco
 /** Canonical 42 audit contrast pairs across semantic and component roles. */
 export const AUDIT_PAIRS: readonly AuditPair[] = [
   // Semantic text on surfaces
-  text('semantic.color.text.primary', 'semantic.color.bg.canvas'),
-  text('semantic.color.text.primary', 'semantic.color.bg.surface'),
-  text('semantic.color.text.primary', 'semantic.color.bg.raised'),
-  text('semantic.color.text.secondary', 'semantic.color.bg.canvas'),
-  text('semantic.color.text.secondary', 'semantic.color.bg.surface'),
-  text('semantic.color.text.tertiary', 'semantic.color.bg.canvas'),
-  text('semantic.color.text.link', 'semantic.color.bg.canvas'),
+  text(SEMANTIC_ROLE_PATHS.TEXT_PRIMARY, SEMANTIC_ROLE_PATHS.BG_CANVAS),
+  text(SEMANTIC_ROLE_PATHS.TEXT_PRIMARY, SEMANTIC_ROLE_PATHS.BG_SURFACE),
+  text(SEMANTIC_ROLE_PATHS.TEXT_PRIMARY, SEMANTIC_ROLE_PATHS.BG_RAISED),
+  text(SEMANTIC_ROLE_PATHS.TEXT_SECONDARY, SEMANTIC_ROLE_PATHS.BG_CANVAS),
+  text(SEMANTIC_ROLE_PATHS.TEXT_SECONDARY, SEMANTIC_ROLE_PATHS.BG_SURFACE),
+  text(SEMANTIC_ROLE_PATHS.TEXT_TERTIARY, SEMANTIC_ROLE_PATHS.BG_CANVAS),
+  text(SEMANTIC_ROLE_PATHS.TEXT_LINK, SEMANTIC_ROLE_PATHS.BG_CANVAS),
   // Action (rest + hover)
-  text('semantic.color.action.primary-text', 'semantic.color.action.primary'),
-  text('semantic.color.action.primary-text', 'semantic.color.action.primary-hover'),
+  text(SEMANTIC_ROLE_PATHS.ACTION_PRIMARY_TEXT, SEMANTIC_ROLE_PATHS.ACTION_PRIMARY),
+  text(SEMANTIC_ROLE_PATHS.ACTION_PRIMARY_TEXT, SEMANTIC_ROLE_PATHS.ACTION_PRIMARY_HOVER),
   // Feedback text on feedback bg
-  ...(['success', 'warning', 'danger', 'info', 'help'] as const).map((role) =>
-    text(`semantic.color.feedback.${role}.text`, `semantic.color.feedback.${role}.bg`),
-  ),
+  ...FEEDBACK_ROLES.map((role) => text(feedbackTextPath(role), feedbackBgPath(role))),
   // Borders: meaningful boundaries gated; decorative hairlines measured only
-  border('semantic.color.border.strong', 'semantic.color.bg.canvas'),
-  border('semantic.color.border.focus', 'semantic.color.bg.canvas'),
-  decorative('semantic.color.border.default', 'semantic.color.bg.canvas'),
-  decorative('semantic.color.border.default', 'semantic.color.bg.surface'),
-  decorative('semantic.color.border.subtle', 'semantic.color.bg.canvas'),
+  border(SEMANTIC_ROLE_PATHS.BORDER_STRONG, SEMANTIC_ROLE_PATHS.BG_CANVAS),
+  border(SEMANTIC_ROLE_PATHS.BORDER_FOCUS, SEMANTIC_ROLE_PATHS.BG_CANVAS),
+  decorative(SEMANTIC_ROLE_PATHS.BORDER_DEFAULT, SEMANTIC_ROLE_PATHS.BG_CANVAS),
+  decorative(SEMANTIC_ROLE_PATHS.BORDER_DEFAULT, SEMANTIC_ROLE_PATHS.BG_SURFACE),
+  decorative(SEMANTIC_ROLE_PATHS.BORDER_SUBTLE, SEMANTIC_ROLE_PATHS.BG_CANVAS),
   // Components — Core 3
   text('component.button.text', 'component.button.bg'),
   text('component.button.text', 'component.button.bg-hover'),

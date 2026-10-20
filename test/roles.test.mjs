@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { AUDIT_PAIRS, SEMANTIC_ROLE_PATHS } from '../src/shared/roles.ts';
+import {
+  AUDIT_PAIRS,
+  FEEDBACK_ROLES,
+  feedbackBgPath,
+  feedbackTextPath,
+  SEMANTIC_ROLE_PATHS,
+} from '../src/shared/roles.ts';
 
 test('AUDIT_PAIRS contains exactly 42 canonical pairs', () => {
   assert.equal(AUDIT_PAIRS.length, 42);
@@ -20,4 +26,11 @@ test('SEMANTIC_ROLE_PATHS maps canonical semantic keys', () => {
   assert.equal(SEMANTIC_ROLE_PATHS.TEXT_PRIMARY, 'semantic.color.text.primary');
   assert.equal(SEMANTIC_ROLE_PATHS.ACTION_PRIMARY, 'semantic.color.action.primary');
   assert.equal(SEMANTIC_ROLE_PATHS.BORDER_DEFAULT, 'semantic.color.border.default');
+});
+
+test('FEEDBACK_ROLES and feedback path generators produce canonical paths', () => {
+  assert.deepEqual(FEEDBACK_ROLES, ['success', 'warning', 'danger', 'info', 'help']);
+  assert.equal(feedbackBgPath('danger'), 'semantic.color.feedback.danger.bg');
+  assert.equal(feedbackTextPath('danger'), 'semantic.color.feedback.danger.text');
+  assert.equal(SEMANTIC_ROLE_PATHS.TEXT_INVERSE, 'semantic.color.text.inverse');
 });
