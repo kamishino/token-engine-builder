@@ -68,10 +68,18 @@ function rememberRole(
   if (!map.has(role)) map.set(role, { role, color });
 }
 
+/** Aggregate candidate weight: score + 2× occurrence count. */
+export function candidateWeight(candidate: ColorCandidate): number {
+  return candidate.score + candidate.count * 2;
+}
+
+/** Rank candidates by weight: highest first. */
+export function rankCandidates(candidates: Iterable<ColorCandidate>): ColorCandidate[] {
+  return [...candidates].sort((a, b) => candidateWeight(b) - candidateWeight(a));
+}
+
 export function composeStyleSpec(evidence: ExtractionEvidence): ComposedSpec | null {
-  const ranked = [...evidence.candidates].sort(
-    (a, b) => b.score + b.count * 2 - (a.score + a.count * 2),
-  );
+  const ranked = rankCandidates(evidence.candidates);
   const top = ranked[0];
   const designFrontmatter = evidence.frontmatter;
   if (top === undefined && designFrontmatter?.primary === undefined) {
@@ -394,6 +402,132 @@ export function scanFile(text: string, relSource: string, state: ScanState): voi
   scanTextColors(text, relSource, state);
 }
 
+const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'release', 'coverage', '.next']);
+const SCAN_EXTS = new Set(['.css', '.scss', '.json', '.ts', '.tsx', '.js', '.jsx', '.html', '.md']);
+
+/** Deterministic source walk: skips build dirs and non-source extensions. */
+export function findSourceFiles(rootDir: string): string[] {
+  return readdirSync(rootDir, { withFileTypes: true })
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .flatMap((entry) => {
+      const path = join(rootDir, entry.name);
+      if (entry.isDirectory()) return SKIP_DIRS.has(entry.name) ? [] : findSourceFiles(path);
+      return SCAN_EXTS.has(extname(entry.name)) ? [path] : [];
+    });
+}
+
+export interface RenderedCapture {
+  colors: Array<[string, number]>;
+  fonts: Array<[string, number]>;
+  radii: Array<[string, number]>;
+}
+
+export type CapturePage = (target: { url?: string; html?: string }) => Promise<RenderedCapture>;
+
+export interface RenderedTarget {
+  url?: string;
+  /** File contents when `--html` is used; also the fallback text source. */
+  html?: string;
+  sourceName?: string;
+}
+
+interface PlaywrightPage {
+  goto: (url: string, options: { waitUntil: string; timeout: number }) => Promise<void>;
+  setContent: (html: string, options: { waitUntil: string }) => Promise<void>;
+  evaluate: <T>(fn: () => T) => Promise<T>;
+}
+
+interface PlaywrightChromium {
+  launch: (options: { headless: boolean }) => Promise<{
+    newPage: () => Promise<PlaywrightPage>;
+    close: () => Promise<void>;
+  }>;
+}
+
+/** Production capture: headless Chromium via the externally-bundled playwright package. */
+export async function captureWithPlaywright(target: {
+  url?: string;
+  html?: string;
+}): Promise<RenderedCapture> {
+  // Dynamic import string interpolation avoids compile-time module resolution while allowing runtime import
+  const playwrightModule = 'playwright';
+  const { chromium } = (await import(playwrightModule)) as { chromium: PlaywrightChromium };
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const page = await browser.newPage();
+    if (target.url !== undefined) {
+      await page.goto(target.url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    } else {
+      await page.setContent(target.html ?? '', { waitUntil: 'domcontentloaded' });
+    }
+    return await page.evaluate(() => {
+      const colorCounts = new Map<string, number>();
+      const fontCounts = new Map<string, number>();
+      const radiusCountsMap = new Map<string, number>();
+      const elements = Array.from(document.querySelectorAll('*'));
+      for (const el of elements) {
+        const cs = window.getComputedStyle(el);
+        for (const prop of ['color', 'background-color', 'border-color']) {
+          const val = cs.getPropertyValue(prop);
+          if (val && val !== 'rgba(0, 0, 0, 0)' && val !== 'transparent') {
+            colorCounts.set(val, (colorCounts.get(val) || 0) + 1);
+          }
+        }
+        const ff = cs.getPropertyValue('font-family');
+        if (ff) fontCounts.set(ff, (fontCounts.get(ff) || 0) + 1);
+        const br = cs.getPropertyValue('border-radius');
+        if (br && br.endsWith('px')) {
+          const px = parseFloat(br);
+          if (px > 0) radiusCountsMap.set(String(px), (radiusCountsMap.get(String(px)) || 0) + 1);
+        }
+      }
+      return {
+        colors: Array.from(colorCounts.entries()),
+        fonts: Array.from(fontCounts.entries()).sort((a, b) => b[1] - a[1]),
+        radii: Array.from(radiusCountsMap.entries()).sort((a, b) => b[1] - a[1]),
+      };
+    });
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
+ * Capture a rendered page into the scan state. A capture failure falls back to
+ * scanning the supplied HTML text; with no HTML it reports the failure.
+ */
+export async function scanRenderedTarget(
+  target: RenderedTarget,
+  state: ScanState,
+  capture: CapturePage = captureWithPlaywright,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const sourceName = target.sourceName ?? target.url ?? 'rendered';
+  try {
+    const captured = await capture({
+      ...(target.url === undefined ? {} : { url: target.url }),
+      ...(target.html === undefined ? {} : { html: target.html }),
+    });
+    for (const [color] of captured.colors) {
+      recordCandidate(state, color, 'rendered', sourceName);
+    }
+    const topFont = captured.fonts[0];
+    if (topFont !== undefined) {
+      state.fontFamily = topFont[0].replaceAll(/["']/g, '').trim();
+    }
+    for (const [radius, count] of captured.radii) {
+      const value = Number.parseFloat(radius);
+      state.radiusCounts.set(value, (state.radiusCounts.get(value) ?? 0) + count);
+    }
+    return { ok: true };
+  } catch (error) {
+    if (target.html !== undefined && target.html.length > 0) {
+      scanTextColors(target.html, sourceName, state);
+      return { ok: true };
+    }
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 export async function runExtract(argv = process.argv.slice(2)): Promise<number> {
   if (hasFlag(argv, '--help')) {
     console.log(
@@ -425,115 +559,25 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
       return 1;
     }
   }
-
-  const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'release', 'coverage', '.next']);
-  const SCAN_EXTS = new Set([
-    '.css',
-    '.scss',
-    '.json',
-    '.ts',
-    '.tsx',
-    '.js',
-    '.jsx',
-    '.html',
-    '.md',
-  ]);
-
-  function scanFiles(dir: string): string[] {
-    return readdirSync(dir, { withFileTypes: true })
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .flatMap((entry) => {
-        const path = join(dir, entry.name);
-        if (entry.isDirectory()) return SKIP_DIRS.has(entry.name) ? [] : scanFiles(path);
-        return SCAN_EXTS.has(extname(entry.name)) ? [path] : [];
-      });
-  }
-
   const state = createScanState();
 
   if (urlArg !== undefined || htmlArg !== undefined) {
-    // Rendered mode: run headless browser or load HTML file to evaluate computed styles
-    let htmlContent = '';
-    let sourceName = 'rendered';
-    if (htmlArg !== undefined) {
-      const filePath = fromCwd(htmlArg);
-      htmlContent = readFileSync(filePath, 'utf8');
-      sourceName = basename(filePath);
-    }
-    try {
-      // Dynamic import string interpolation avoids compile-time module resolution while allowing runtime import
-      const pwModule = 'playwright';
-      const { chromium } = (await import(pwModule)) as {
-        chromium: {
-          launch: (opts: { headless: boolean }) => Promise<{
-            newPage: () => Promise<{
-              goto: (url: string, opts: { waitUntil: string; timeout: number }) => Promise<void>;
-              setContent: (html: string, opts: { waitUntil: string }) => Promise<void>;
-              evaluate: <T>(fn: () => T) => Promise<T>;
-            }>;
-            close: () => Promise<void>;
-          }>;
-        };
-      };
-      const browser = await chromium.launch({ headless: true });
-      const page = await browser.newPage();
-      if (urlArg !== undefined) {
-        sourceName = urlArg;
-        await page.goto(urlArg, { waitUntil: 'domcontentloaded', timeout: 15000 });
-      } else {
-        await page.setContent(htmlContent, { waitUntil: 'domcontentloaded' });
-      }
-      const renderedData = await page.evaluate(() => {
-        const colorCounts = new Map<string, number>();
-        const fontCounts = new Map<string, number>();
-        const radiusCountsMap = new Map<string, number>();
-        const elements = Array.from(document.querySelectorAll('*'));
-        for (const el of elements) {
-          const cs = window.getComputedStyle(el);
-          for (const prop of ['color', 'background-color', 'border-color']) {
-            const val = cs.getPropertyValue(prop);
-            if (val && val !== 'rgba(0, 0, 0, 0)' && val !== 'transparent') {
-              colorCounts.set(val, (colorCounts.get(val) || 0) + 1);
-            }
-          }
-          const ff = cs.getPropertyValue('font-family');
-          if (ff) fontCounts.set(ff, (fontCounts.get(ff) || 0) + 1);
-          const br = cs.getPropertyValue('border-radius');
-          if (br && br.endsWith('px')) {
-            const px = parseFloat(br);
-            if (px > 0) radiusCountsMap.set(String(px), (radiusCountsMap.get(String(px)) || 0) + 1);
-          }
-        }
-        return {
-          colors: Array.from(colorCounts.entries()),
-          fonts: Array.from(fontCounts.entries()).sort((a, b) => b[1] - a[1]),
-          radii: Array.from(radiusCountsMap.entries()).sort((a, b) => b[1] - a[1]),
-        };
-      });
-      await browser.close();
-
-      for (const [col] of renderedData.colors) {
-        recordCandidate(state, col, 'rendered', sourceName);
-      }
-      if (renderedData.fonts[0] !== undefined) {
-        state.fontFamily = renderedData.fonts[0][0].replaceAll(/["']/g, '').trim();
-      }
-      for (const [rStr, count] of renderedData.radii) {
-        const rVal = parseFloat(rStr);
-        state.radiusCounts.set(rVal, (state.radiusCounts.get(rVal) || 0) + count);
-      }
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      // If Playwright is not installed or headless launch fails, fall back to regex scan of HTML text
-      if (htmlContent) {
-        scanTextColors(htmlContent, sourceName, state);
-      } else {
-        console.error(`rendered extraction error: ${message}`);
-        return 1;
-      }
+    const htmlContent = htmlArg === undefined ? undefined : readFileSync(fromCwd(htmlArg), 'utf8');
+    const sourceName = htmlArg === undefined ? (urlArg ?? 'rendered') : basename(fromCwd(htmlArg));
+    const rendered = await scanRenderedTarget(
+      {
+        ...(urlArg === undefined ? {} : { url: urlArg }),
+        ...(htmlContent === undefined ? {} : { html: htmlContent }),
+        sourceName,
+      },
+      state,
+    );
+    if (!rendered.ok) {
+      console.error(`rendered extraction error: ${rendered.error}`);
+      return 1;
     }
   } else {
-    for (const file of scanFiles(rootDir)) {
+    for (const file of findSourceFiles(rootDir)) {
       const rel = relative(rootDir, file).replaceAll('\\', '/');
       let text: string;
       try {
@@ -545,14 +589,12 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
     }
   }
 
-  const ranked = [...state.candidates.values()].sort(
-    (a, b) => b.score + b.count * 2 - (a.score + a.count * 2),
-  );
+  const ranked = rankCandidates(state.candidates.values());
   const evidenceSummary = ranked.slice(0, 5).map((candidate) => ({
     value: formatOklch(candidate.color),
     source: candidate.source,
     name: candidate.name,
-    score: Math.round(candidate.score + candidate.count * 2),
+    score: Math.round(candidateWeight(candidate)),
   }));
 
   let projectName = basename(rootDir);
