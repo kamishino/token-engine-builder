@@ -54,3 +54,26 @@ test('buildUiProfile emits distinct polarized radix blocks for root and dark', a
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('buildUiProfile builds fluent, antd, mui, chakra, and shadcn profiles successfully', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ui-prof-all-'));
+  try {
+    const tokensDir = join(dir, 'tokens');
+    const outDir = join(dir, 'out');
+    runGenerate([
+      '--spec',
+      'src/skills/token-style/assets/style-spec.example.json',
+      '--out',
+      tokensDir,
+    ]);
+
+    for (const profile of ['fluent', 'antd', 'mui', 'chakra', 'shadcn']) {
+      const files = await buildUiProfile(profile, tokensDir, outDir);
+      assert.equal(files.length, 1);
+      const content = readFileSync(files[0], 'utf8');
+      assert.ok(content.length > 50);
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

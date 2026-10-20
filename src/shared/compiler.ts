@@ -17,8 +17,7 @@ import { deepMerge, expandSource, loadTokenSources } from './tokens.js';
 import type { BuildTokensOptions, DtcgColorValue } from './types.js';
 
 export { expandSource, deepMerge, loadTokenSources };
-
-interface SdToken {
+export interface ResolvedToken {
   $value?: unknown;
   value?: unknown;
   $type?: string;
@@ -28,11 +27,16 @@ interface SdToken {
   path: string[];
   original?: { $value?: unknown; value?: unknown };
 }
+type SdToken = ResolvedToken;
 
-function tokenValue(token: SdToken): unknown {
-  return token.$value ?? token.value ?? token.original?.$value ?? token.original?.value;
+export interface ResolvedThemeTokens {
+  tokens: ResolvedToken[];
+  values: Map<string, string>;
 }
 
+export function tokenValue(token: ResolvedToken): unknown {
+  return token.$value ?? token.value ?? token.original?.$value ?? token.original?.value;
+}
 const oklchTransform = {
   name: 'color/oklch',
   type: 'value' as const,
@@ -607,7 +611,7 @@ export async function buildTokens(options: BuildTokensOptions): Promise<string[]
 export async function loadThemeTokens(
   tokensDir: string,
   theme: string,
-): Promise<{ tokens: SdToken[]; values: Map<string, string> }> {
+): Promise<ResolvedThemeTokens> {
   const base = tokensDir.replaceAll('\\', '/');
   const merged = loadTokenSources([
     `${base}/primitive/**/*.tokens.json`,
