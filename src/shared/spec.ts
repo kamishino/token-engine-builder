@@ -155,6 +155,79 @@ export function validateStyleSpec(raw: unknown): StyleSpecValidationResult {
       }
     }
   }
+  if (obj['themes'] !== undefined) {
+    const themes = obj['themes'];
+    if (themes === null || typeof themes !== 'object' || Array.isArray(themes)) {
+      errors.push('themes must be an object');
+    } else {
+      for (const [themeName, config] of Object.entries(themes as Record<string, unknown>)) {
+        if (config === null || typeof config !== 'object' || Array.isArray(config)) {
+          errors.push(`themes["${themeName}"] must be an object`);
+          continue;
+        }
+        const cfg = config as Record<string, unknown>;
+        if (cfg['mode'] !== 'light' && cfg['mode'] !== 'dark') {
+          errors.push(`themes["${themeName}"].mode must be "light" or "dark"`);
+        }
+        if (cfg['actionStep'] !== undefined && typeof cfg['actionStep'] !== 'number') {
+          errors.push(`themes["${themeName}"].actionStep must be a number`);
+        }
+        if (cfg['surfaceSteps'] !== undefined) {
+          if (typeof cfg['surfaceSteps'] !== 'object' || cfg['surfaceSteps'] === null) {
+            errors.push(`themes["${themeName}"].surfaceSteps must be an object`);
+          }
+        }
+      }
+    }
+  }
+
+  if (
+    obj['density'] !== undefined &&
+    obj['density'] !== 'comfortable' &&
+    obj['density'] !== 'compact'
+  ) {
+    errors.push('density must be "comfortable" or "compact"');
+  }
+
+  if (
+    obj['neutralHue'] !== undefined &&
+    (typeof obj['neutralHue'] !== 'number' || obj['neutralHue'] < 0 || obj['neutralHue'] > 360)
+  ) {
+    errors.push('neutralHue must be a number between 0 and 360');
+  }
+
+  if (
+    obj['neutralChroma'] !== undefined &&
+    (typeof obj['neutralChroma'] !== 'number' || obj['neutralChroma'] < 0)
+  ) {
+    errors.push('neutralChroma must be a non-negative number');
+  }
+
+  if (obj['targets'] !== undefined) {
+    const targets = obj['targets'] as Record<string, unknown> | undefined;
+    if (
+      targets === null ||
+      typeof targets !== 'object' ||
+      typeof targets['minWcagRatio'] !== 'number' ||
+      !(targets['minWcagRatio'] > 0)
+    ) {
+      errors.push('targets.minWcagRatio must be a positive number');
+    }
+  }
+
+  if (obj['radius'] !== undefined) {
+    const radius = obj['radius'] as Record<string, unknown> | undefined;
+    if (
+      radius === null ||
+      typeof radius !== 'object' ||
+      typeof radius['sm'] !== 'number' ||
+      typeof radius['md'] !== 'number' ||
+      typeof radius['lg'] !== 'number' ||
+      typeof radius['full'] !== 'number'
+    ) {
+      errors.push('radius must specify numeric sm, md, lg, and full values');
+    }
+  }
 
   if (obj['clusterBounds'] !== undefined && Array.isArray(palette)) {
     const bounds = obj['clusterBounds'] as {

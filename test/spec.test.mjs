@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { normalizeStyleSpec, validateStyleSpec } from '../src/shared/spec.ts';
 
@@ -45,4 +46,48 @@ test('normalizeStyleSpec populates default design token decisions', () => {
   assert.equal(normalized.rampSteps, 11);
   assert.equal(normalized.typography.baseLineHeight, 1.5);
   assert.equal(normalized.targets.minWcagRatio, 4.5);
+});
+
+test('validateStyleSpec rejects invalid custom theme mode and invalid density', () => {
+  const invalidTheme = validateStyleSpec({
+    name: 'test',
+    palette: [
+      { role: 'primary', name: 'p', anchor: { l: 0.5, c: 0.1, h: 200 } },
+      { role: 'secondary', name: 's', anchor: { l: 0.6, c: 0.1, h: 150 } },
+      { role: 'accent', name: 'a', anchor: { l: 0.7, c: 0.1, h: 100 } },
+    ],
+    typography: { baseSizePx: 16, ratio: 1.2 },
+    themes: {
+      sepia: { mode: 'invalid-mode' },
+    },
+  });
+  assert.equal(invalidTheme.valid, false);
+  assert.ok(invalidTheme.errors.some((e) => e.includes('mode must be "light" or "dark"')));
+
+  const invalidDensity = validateStyleSpec({
+    name: 'test',
+    palette: [
+      { role: 'primary', name: 'p', anchor: { l: 0.5, c: 0.1, h: 200 } },
+      { role: 'secondary', name: 's', anchor: { l: 0.6, c: 0.1, h: 150 } },
+      { role: 'accent', name: 'a', anchor: { l: 0.7, c: 0.1, h: 100 } },
+    ],
+    typography: { baseSizePx: 16, ratio: 1.2 },
+    density: 'ultra-wide',
+  });
+  assert.equal(invalidDensity.valid, false);
+  assert.ok(
+    invalidDensity.errors.some((e) => e.includes('density must be "comfortable" or "compact"')),
+  );
+});
+
+test('schema parity: style-spec schema properties are checked by runtime validator', () => {
+  const schema = JSON.parse(
+    readFileSync('src/skills/token-math/assets/style-spec.schema.json', 'utf8'),
+  );
+  assert.ok(schema.properties);
+  assert.ok('palette' in schema.properties);
+  assert.ok('typography' in schema.properties);
+  assert.ok('themes' in schema.properties);
+  assert.ok('density' in schema.properties);
+  assert.ok('targets' in schema.properties);
 });
