@@ -7,7 +7,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { oklchToHex } from '../../../shared/colors.js';
-import { buildTokens } from '../../../shared/compiler.js';
+import { buildTokens, DEFAULT_ARTIFACTS } from '../../../shared/compiler.js';
 import {
   assertSafeOutDir,
   checkAuditStamp,
@@ -102,12 +102,7 @@ export async function runBuild(argv = process.argv.slice(2)): Promise<number> {
   const outDir = fromCwd(outArg);
   const outputPaths =
     profile === undefined
-      ? [
-          join(outDir, 'tokens.css'),
-          join(outDir, 'theme.css'),
-          join(outDir, 'components.md'),
-          join(outDir, 'DESIGN.md'),
-        ]
+      ? DEFAULT_ARTIFACTS.map((name) => join(outDir, name))
       : [join(outDir, profileFileName(profile))];
   const outputsExist = outputPaths.some((path) => existsSync(path));
   const tamper = checkCssProvenance(outDir);
@@ -171,41 +166,50 @@ export async function runBuild(argv = process.argv.slice(2)): Promise<number> {
   ];
 
   try {
-    const outputs =
-      profile === undefined
-        ? await buildTokens({
-            source,
-            outDir: outArg.replaceAll('\\', '/'),
-            label: theme,
-            ...(guide === undefined ? {} : { guide }),
-            ...(prefix === undefined ? {} : { prefix }),
-            visualizer,
-          })
-        : await buildUiProfile(profile, tokensDir, outArg.replaceAll('\\', '/'));
-    const missing = outputs.filter((path) => !existsSync(fromCwd(path)));
+    if (profile === undefined) {
+      const outputs = await buildTokens({
+        source,
+        outDir: outArg.replaceAll('\\', '/'),
+        label: theme,
+        ...(guide === undefined ? {} : { guide }),
+        ...(prefix === undefined ? {} : { prefix }),
+        visualizer,
+      });
+      const outputList = Object.values(outputs);
+      const missing = outputList.filter((path) => !existsSync(fromCwd(path)));
+      if (missing.length > 0) {
+        console.error(
+          `build failed: Style Dictionary produced no tokens for ${missing.join(', ')}`,
+        );
+        return 1;
+      }
+      const inputHash = computeTreeHash(tokensDir);
+      const files: Record<string, string> = {
+        'DESIGN.md': sha256Hex(readFileSync(fromCwd(outputs.designMd))),
+        'components.md': sha256Hex(readFileSync(fromCwd(outputs.componentsMd))),
+        'theme.css': sha256Hex(readFileSync(fromCwd(outputs.themeCss))),
+        'tokens.css': sha256Hex(readFileSync(fromCwd(outputs.tokensCss))),
+        ...(outputs.visualizerHtml === undefined
+          ? {}
+          : { 'visualizer.html': sha256Hex(readFileSync(fromCwd(outputs.visualizerHtml))) }),
+      };
+      writeCssProvenance(outDir, inputHash, files);
+      console.log(`built (${theme}) → ${outputList.join(', ')}`);
+      return 0;
+    }
+
+    const profileOutputs = await buildUiProfile(profile, tokensDir, outArg.replaceAll('\\', '/'));
+    const missing = profileOutputs.filter((path) => !existsSync(fromCwd(path)));
     if (missing.length > 0) {
       console.error(`build failed: Style Dictionary produced no tokens for ${missing.join(', ')}`);
       return 1;
     }
     const inputHash = computeTreeHash(tokensDir);
-    const files: Record<string, string> =
-      profile === undefined
-        ? {
-            'DESIGN.md': sha256Hex(readFileSync(fromCwd(outputs[3] as string))),
-            'components.md': sha256Hex(readFileSync(fromCwd(outputs[2] as string))),
-            'theme.css': sha256Hex(readFileSync(fromCwd(outputs[1] as string))),
-            'tokens.css': sha256Hex(readFileSync(fromCwd(outputs[0] as string))),
-            ...(visualizer && outputs[4] !== undefined
-              ? { 'visualizer.html': sha256Hex(readFileSync(fromCwd(outputs[4]))) }
-              : {}),
-          }
-        : { [profileFileName(profile)]: sha256Hex(readFileSync(fromCwd(outputs[0] as string))) };
+    const files: Record<string, string> = {
+      [profileFileName(profile)]: sha256Hex(readFileSync(fromCwd(profileOutputs[0] as string))),
+    };
     writeCssProvenance(outDir, inputHash, files);
-    console.log(
-      profile === undefined
-        ? `built (${theme}) → ${outputs.join(', ')}`
-        : `built profile ${profile} → ${outputs.join(', ')}`,
-    );
+    console.log(`built profile ${profile} → ${profileOutputs.join(', ')}`);
     return 0;
   } catch (error) {
     console.error(`build failed: ${error instanceof Error ? error.message : String(error)}`);

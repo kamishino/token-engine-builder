@@ -580,7 +580,17 @@ function engineHooks() {
   };
 }
 
-export async function buildTokens(options: BuildTokensOptions): Promise<string[]> {
+export const DEFAULT_ARTIFACTS = ['tokens.css', 'theme.css', 'components.md', 'DESIGN.md'] as const;
+
+export interface CompiledOutputs {
+  tokensCss: string;
+  themeCss: string;
+  componentsMd: string;
+  designMd: string;
+  visualizerHtml?: string;
+}
+
+export async function buildTokens(options: BuildTokensOptions): Promise<CompiledOutputs> {
   const buildPath = options.outDir.endsWith('/') ? options.outDir : `${options.outDir}/`;
   const sd = new StyleDictionary({
     tokens: loadTokenSources(options.source) as never,
@@ -617,13 +627,13 @@ export async function buildTokens(options: BuildTokensOptions): Promise<string[]
     },
   });
   await sd.buildAllPlatforms();
-  return [
-    `${buildPath}tokens.css`,
-    `${buildPath}theme.css`,
-    `${buildPath}components.md`,
-    `${buildPath}DESIGN.md`,
-    ...(options.visualizer ? [`${buildPath}visualizer.html`] : []),
-  ];
+  return {
+    tokensCss: `${buildPath}tokens.css`,
+    themeCss: `${buildPath}theme.css`,
+    componentsMd: `${buildPath}components.md`,
+    designMd: `${buildPath}DESIGN.md`,
+    ...(options.visualizer ? { visualizerHtml: `${buildPath}visualizer.html` } : {}),
+  };
 }
 
 /** Load one theme's resolved tokens (UI profiles): raw tokens + path → value map. */

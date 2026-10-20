@@ -35,7 +35,11 @@ test('buildTokens compiles DTCG tokens to CSS, Tailwind @theme, docs, and visual
       },
     });
 
-    assert.equal(emitted.length, 5);
+    assert.ok(emitted.tokensCss.endsWith('tokens.css'));
+    assert.ok(emitted.themeCss.endsWith('theme.css'));
+    assert.ok(emitted.componentsMd.endsWith('components.md'));
+    assert.ok(emitted.designMd.endsWith('DESIGN.md'));
+    assert.ok(emitted.visualizerHtml?.endsWith('visualizer.html'));
 
     const tokensCss = readFileSync(join(outDir, 'tokens.css'), 'utf8');
     assert.ok(tokensCss.includes(':root {'));
