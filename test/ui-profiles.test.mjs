@@ -3,7 +3,8 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { loadThemeTokens } from '../src/shared/compiler.ts';
+import { loadThemeTokens, ResolvedDictionary } from '../src/shared/compiler.ts';
+import { SEMANTIC_ROLE_PATHS } from '../src/shared/roles.ts';
 import {
   buildUiProfile,
   profileFileName,
@@ -107,4 +108,32 @@ test('renderProfile returns content for all eight profiles without writing files
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('renderProfile renders a Chakra-only dictionary without MUI-only roles', () => {
+  const paths = [
+    SEMANTIC_ROLE_PATHS.BG_CANVAS,
+    SEMANTIC_ROLE_PATHS.BG_SUBTLE,
+    SEMANTIC_ROLE_PATHS.BG_SURFACE,
+    SEMANTIC_ROLE_PATHS.BG_RAISED,
+    SEMANTIC_ROLE_PATHS.TEXT_PRIMARY,
+    SEMANTIC_ROLE_PATHS.TEXT_SECONDARY,
+    SEMANTIC_ROLE_PATHS.TEXT_DISABLED,
+    SEMANTIC_ROLE_PATHS.BORDER_DEFAULT,
+    SEMANTIC_ROLE_PATHS.BORDER_SUBTLE,
+    SEMANTIC_ROLE_PATHS.BORDER_FOCUS,
+    SEMANTIC_ROLE_PATHS.ACTION_PRIMARY,
+    SEMANTIC_ROLE_PATHS.ACTION_PRIMARY_TEXT,
+  ];
+  const dict = new ResolvedDictionary(
+    paths.map((path) => ({ name: path, path: path.split('.'), $value: '#ffffff' })),
+  );
+  const { fileName, content } = renderProfile('chakra', dict, dict);
+  assert.equal(fileName, 'chakra-theme.json');
+  assert.ok(content.includes('semanticTokens'));
+});
+
+test('renderProfile fails at the missing read', () => {
+  const empty = new ResolvedDictionary([]);
+  assert.throws(() => renderProfile('chakra', empty, empty), /missing required token/);
 });

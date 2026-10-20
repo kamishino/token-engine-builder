@@ -29,10 +29,6 @@ export interface ResolvedToken {
 }
 type SdToken = ResolvedToken;
 
-export interface ResolvedThemeTokens {
-  tokens: ResolvedToken[];
-  values: Map<string, string>;
-}
 export class ResolvedDictionary {
   readonly tokens: readonly ResolvedToken[];
   readonly values: Map<string, string>;
@@ -687,7 +683,7 @@ export async function buildTokens(options: BuildTokensOptions): Promise<Compiled
 export async function loadThemeTokens(
   tokensDir: string,
   theme: string,
-): Promise<ResolvedThemeTokens> {
+): Promise<ResolvedDictionary> {
   const base = tokensDir.replaceAll('\\', '/');
   const merged = loadTokenSources([
     `${base}/primitive/**/*.tokens.json`,
@@ -706,6 +702,5 @@ export async function loadThemeTokens(
     },
   });
   const dictionary = (await sd.getPlatformTokens('css')) as unknown as { allTokens: SdToken[] };
-  const dict = new ResolvedDictionary(dictionary.allTokens);
-  return { tokens: dictionary.allTokens, values: dict.values };
+  return new ResolvedDictionary(dictionary.allTokens);
 }

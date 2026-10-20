@@ -1,11 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { formatOklch, oklchToHex, parseToOklch } from './colors.js';
-import {
-  loadThemeTokens,
-  tokenValue,
-  type ResolvedThemeTokens,
-  type ResolvedToken,
-} from './compiler.js';
+import { loadThemeTokens, ResolvedDictionary, tokenValue, type ResolvedToken } from './compiler.js';
 import { feedbackBgPath, feedbackTextPath, SEMANTIC_ROLE_PATHS } from './roles.js';
 
 export type UiProfileId =
@@ -103,31 +98,32 @@ const PROFILE_MAPPINGS: Record<
  * library's variables for light + dark themes. Fails closed listing any
  * missing mapping target — never emits a partial variable set.
  */
+type ProfileRenderer = (
+  profile: UiProfileId,
+  light: ResolvedDictionary,
+  dark: ResolvedDictionary,
+) => string;
+
+const PROFILE_RENDERERS: Record<UiProfileId, ProfileRenderer> = {
+  fluent: renderFluentProfile,
+  shadcn: renderCssMappingProfile,
+  bootstrap: renderCssMappingProfile,
+  primevue: renderCssMappingProfile,
+  antd: renderAntdProfile,
+  mui: renderMuiProfile,
+  chakra: renderChakraProfile,
+  radix: renderRadixProfile,
+};
+
 export function renderProfile(
   profile: UiProfileId,
-  lightData: ResolvedThemeTokens,
-  darkData: ResolvedThemeTokens,
+  light: ResolvedDictionary,
+  dark: ResolvedDictionary,
 ): { fileName: string; content: string } {
-  const light = lightData.values;
-  const dark = darkData.values;
-  const fileName = profileFileName(profile);
-  const content =
-    profile === 'fluent'
-      ? renderFluentProfile(light, dark)
-      : profile === 'radix'
-        ? renderRadixProfile(lightData, darkData)
-        : profile === 'mui'
-          ? renderMuiProfile(lightData, darkData)
-          : profile === 'chakra'
-            ? renderChakraProfile(light, dark)
-            : profile === 'antd'
-              ? renderAntdProfile(light, dark)
-              : renderCssMappingProfile(
-                  profile as 'shadcn' | 'bootstrap' | 'primevue',
-                  light,
-                  dark,
-                );
-  return { fileName, content };
+  return {
+    fileName: profileFileName(profile),
+    content: PROFILE_RENDERERS[profile](profile, light, dark),
+  };
 }
 
 export async function buildUiProfile(
@@ -135,9 +131,9 @@ export async function buildUiProfile(
   tokensDir: string,
   outDir: string,
 ): Promise<string> {
-  const lightData = await loadThemeTokens(tokensDir, 'light');
-  const darkData = await loadThemeTokens(tokensDir, 'dark');
-  const rendered = renderProfile(profile, lightData, darkData);
+  const light = await loadThemeTokens(tokensDir, 'light');
+  const dark = await loadThemeTokens(tokensDir, 'dark');
+  const rendered = renderProfile(profile, light, dark);
   const buildPath = outDir.endsWith('/') ? outDir : `${outDir}/`;
   mkdirSync(buildPath, { recursive: true });
   const destination = `${buildPath}${rendered.fileName}`;
@@ -145,73 +141,34 @@ export async function buildUiProfile(
   return destination;
 }
 
-function profileHex(values: Map<string, string>, path: string): string {
-  const raw = values.get(path);
-  if (!raw) throw new Error(`missing color token "${path}"`);
-  return oklchToHex(parseToOklch(raw));
+function profileHex(dict: ResolvedDictionary, path: string, profile: UiProfileId): string {
+  return oklchToHex(parseToOklch(dict.require(path, `profile ${profile}`)));
 }
 
-function profileRemToPx(values: Map<string, string>, path: string): number {
-  const raw = values.get(path);
-  if (!raw) throw new Error(`missing dimension token "${path}"`);
+function profileRemToPx(dict: ResolvedDictionary, path: string, profile: UiProfileId): number {
+  const raw = dict.require(path, `profile ${profile}`);
   return Math.round(Number.parseFloat(raw) * 16);
 }
 
-function assertRequiredRoles(
-  profile: string,
-  required: readonly string[],
-  light: Map<string, string>,
-  dark: Map<string, string>,
-): void {
-  for (const source of required) {
-    if (!light.has(source) || !dark.has(source)) {
-      throw new Error(`profile ${profile}: missing token role ${source}`);
-    }
-  }
-}
-
-const FLUENT_REQUIRED = [
-  SEMANTIC_ROLE_PATHS.ACTION_PRIMARY,
-  SEMANTIC_ROLE_PATHS.ACTION_PRIMARY_TEXT,
-  SEMANTIC_ROLE_PATHS.TEXT_PRIMARY,
-  SEMANTIC_ROLE_PATHS.TEXT_SECONDARY,
-  SEMANTIC_ROLE_PATHS.BG_CANVAS,
-  SEMANTIC_ROLE_PATHS.BG_SURFACE,
-  SEMANTIC_ROLE_PATHS.BORDER_DEFAULT,
-  SEMANTIC_ROLE_PATHS.BORDER_STRONG,
-  SEMANTIC_ROLE_PATHS.BORDER_FOCUS,
-  'radius.md',
-] as const;
-
-function renderFluentProfile(light: Map<string, string>, dark: Map<string, string>): string {
-  assertRequiredRoles('fluent', FLUENT_REQUIRED, light, dark);
-  const fluentTokens = (values: Map<string, string>): Record<string, string | number> => ({
-    colorBrandBackground: profileHex(values, SEMANTIC_ROLE_PATHS.ACTION_PRIMARY),
-    colorBrandForeground1: profileHex(values, SEMANTIC_ROLE_PATHS.ACTION_PRIMARY_TEXT),
-    colorNeutralBackground1: profileHex(values, SEMANTIC_ROLE_PATHS.BG_SURFACE),
-    colorNeutralBackground2: profileHex(values, SEMANTIC_ROLE_PATHS.BG_CANVAS),
-    colorNeutralForeground1: profileHex(values, SEMANTIC_ROLE_PATHS.TEXT_PRIMARY),
-    colorNeutralForeground2: profileHex(values, SEMANTIC_ROLE_PATHS.TEXT_SECONDARY),
-    colorNeutralStroke1: profileHex(values, SEMANTIC_ROLE_PATHS.BORDER_DEFAULT),
-    colorNeutralStrokeAccessible: profileHex(values, SEMANTIC_ROLE_PATHS.BORDER_STRONG),
-    colorBrandStroke1: profileHex(values, SEMANTIC_ROLE_PATHS.BORDER_FOCUS),
-    borderRadiusMedium: profileRemToPx(values, 'radius.md'),
+function renderFluentProfile(
+  profile: UiProfileId,
+  light: ResolvedDictionary,
+  dark: ResolvedDictionary,
+): string {
+  const fluentTokens = (dict: ResolvedDictionary): Record<string, string | number> => ({
+    colorBrandBackground: profileHex(dict, SEMANTIC_ROLE_PATHS.ACTION_PRIMARY, profile),
+    colorBrandForeground1: profileHex(dict, SEMANTIC_ROLE_PATHS.ACTION_PRIMARY_TEXT, profile),
+    colorNeutralBackground1: profileHex(dict, SEMANTIC_ROLE_PATHS.BG_SURFACE, profile),
+    colorNeutralBackground2: profileHex(dict, SEMANTIC_ROLE_PATHS.BG_CANVAS, profile),
+    colorNeutralForeground1: profileHex(dict, SEMANTIC_ROLE_PATHS.TEXT_PRIMARY, profile),
+    colorNeutralForeground2: profileHex(dict, SEMANTIC_ROLE_PATHS.TEXT_SECONDARY, profile),
+    colorNeutralStroke1: profileHex(dict, SEMANTIC_ROLE_PATHS.BORDER_DEFAULT, profile),
+    colorNeutralStrokeAccessible: profileHex(dict, SEMANTIC_ROLE_PATHS.BORDER_STRONG, profile),
+    colorBrandStroke1: profileHex(dict, SEMANTIC_ROLE_PATHS.BORDER_FOCUS, profile),
+    borderRadiusMedium: profileRemToPx(dict, 'radius.md', profile),
   });
   return `${JSON.stringify({ light: fluentTokens(light), dark: fluentTokens(dark) }, null, 2)}\n`;
 }
-
-const RADIX_REQUIRED = [
-  SEMANTIC_ROLE_PATHS.ACTION_PRIMARY,
-  SEMANTIC_ROLE_PATHS.ACTION_PRIMARY_TEXT,
-  SEMANTIC_ROLE_PATHS.TEXT_PRIMARY,
-  SEMANTIC_ROLE_PATHS.TEXT_SECONDARY,
-  SEMANTIC_ROLE_PATHS.BG_CANVAS,
-  SEMANTIC_ROLE_PATHS.BG_SURFACE,
-  SEMANTIC_ROLE_PATHS.BORDER_DEFAULT,
-  SEMANTIC_ROLE_PATHS.BORDER_STRONG,
-  SEMANTIC_ROLE_PATHS.BORDER_FOCUS,
-  'radius.md',
-] as const;
 
 const RADIX_LIGHT_POSITIONS = [
   0, 0.06, 0.14, 0.23, 0.32, 0.42, 0.52, 0.63, 0.74, 0.84, 0.92, 1,
@@ -220,12 +177,13 @@ const RADIX_DARK_POSITIONS = [
   1, 0.94, 0.86, 0.77, 0.68, 0.58, 0.48, 0.37, 0.26, 0.16, 0.08, 0,
 ] as const;
 
-function renderRadixProfile(lightData: ResolvedThemeTokens, darkData: ResolvedThemeTokens): string {
-  const light = lightData.values;
-  const dark = darkData.values;
-  assertRequiredRoles('radix', RADIX_REQUIRED, light, dark);
+function renderRadixProfile(
+  profile: UiProfileId,
+  light: ResolvedDictionary,
+  dark: ResolvedDictionary,
+): string {
   const rampPointsFor = (
-    tokensList: ResolvedToken[],
+    tokensList: readonly ResolvedToken[],
     slug: string,
   ): Array<{ l: number; c: number; h: number }> => {
     return tokensList
@@ -234,7 +192,18 @@ function renderRadixProfile(lightData: ResolvedThemeTokens, darkData: ResolvedTh
       .sort((a, b) => b.l - a.l);
   };
 
-  const primaryToken = lightData.tokens.find(
+  const rampOrThrow = (
+    tokensList: readonly ResolvedToken[],
+    slug: string,
+  ): Array<{ l: number; c: number; h: number }> => {
+    const points = rampPointsFor(tokensList, slug);
+    if (points.length < 2) {
+      throw new Error(`profile radix: ramp "${slug}" needs at least two steps`);
+    }
+    return points;
+  };
+
+  const primaryToken = light.tokens.find(
     (token) => (token.$description ?? '').startsWith('primary —') && token.path[2] === '500',
   );
   if (primaryToken === undefined) throw new Error('profile radix: primary ramp not found');
@@ -264,18 +233,12 @@ function renderRadixProfile(lightData: ResolvedThemeTokens, darkData: ResolvedTh
   };
 
   const lightAccent = interpolateRamp(
-    rampPointsFor(lightData.tokens, primarySlug),
+    rampOrThrow(light.tokens, primarySlug),
     RADIX_LIGHT_POSITIONS,
   );
-  const lightGray = interpolateRamp(
-    rampPointsFor(lightData.tokens, 'neutral'),
-    RADIX_LIGHT_POSITIONS,
-  );
-  const darkAccent = interpolateRamp(
-    rampPointsFor(darkData.tokens, primarySlug),
-    RADIX_DARK_POSITIONS,
-  );
-  const darkGray = interpolateRamp(rampPointsFor(darkData.tokens, 'neutral'), RADIX_DARK_POSITIONS);
+  const lightGray = interpolateRamp(rampOrThrow(light.tokens, 'neutral'), RADIX_LIGHT_POSITIONS);
+  const darkAccent = interpolateRamp(rampOrThrow(dark.tokens, primarySlug), RADIX_DARK_POSITIONS);
+  const darkGray = interpolateRamp(rampOrThrow(dark.tokens, 'neutral'), RADIX_DARK_POSITIONS);
 
   const renderRadixBlock = (
     selector: string,
@@ -295,90 +258,76 @@ function renderRadixProfile(lightData: ResolvedThemeTokens, darkData: ResolvedTh
       ':root',
       lightAccent,
       lightGray,
-      light.get(SEMANTIC_ROLE_PATHS.ACTION_PRIMARY_TEXT) as string,
+      light.require(SEMANTIC_ROLE_PATHS.ACTION_PRIMARY_TEXT, `profile ${profile}`),
     ) +
     `\n` +
     renderRadixBlock(
       '.dark',
       darkAccent,
       darkGray,
-      dark.get(SEMANTIC_ROLE_PATHS.ACTION_PRIMARY_TEXT) as string,
+      dark.require(SEMANTIC_ROLE_PATHS.ACTION_PRIMARY_TEXT, `profile ${profile}`),
     )
   );
 }
 
-const MUI_CHAKRA_REQUIRED = [
-  SEMANTIC_ROLE_PATHS.ACTION_PRIMARY,
-  SEMANTIC_ROLE_PATHS.ACTION_PRIMARY_TEXT,
-  SEMANTIC_ROLE_PATHS.ACTION_PRIMARY_HOVER,
-  feedbackTextPath('success'),
-  feedbackTextPath('warning'),
-  feedbackTextPath('danger'),
-  feedbackTextPath('info'),
-  SEMANTIC_ROLE_PATHS.TEXT_PRIMARY,
-  SEMANTIC_ROLE_PATHS.TEXT_SECONDARY,
-  SEMANTIC_ROLE_PATHS.TEXT_DISABLED,
-  SEMANTIC_ROLE_PATHS.BG_CANVAS,
-  SEMANTIC_ROLE_PATHS.BG_SURFACE,
-  SEMANTIC_ROLE_PATHS.BG_RAISED,
-  SEMANTIC_ROLE_PATHS.BG_SUBTLE,
-  SEMANTIC_ROLE_PATHS.BORDER_DEFAULT,
-  SEMANTIC_ROLE_PATHS.BORDER_SUBTLE,
-  SEMANTIC_ROLE_PATHS.BORDER_FOCUS,
-  'radius.md',
-  'font-family.sans',
-  'font-size.base',
-] as const;
-
-function renderMuiProfile(lightData: ResolvedThemeTokens, darkData: ResolvedThemeTokens): string {
-  assertRequiredRoles('mui', MUI_CHAKRA_REQUIRED, lightData.values, darkData.values);
+function renderMuiProfile(
+  profile: UiProfileId,
+  light: ResolvedDictionary,
+  dark: ResolvedDictionary,
+): string {
   const muiTheme = (theme: string): Record<string, unknown> => {
-    const { tokens, values } = theme === 'light' ? lightData : darkData;
-    const secondary = tokens.find(
+    const dict = theme === 'light' ? light : dark;
+    const secondary = dict.tokens.find(
       (token) => (token.$description ?? '').startsWith('secondary —') && token.path[2] === '500',
     );
     return {
       palette: {
         mode: theme,
         primary: {
-          main: profileHex(values, SEMANTIC_ROLE_PATHS.ACTION_PRIMARY),
-          contrastText: profileHex(values, SEMANTIC_ROLE_PATHS.ACTION_PRIMARY_TEXT),
+          main: profileHex(dict, SEMANTIC_ROLE_PATHS.ACTION_PRIMARY, profile),
+          contrastText: profileHex(dict, SEMANTIC_ROLE_PATHS.ACTION_PRIMARY_TEXT, profile),
         },
         secondary: {
           main:
             secondary === undefined
-              ? profileHex(values, SEMANTIC_ROLE_PATHS.ACTION_PRIMARY_HOVER)
+              ? profileHex(dict, SEMANTIC_ROLE_PATHS.ACTION_PRIMARY_HOVER, profile)
               : oklchToHex(parseToOklch(String(tokenValue(secondary)))),
         },
-        error: { main: profileHex(values, feedbackTextPath('danger')) },
-        warning: { main: profileHex(values, feedbackTextPath('warning')) },
-        success: { main: profileHex(values, feedbackTextPath('success')) },
-        info: { main: profileHex(values, feedbackTextPath('info')) },
+        error: { main: profileHex(dict, feedbackTextPath('danger'), profile) },
+        warning: { main: profileHex(dict, feedbackTextPath('warning'), profile) },
+        success: { main: profileHex(dict, feedbackTextPath('success'), profile) },
+        info: { main: profileHex(dict, feedbackTextPath('info'), profile) },
         text: {
-          primary: profileHex(values, SEMANTIC_ROLE_PATHS.TEXT_PRIMARY),
-          secondary: profileHex(values, SEMANTIC_ROLE_PATHS.TEXT_SECONDARY),
-          disabled: profileHex(values, SEMANTIC_ROLE_PATHS.TEXT_DISABLED),
+          primary: profileHex(dict, SEMANTIC_ROLE_PATHS.TEXT_PRIMARY, profile),
+          secondary: profileHex(dict, SEMANTIC_ROLE_PATHS.TEXT_SECONDARY, profile),
+          disabled: profileHex(dict, SEMANTIC_ROLE_PATHS.TEXT_DISABLED, profile),
         },
         background: {
-          default: profileHex(values, SEMANTIC_ROLE_PATHS.BG_CANVAS),
-          paper: profileHex(values, SEMANTIC_ROLE_PATHS.BG_SURFACE),
+          default: profileHex(dict, SEMANTIC_ROLE_PATHS.BG_CANVAS, profile),
+          paper: profileHex(dict, SEMANTIC_ROLE_PATHS.BG_SURFACE, profile),
         },
-        divider: profileHex(values, SEMANTIC_ROLE_PATHS.BORDER_DEFAULT),
+        divider: profileHex(dict, SEMANTIC_ROLE_PATHS.BORDER_DEFAULT, profile),
       },
       typography: {
-        fontFamily: values.get('font-family.sans') as string,
-        fontSize: profileRemToPx(values, 'font-size.base'),
+        fontFamily: dict.require('font-family.sans', `profile ${profile}`),
+        fontSize: profileRemToPx(dict, 'font-size.base', profile),
       },
-      shape: { borderRadius: profileRemToPx(values, 'radius.md') },
+      shape: { borderRadius: profileRemToPx(dict, 'radius.md', profile) },
     };
   };
   return `${JSON.stringify({ light: muiTheme('light'), dark: muiTheme('dark') }, null, 2)}\n`;
 }
 
-function renderChakraProfile(light: Map<string, string>, dark: Map<string, string>): string {
-  assertRequiredRoles('chakra', MUI_CHAKRA_REQUIRED, light, dark);
+function renderChakraProfile(
+  profile: UiProfileId,
+  light: ResolvedDictionary,
+  dark: ResolvedDictionary,
+): string {
   const pair = (path: string): { value: { _light: string; _dark: string } } => ({
-    value: { _light: light.get(path) as string, _dark: dark.get(path) as string },
+    value: {
+      _light: light.require(path, `profile ${profile}`),
+      _dark: dark.require(path, `profile ${profile}`),
+    },
   });
   const chakra = {
     semanticTokens: {
@@ -402,62 +351,45 @@ function renderChakraProfile(light: Map<string, string>, dark: Map<string, strin
   return `${JSON.stringify(chakra, null, 2)}\n`;
 }
 
-const ANTD_REQUIRED = [
-  SEMANTIC_ROLE_PATHS.ACTION_PRIMARY,
-  feedbackTextPath('success'),
-  feedbackTextPath('warning'),
-  feedbackTextPath('danger'),
-  feedbackTextPath('info'),
-  SEMANTIC_ROLE_PATHS.TEXT_PRIMARY,
-  SEMANTIC_ROLE_PATHS.TEXT_SECONDARY,
-  SEMANTIC_ROLE_PATHS.BG_CANVAS,
-  SEMANTIC_ROLE_PATHS.BG_SURFACE,
-  SEMANTIC_ROLE_PATHS.BG_RAISED,
-  SEMANTIC_ROLE_PATHS.BORDER_DEFAULT,
-  SEMANTIC_ROLE_PATHS.BORDER_SUBTLE,
-  SEMANTIC_ROLE_PATHS.TEXT_LINK,
-  'radius.md',
-  'font-family.sans',
-  'font-size.base',
-] as const;
-
-function renderAntdProfile(light: Map<string, string>, dark: Map<string, string>): string {
-  assertRequiredRoles('antd', ANTD_REQUIRED, light, dark);
-  const antdTokens = (values: Map<string, string>): Record<string, string | number> => ({
-    colorPrimary: profileHex(values, SEMANTIC_ROLE_PATHS.ACTION_PRIMARY),
-    colorSuccess: profileHex(values, feedbackTextPath('success')),
-    colorWarning: profileHex(values, feedbackTextPath('warning')),
-    colorError: profileHex(values, feedbackTextPath('danger')),
-    colorInfo: profileHex(values, feedbackTextPath('info')),
-    colorText: profileHex(values, SEMANTIC_ROLE_PATHS.TEXT_PRIMARY),
-    colorTextSecondary: profileHex(values, SEMANTIC_ROLE_PATHS.TEXT_SECONDARY),
-    colorBgLayout: profileHex(values, SEMANTIC_ROLE_PATHS.BG_CANVAS),
-    colorBgContainer: profileHex(values, SEMANTIC_ROLE_PATHS.BG_SURFACE),
-    colorBgElevated: profileHex(values, SEMANTIC_ROLE_PATHS.BG_RAISED),
-    colorBorder: profileHex(values, SEMANTIC_ROLE_PATHS.BORDER_DEFAULT),
-    colorBorderSecondary: profileHex(values, SEMANTIC_ROLE_PATHS.BORDER_SUBTLE),
-    colorLink: profileHex(values, SEMANTIC_ROLE_PATHS.TEXT_LINK),
-    borderRadius: profileRemToPx(values, 'radius.md'),
-    fontFamily: values.get('font-family.sans') as string,
-    fontSize: profileRemToPx(values, 'font-size.base'),
+function renderAntdProfile(
+  profile: UiProfileId,
+  light: ResolvedDictionary,
+  dark: ResolvedDictionary,
+): string {
+  const antdTokens = (dict: ResolvedDictionary): Record<string, string | number> => ({
+    colorPrimary: profileHex(dict, SEMANTIC_ROLE_PATHS.ACTION_PRIMARY, profile),
+    colorSuccess: profileHex(dict, feedbackTextPath('success'), profile),
+    colorWarning: profileHex(dict, feedbackTextPath('warning'), profile),
+    colorError: profileHex(dict, feedbackTextPath('danger'), profile),
+    colorInfo: profileHex(dict, feedbackTextPath('info'), profile),
+    colorText: profileHex(dict, SEMANTIC_ROLE_PATHS.TEXT_PRIMARY, profile),
+    colorTextSecondary: profileHex(dict, SEMANTIC_ROLE_PATHS.TEXT_SECONDARY, profile),
+    colorBgLayout: profileHex(dict, SEMANTIC_ROLE_PATHS.BG_CANVAS, profile),
+    colorBgContainer: profileHex(dict, SEMANTIC_ROLE_PATHS.BG_SURFACE, profile),
+    colorBgElevated: profileHex(dict, SEMANTIC_ROLE_PATHS.BG_RAISED, profile),
+    colorBorder: profileHex(dict, SEMANTIC_ROLE_PATHS.BORDER_DEFAULT, profile),
+    colorBorderSecondary: profileHex(dict, SEMANTIC_ROLE_PATHS.BORDER_SUBTLE, profile),
+    colorLink: profileHex(dict, SEMANTIC_ROLE_PATHS.TEXT_LINK, profile),
+    borderRadius: profileRemToPx(dict, 'radius.md', profile),
+    fontFamily: dict.require('font-family.sans', `profile ${profile}`),
+    fontSize: profileRemToPx(dict, 'font-size.base', profile),
   });
   return `${JSON.stringify({ light: { token: antdTokens(light) }, dark: { token: antdTokens(dark) } }, null, 2)}\n`;
 }
+
 function renderCssMappingProfile(
-  profile: 'shadcn' | 'bootstrap' | 'primevue',
-  light: Map<string, string>,
-  dark: Map<string, string>,
+  profile: UiProfileId,
+  light: ResolvedDictionary,
+  dark: ResolvedDictionary,
 ): string {
-  const { darkSelector, mapping } = PROFILE_MAPPINGS[profile];
-  for (const entry of mapping) {
-    if (!light.has(entry.source) || (!entry.lightOnly && !dark.has(entry.source))) {
-      throw new Error(`profile ${profile}: missing token role ${entry.source}`);
-    }
+  if (profile !== 'shadcn' && profile !== 'bootstrap' && profile !== 'primevue') {
+    throw new Error(`profile ${profile} has no CSS mapping`);
   }
-  const renderBlock = (values: Map<string, string>, includeLightOnly: boolean): string =>
+  const { darkSelector, mapping } = PROFILE_MAPPINGS[profile];
+  const renderBlock = (dict: ResolvedDictionary, includeLightOnly: boolean): string =>
     mapping
       .filter((entry) => includeLightOnly || !entry.lightOnly)
-      .map((entry) => `  ${entry.variable}: ${values.get(entry.source) as string};`)
+      .map((entry) => `  ${entry.variable}: ${dict.require(entry.source, `profile ${profile}`)};`)
       .join('\n');
   return (
     `/**\n * Do not edit directly, this file was auto-generated.\n */\n\n` +
