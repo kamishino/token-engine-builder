@@ -1,6 +1,6 @@
 {
   "name": "token-engine-builder",
-  "version": "0.15.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "description": "Builds self-contained AI agent skills for 3-tier W3C DTCG design tokens (OKLCH, WCAG + APCA, Style Dictionary v5).",
