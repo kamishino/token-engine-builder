@@ -19,11 +19,11 @@ token-engine-builder is an agent-skill pipeline that turns a recorded brand pale
 
 With all v0.x foundation epics (N1, N3, X1–X8, L1, L2, L4, L5, L6, L7, L8) shipped, the pipeline enters its v1.0 stabilization and consumer adoption cycle.
 
-### N2. Restore CI trust (standing blocker)
+### N2. Restore CI trust — ✅ resolved
 
-- **Why**: GitHub Actions workflow fails at 0s with 0 jobs scheduled (account/billing signature). Local `npm run check` is 100% green.
-- **Scope**: Owner checks GitHub billing / Actions permissions in repository settings; verify `check.yml` passes on `main`.
-- **Exit criteria**: GitHub Actions workflow conclusion = success on `main`.
+- **Why**: GitHub Actions workflow had failed at 0s with no jobs started.
+- **Root cause**: Syntax issue in `.github/workflows/check.yml` where `permissions: contents: read` was authored inline rather than as a mapping block (`permissions:\n  contents: read`), causing GitHub's workflow parser to reject job creation during check suite initialization.
+- **Exit criteria**: `check` workflow passes green on `main`.
 
 ### N4. Interactive Visualizer Surface (HTML Inspector) — ✅ shipped in v0.15.0
 
