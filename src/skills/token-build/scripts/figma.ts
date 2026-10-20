@@ -16,13 +16,27 @@ import { fromCwd, getArg, hasFlag, isMainModule } from '../../../shared/paths.js
 import { findTokenFiles, walkTokenLeaves, type JsonObject } from '../../../shared/tokens.js';
 import type { DtcgColorValue } from '../../../shared/types.js';
 
-function hexToFigmaRgb(hex: string): { r: number; g: number; b: number; a: number } {
+function hexToFigmaRgb(hex: string): {
+  rgb: { r: number; g: number; b: number; a: number };
+  rounded: boolean;
+} {
   const clean = hex.replace('#', '');
-  const r = Number.parseInt(clean.slice(0, 2), 16) / 255;
-  const g = Number.parseInt(clean.slice(2, 4), 16) / 255;
-  const b = Number.parseInt(clean.slice(4, 6), 16) / 255;
-  const a = clean.length === 8 ? Number.parseInt(clean.slice(6, 8), 16) / 255 : 1;
-  return { r: Number(r.toFixed(4)), g: Number(g.toFixed(4)), b: Number(b.toFixed(4)), a };
+  const expanded =
+    clean.length === 3
+      ? clean
+          .split('')
+          .map((c) => c + c)
+          .join('')
+      : clean;
+  const rawR = Number.parseInt(expanded.slice(0, 2), 16) / 255;
+  const rawG = Number.parseInt(expanded.slice(2, 4), 16) / 255;
+  const rawB = Number.parseInt(expanded.slice(4, 6), 16) / 255;
+  const a = expanded.length === 8 ? Number.parseInt(expanded.slice(6, 8), 16) / 255 : 1;
+  const r = Number(rawR.toFixed(4));
+  const g = Number(rawG.toFixed(4));
+  const b = Number(rawB.toFixed(4));
+  const rounded = r !== rawR || g !== rawG || b !== rawB;
+  return { rgb: { r, g, b, a }, rounded };
 }
 
 function figmaRgbToHex(rgb: { r: number; g: number; b: number; a?: number }): string {
@@ -41,6 +55,34 @@ function hasNumericValue(obj: unknown): obj is { value: number } {
   return typeof obj.value === 'number';
 }
 
+export type FigmaLossKind = 'alias' | 'unreadable' | 'precision' | 'dimension' | 'mode' | 'type';
+
+export interface FigmaLoss {
+  path: string;
+  kind: FigmaLossKind;
+  detail: string;
+}
+
+export function loadTokenTrees(files: string[]): {
+  trees: JsonObject[];
+  losses: FigmaLoss[];
+} {
+  const trees: JsonObject[] = [];
+  const losses: FigmaLoss[] = [];
+  for (const file of files) {
+    try {
+      trees.push(JSON.parse(readFileSync(file, 'utf8')) as JsonObject);
+    } catch (error) {
+      losses.push({
+        path: file,
+        kind: 'unreadable',
+        detail: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+  return { trees, losses };
+}
+
 export interface FigmaVariable {
   id: string;
   name: string;
@@ -52,20 +94,20 @@ export interface FigmaVariable {
 }
 
 export function dtcgTokensToFigma(
-  sources: JsonObject | string[],
+  trees: JsonObject[],
   options: { collectionId?: string; defaultModeId?: string } = {},
-): { variables: FigmaVariable[]; losses: string[] } {
+): { variables: FigmaVariable[]; losses: FigmaLoss[] } {
   const collectionId = options.collectionId ?? 'VariableCollectionId:1:1';
   const defaultModeId = options.defaultModeId ?? '1:0';
   const variables: FigmaVariable[] = [];
-  const losses: string[] = [];
+  const losses: FigmaLoss[] = [];
   const visitLeaf = (path: string, rec: JsonObject): void => {
     const val = rec['$value'];
     const type = (rec['$type'] as string) || '';
     const desc = (rec['$description'] as string) || '';
 
     if (typeof val === 'string' && val.startsWith('{')) {
-      losses.push(`alias "${path}" exported as literal STRING: ${val}`);
+      losses.push({ path, kind: 'alias', detail: `exported as literal STRING: ${val}` });
       variables.push({
         id: `VariableID:${variables.length + 1}`,
         name: path,
@@ -85,6 +127,10 @@ export function dtcgTokensToFigma(
       } else if (typeof val === 'string') {
         hex = oklchToHex(parseToOklch(val));
       }
+      const { rgb, rounded } = hexToFigmaRgb(hex);
+      if (rounded) {
+        losses.push({ path, kind: 'precision', detail: 'RGBA rounded to 4 decimal places' });
+      }
       variables.push({
         id: `VariableID:${variables.length + 1}`,
         name: path,
@@ -92,15 +138,33 @@ export function dtcgTokensToFigma(
         variableCollectionId: collectionId,
         resolvedType: 'COLOR',
         description: desc,
-        valuesByMode: { [defaultModeId]: hexToFigmaRgb(hex) },
+        valuesByMode: { [defaultModeId]: rgb },
       });
     } else if (type === 'dimension' || typeof val === 'number' || hasNumericValue(val)) {
       let num = typeof val === 'number' ? val : 0;
       if (hasNumericValue(val)) {
-        num = val.value;
+        const vObj = val as { value: number; unit?: string };
+        if (vObj.unit !== undefined && vObj.unit !== 'px' && vObj.unit !== 'rem') {
+          losses.push({
+            path,
+            kind: 'dimension',
+            detail: `unsupported dimension unit "${vObj.unit}" exported as 0`,
+          });
+          num = 0;
+        } else {
+          num = vObj.value;
+        }
       } else if (typeof val === 'string') {
         if (val.endsWith('rem')) num = Math.round(Number.parseFloat(val) * 16);
         else if (val.endsWith('px')) num = Number.parseFloat(val);
+        else {
+          losses.push({
+            path,
+            kind: 'dimension',
+            detail: `unparsed dimension "${val}" exported as 0`,
+          });
+          num = 0;
+        }
       }
       variables.push({
         id: `VariableID:${variables.length + 1}`,
@@ -124,18 +188,8 @@ export function dtcgTokensToFigma(
     }
   };
 
-  if (Array.isArray(sources)) {
-    for (const file of sources) {
-      try {
-        walkTokenLeaves(JSON.parse(readFileSync(file, 'utf8')) as JsonObject, '/', visitLeaf);
-      } catch (err) {
-        losses.push(
-          `unreadable token file "${file}": ${err instanceof Error ? err.message : String(err)}`,
-        );
-      }
-    }
-  } else {
-    walkTokenLeaves(sources, '/', visitLeaf);
+  for (const tree of trees) {
+    walkTokenLeaves(tree, '/', visitLeaf);
   }
 
   return {
@@ -146,14 +200,18 @@ export function dtcgTokensToFigma(
 
 export function figmaVariablesToDtcg(variables: FigmaVariable[]): {
   tokensTree: JsonObject;
-  losses: string[];
+  losses: FigmaLoss[];
 } {
   const rootObj: JsonObject = {};
-  const losses: string[] = [];
+  const losses: FigmaLoss[] = [];
   for (const v of variables) {
     const modeKeys = Object.keys(v.valuesByMode);
     if (modeKeys.length > 1) {
-      losses.push(`variable "${v.name}" has ${modeKeys.length} modes, imported first mode only`);
+      losses.push({
+        path: v.name,
+        kind: 'mode',
+        detail: `variable has ${modeKeys.length} modes, imported first mode only`,
+      });
     }
     const parts = v.name.split('/');
     let cur = rootObj;
@@ -168,6 +226,7 @@ export function figmaVariablesToDtcg(variables: FigmaVariable[]): {
     if (v.resolvedType === 'COLOR' && firstModeVal && typeof firstModeVal === 'object') {
       const hex = figmaRgbToHex(firstModeVal as { r: number; g: number; b: number; a?: number });
       const oklch = parseToOklch(hex);
+      losses.push({ path: v.name, kind: 'precision', detail: 'imported as 8-bit RGBA' });
       cur[lastKey] = {
         $value: dtcgColorValue(oklch),
         $type: 'color',
@@ -181,8 +240,15 @@ export function figmaVariablesToDtcg(variables: FigmaVariable[]): {
       };
     } else {
       if (firstModeVal === undefined) {
-        losses.push(`variable "${v.name}" has no value in first mode; skipped`);
+        losses.push({ path: v.name, kind: 'mode', detail: 'no value in first mode; skipped' });
         continue;
+      }
+      if (v.resolvedType !== 'STRING') {
+        losses.push({
+          path: v.name,
+          kind: 'type',
+          detail: `variable type ${v.resolvedType} imported as $type "other"`,
+        });
       }
       cur[lastKey] = {
         $value: String(firstModeVal),
@@ -226,8 +292,14 @@ export function runFigma(argv = process.argv.slice(2)): number {
     const files = findTokenFiles(tokensDir);
     const collectionId = 'VariableCollectionId:1:1';
     const defaultModeId = '1:0';
-    const { variables, losses } = dtcgTokensToFigma(files, { collectionId, defaultModeId });
-    for (const loss of losses) console.log(`[figma] note: ${loss}`);
+    const loaded = loadTokenTrees(files);
+    const { variables, losses } = dtcgTokensToFigma(loaded.trees, {
+      collectionId,
+      defaultModeId,
+    });
+    for (const loss of [...loaded.losses, ...losses]) {
+      console.log(`[figma] note: [${loss.kind}] ${loss.path}: ${loss.detail}`);
+    }
     const figmaPayload = {
       status: 200,
       error: false,
@@ -274,7 +346,9 @@ export function runFigma(argv = process.argv.slice(2)): number {
     mkdirSync(outTokensDir, { recursive: true });
 
     const { tokensTree: rootObj, losses } = figmaVariablesToDtcg(vars);
-    for (const loss of losses) console.log(`[figma] note: ${loss}`);
+    for (const loss of losses) {
+      console.log(`[figma] note: [${loss.kind}] ${loss.path}: ${loss.detail}`);
+    }
 
     const outPrimitive = join(outTokensDir, 'primitive');
     mkdirSync(outPrimitive, { recursive: true });
