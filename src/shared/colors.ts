@@ -18,6 +18,7 @@ import {
 } from 'colorjs.io/fn';
 import type {
   ColorRamp,
+  ContrastKind,
   ContrastResult,
   DtcgColorValue,
   FeedbackRole,
@@ -130,12 +131,14 @@ export function checkContrast(
   background: OklchColor,
   minRatio: number,
   minApcaLc = 60,
+  kind: ContrastKind = 'text',
 ): ContrastResult {
   const ratio = contrastRatio(foreground, background);
   const apcaLc = apcaContrast(foreground, background);
   return {
     foreground: foregroundName,
     background: backgroundName,
+    kind,
     ratio: Number(ratio.toFixed(2)),
     apcaLc: Number(apcaLc.toFixed(1)),
     pass: ratio >= minRatio && apcaLc >= minApcaLc,

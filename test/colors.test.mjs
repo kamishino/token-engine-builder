@@ -28,10 +28,12 @@ test('clampToSrgb preserves hue and lightness while reducing chroma in gamut', (
 test('checkContrast accurately calculates WCAG 2.1 ratio and APCA Lc', () => {
   const black = { l: 0, c: 0, h: 0 };
   const white = { l: 1, c: 0, h: 0 };
-  const result = checkContrast('white', white, 'black', black, 4.5, 60);
+  const result = checkContrast('white', white, 'black', black, 4.5, 60, 'text');
   assert.equal(result.pass, true);
+  assert.equal(result.kind, 'text');
   assert.ok(result.ratio >= 21);
   assert.ok(result.apcaLc >= 100);
+  assert.equal(checkContrast('white', white, 'black', black, 4.5, 60, 'border').kind, 'border');
 });
 
 test('formatOklch and parseToOklch round-trip cleanly', () => {

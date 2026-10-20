@@ -17,7 +17,7 @@ import { fromCwd, getArg, hasFlag, isMainModule } from '../../../shared/paths.js
 import { AUDIT_PAIRS } from '../../../shared/roles.js';
 import { loadStyleSpec } from '../../../shared/spec.js';
 import { loadTokenTree } from '../../../shared/tokens.js';
-import type { AuditReport } from '../../../shared/types.js';
+import type { AuditReport, ContrastKind } from '../../../shared/types.js';
 
 export function runAudit(argv = process.argv.slice(2)): number {
   if (hasFlag(argv, '--help')) {
@@ -48,16 +48,11 @@ export function runAudit(argv = process.argv.slice(2)): number {
     return 1;
   }
 
-  /** Non-text (border/UI) floors: WCAG 3.0 + APCA Lc 30. Text uses the CLI flags. */
-  const BORDER_MIN_RATIO = 3;
-  const BORDER_MIN_APCA = 30;
-
-  const BORDER_KEYS = new Set(
-    AUDIT_PAIRS.filter((pair) => pair.kind === 'border').map((pair) => `${pair.fg}|${pair.bg}`),
-  );
-  const DECORATIVE_KEYS = new Set(
-    AUDIT_PAIRS.filter((pair) => pair.kind === 'decorative').map((pair) => `${pair.fg}|${pair.bg}`),
-  );
+  const FLOORS: Record<ContrastKind, { ratio: number; apca: number }> = {
+    text: { ratio: minRatio, apca: minApca },
+    border: { ratio: 3, apca: 30 },
+    decorative: { ratio: 1, apca: 0 },
+  };
 
   function auditTheme(themeName: string): AuditReport {
     const semanticFile = join(tokensDir, 'semantic', `${themeName}.tokens.json`);
@@ -89,16 +84,8 @@ export function runAudit(argv = process.argv.slice(2)): number {
       const fgColor = tree.resolveColor(fg, unresolvedAliases);
       const bgColor = tree.resolveColor(bg, unresolvedAliases);
       if (fgColor === undefined || bgColor === undefined) return [];
-      return [
-        checkContrast(
-          fg,
-          fgColor,
-          bg,
-          bgColor,
-          kind === 'border' ? BORDER_MIN_RATIO : kind === 'decorative' ? 1 : minRatio,
-          kind === 'border' ? BORDER_MIN_APCA : kind === 'decorative' ? 0 : minApca,
-        ),
-      ];
+      const floor = FLOORS[kind];
+      return [checkContrast(fg, fgColor, bg, bgColor, floor.ratio, floor.apca, kind)];
     });
 
     unresolvedAliases.push(...tree.checkUnresolvedAliases());
@@ -141,8 +128,14 @@ export function runAudit(argv = process.argv.slice(2)): number {
     for (const [name, report] of reports) {
       console.log(`\n[${name}] min WCAG ratio ${minRatio}:1`);
       for (const pair of report.pairs) {
+        const suffix =
+          pair.kind === 'border'
+            ? ' (border)'
+            : pair.kind === 'decorative'
+              ? ' (border, decorative)'
+              : '';
         console.log(
-          `  ${pair.pass ? 'PASS' : 'FAIL'}  ${pair.ratio.toFixed(2)}:1  Lc ${pair.apcaLc.toFixed(1)}  ${pair.foreground} on ${pair.background}${BORDER_KEYS.has(`${pair.foreground}|${pair.background}`) ? ' (border)' : DECORATIVE_KEYS.has(`${pair.foreground}|${pair.background}`) ? ' (border, decorative)' : ''}`,
+          `  ${pair.pass ? 'PASS' : 'FAIL'}  ${pair.ratio.toFixed(2)}:1  Lc ${pair.apcaLc.toFixed(1)}  ${pair.foreground} on ${pair.background}${suffix}`,
         );
       }
       for (const item of report.unresolvedAliases) console.log(`  FAIL  unresolved alias: ${item}`);

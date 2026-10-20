@@ -123,10 +123,12 @@ export interface StyleSpec {
   radius: { sm: number; md: number; lg: number; full: number };
   targets: { minWcagRatio: number };
 }
+export type ContrastKind = 'text' | 'border' | 'decorative';
 
 export interface ContrastResult {
   foreground: string;
   background: string;
+  kind: ContrastKind;
   ratio: number;
   /** Absolute APCA lightness contrast |Lc| (0–~108); polarity-independent floor value. */
   apcaLc: number;
