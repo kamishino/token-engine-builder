@@ -54,7 +54,7 @@ export interface FigmaVariable {
 export function dtcgTokensToFigma(
   sources: JsonObject | string[],
   options: { collectionId?: string; defaultModeId?: string } = {},
-): { variables: FigmaVariable[]; collections: unknown[]; losses: string[] } {
+): { variables: FigmaVariable[]; losses: string[] } {
   const collectionId = options.collectionId ?? 'VariableCollectionId:1:1';
   const defaultModeId = options.defaultModeId ?? '1:0';
   const variables: FigmaVariable[] = [];
@@ -140,14 +140,6 @@ export function dtcgTokensToFigma(
 
   return {
     variables,
-    collections: [
-      {
-        id: collectionId,
-        name: 'Design Tokens',
-        modes: [{ modeId: defaultModeId, name: 'Default' }],
-        defaultModeId,
-      },
-    ],
     losses,
   };
 }
