@@ -632,11 +632,3 @@ export async function loadThemeTokens(
   }
   return { tokens: dictionary.allTokens, values };
 }
-
-/** Load one theme's resolved token dictionary as path → value (UI profiles). */
-export {
-  buildUiProfile,
-  profileFileName,
-  UI_PROFILE_IDS,
-  type UiProfileId,
-} from './ui-profiles.js';

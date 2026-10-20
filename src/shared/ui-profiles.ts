@@ -110,8 +110,10 @@ export async function buildUiProfile(
   tokensDir: string,
   outDir: string,
 ): Promise<string[]> {
-  const light = (await loadThemeTokens(tokensDir, 'light')).values;
-  const dark = (await loadThemeTokens(tokensDir, 'dark')).values;
+  const lightData = await loadThemeTokens(tokensDir, 'light');
+  const darkData = await loadThemeTokens(tokensDir, 'dark');
+  const light = lightData.values;
+  const dark = darkData.values;
   const buildPath = outDir.endsWith('/') ? outDir : `${outDir}/`;
   mkdirSync(buildPath, { recursive: true });
   const destination = `${buildPath}${profileFileName(profile)}`;
@@ -155,7 +157,7 @@ export async function buildUiProfile(
       return [destination];
     }
 
-    const { tokens } = await loadThemeTokens(tokensDir, 'light');
+    const tokens = lightData.tokens;
     const rampPoints = (slug: string): Array<{ l: number; c: number; h: number }> => {
       const points = tokens
         .filter((t) => t.path[0] === 'color' && t.path[1] === slug && /^\d+$/.test(t.path[2] ?? ''))
@@ -239,8 +241,8 @@ export async function buildUiProfile(
       Math.round(Number.parseFloat(values.get(path) as string) * 16);
 
     if (profile === 'mui') {
-      const muiTheme = async (theme: string): Promise<Record<string, unknown>> => {
-        const { tokens, values } = await loadThemeTokens(tokensDir, theme);
+      const muiTheme = (theme: string): Record<string, unknown> => {
+        const { tokens, values } = theme === 'light' ? lightData : darkData;
         const secondary = tokens.find(
           (token) =>
             (token.$description ?? '').startsWith('secondary —') && token.path[2] === '500',
@@ -280,7 +282,7 @@ export async function buildUiProfile(
           shape: { borderRadius: remToPx(values, 'radius.md') },
         };
       };
-      const content = `${JSON.stringify({ light: await muiTheme('light'), dark: await muiTheme('dark') }, null, 2)}\n`;
+      const content = `${JSON.stringify({ light: muiTheme('light'), dark: muiTheme('dark') }, null, 2)}\n`;
       writeFileSync(destination, content, 'utf8');
       return [destination];
     }
