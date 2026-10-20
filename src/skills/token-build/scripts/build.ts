@@ -23,6 +23,8 @@ import {
   writeCssProvenance,
 } from '../../../shared/guard.js';
 import { fromCwd, getArg, hasFlag, templatePath } from '../../../shared/paths.js';
+import { loadStyleSpec } from '../../../shared/spec.js';
+import type { BuildTokensOptions } from '../../../shared/types.js';
 
 const argv = process.argv.slice(2);
 
@@ -42,33 +44,24 @@ const dryRun = hasFlag(argv, '--dry-run');
 const visualizer = hasFlag(argv, '--visualizer');
 const specArg = getArg(argv, '--spec');
 
-interface SpecGuide {
-  name: string;
-  overview?: string;
-  dos?: string[];
-  donts?: string[];
-  primaryHex?: string;
-  secondaryHex?: string;
-  scale?: number;
-  density?: string;
-}
-
-let guide: SpecGuide | undefined;
+let guide: BuildTokensOptions['guide'];
 if (specArg !== undefined) {
   const specPath = fromCwd(specArg);
   if (!existsSync(specPath)) {
     console.error(`style-spec not found: ${specPath}`);
     process.exit(1);
   }
-  const spec = JSON.parse(readFileSync(specPath, 'utf8')) as {
-    name: string;
-    density?: string;
-    typography?: { ratio?: number };
-    palette?: Array<{ role: string; anchor: { l: number; c: number; h: number; alpha?: number } }>;
-    guide?: { overview?: string; dos?: string[]; donts?: string[] };
-  };
-  const primary = spec.palette?.find((entry) => entry.role === 'primary');
-  const secondary = spec.palette?.find((entry) => entry.role === 'secondary');
+  let spec;
+  try {
+    spec = loadStyleSpec(specPath).spec;
+  } catch (error) {
+    console.error(
+      `style-spec not readable: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    process.exit(1);
+  }
+  const primary = spec.palette.find((entry) => entry.role === 'primary');
+  const secondary = spec.palette.find((entry) => entry.role === 'secondary');
   guide = {
     name: spec.name,
     ...(spec.guide?.overview === undefined ? {} : { overview: spec.guide.overview }),
@@ -76,8 +69,8 @@ if (specArg !== undefined) {
     ...(spec.guide?.donts === undefined ? {} : { donts: spec.guide.donts }),
     ...(primary === undefined ? {} : { primaryHex: oklchToHex(primary.anchor) }),
     ...(secondary === undefined ? {} : { secondaryHex: oklchToHex(secondary.anchor) }),
-    ...(spec.typography?.ratio === undefined ? {} : { scale: spec.typography.ratio }),
-    ...(spec.density === undefined ? {} : { density: spec.density }),
+    scale: spec.typography.ratio,
+    density: spec.density,
   };
 }
 const tokensDir = fromCwd(tokensArg);

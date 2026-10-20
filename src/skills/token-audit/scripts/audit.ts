@@ -4,7 +4,7 @@
  *
  * Usage: node ./scripts/audit.mjs --tokens tokens [--theme light|dark|both] [--min-ratio 4.5] [--json]
  */
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { checkContrast } from '../../../shared/colors.js';
 import {
@@ -14,6 +14,7 @@ import {
   type TamperReport,
 } from '../../../shared/guard.js';
 import { fromCwd, getArg, hasFlag } from '../../../shared/paths.js';
+import { loadStyleSpec } from '../../../shared/spec.js';
 import { loadTokenTree } from '../../../shared/tokens.js';
 import type { AuditReport } from '../../../shared/types.js';
 
@@ -32,9 +33,7 @@ const specArg = getArg(argv, '--spec');
 let minRatio = Number(getArg(argv, '--min-ratio', '4.5'));
 if (!argv.includes('--min-ratio') && specArg !== undefined) {
   try {
-    const spec = JSON.parse(readFileSync(fromCwd(specArg), 'utf8')) as {
-      targets?: { minWcagRatio?: number };
-    };
+    const spec = loadStyleSpec(fromCwd(specArg)).spec;
     if (typeof spec.targets?.minWcagRatio === 'number') minRatio = spec.targets.minWcagRatio;
   } catch {
     console.error(`style-spec not readable: ${specArg}`);

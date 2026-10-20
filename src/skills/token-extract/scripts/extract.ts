@@ -12,6 +12,7 @@ import { basename, extname, join, relative } from 'node:path';
 import { nearestColorName } from '../../../shared/color-names.js';
 import { buildHarmony, formatOklch, parseToOklch } from '../../../shared/colors.js';
 import { fromCwd, getArg, hasFlag } from '../../../shared/paths.js';
+import { validateStyleSpec } from '../../../shared/spec.js';
 import type { OklchColor, StyleSpec } from '../../../shared/types.js';
 
 const argv = process.argv.slice(2);
@@ -549,7 +550,10 @@ const spec: StyleSpec = {
       : { ...designFrontmatter.rounded, full: 9999 },
   targets: { minWcagRatio: 4.5 },
 };
-
+const validation = validateStyleSpec(spec);
+if (!validation.valid) {
+  console.error(`warning: candidate style-spec validation: ${validation.errors.join('; ')}`);
+}
 if (dryRun) {
   console.log(JSON.stringify({ spec, evidence, notes: frontmatterNotes }, null, 2));
   process.exit(0);

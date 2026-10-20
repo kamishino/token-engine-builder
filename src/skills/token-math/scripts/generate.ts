@@ -6,12 +6,7 @@
  */
 import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import {
-  buildFeedbackColors,
-  buildRamp,
-  clampToSrgb,
-  dtcgColorValue,
-} from '../../../shared/colors.js';
+import { buildFeedbackColors, buildRamp, dtcgColorValue } from '../../../shared/colors.js';
 import {
   assertSafeOutDir,
   checkTokensProvenance,
@@ -27,7 +22,8 @@ import {
   spacingScale,
   typographyScale,
 } from '../../../shared/scales.js';
-import type { ColorRamp, HarmonyMethod, StyleSpec, TokenGroup } from '../../../shared/types.js';
+import { loadStyleSpec } from '../../../shared/spec.js';
+import type { ColorRamp, StyleSpec, TokenGroup } from '../../../shared/types.js';
 
 const argv = process.argv.slice(2);
 
@@ -49,110 +45,21 @@ if (!existsSync(specPath)) {
 }
 const tamper = existsSync(outDir) ? checkTokensProvenance(outDir) : null;
 
-const spec = JSON.parse(readFileSync(specPath, 'utf8')) as StyleSpec;
-const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
-if (!Array.isArray(spec.palette) || spec.palette.length < 3 || spec.palette.length > 5) {
-  console.error('invalid style-spec: palette must contain 3–5 colors');
+let spec: StyleSpec;
+let warnings: string[] = [];
+try {
+  const loaded = loadStyleSpec(specPath);
+  spec = loaded.spec;
+  warnings = loaded.warnings;
+} catch (error) {
+  console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);
 }
-if (spec.palette.filter((entry) => entry.role === 'primary').length !== 1) {
-  console.error('invalid style-spec: palette must contain exactly one primary color');
-  process.exit(1);
-}
-const paletteNames = new Set<string>();
-for (const entry of spec.palette) {
-  if (!SLUG_PATTERN.test(entry.name) || paletteNames.has(entry.name)) {
-    console.error(
-      `invalid style-spec: palette name "${entry.name}" must be a unique kebab-case slug`,
-    );
-    process.exit(1);
-  }
-  paletteNames.add(entry.name);
-  const a = entry.anchor;
-  if (
-    typeof a?.l !== 'number' ||
-    a.l < 0 ||
-    a.l > 1 ||
-    typeof a.c !== 'number' ||
-    typeof a.h !== 'number' ||
-    a.h < 0 ||
-    a.h > 360
-  ) {
-    console.error(
-      `invalid style-spec: palette "${entry.name}" anchor must be OKLCH { l: 0–1, c: ≥0, h: 0–360 }`,
-    );
-    process.exit(1);
-  }
-}
-if (spec.rampSteps !== undefined && ![5, 9, 11].includes(spec.rampSteps)) {
-  console.error('invalid style-spec: rampSteps must be 5, 9, or 11');
-  process.exit(1);
+for (const warning of warnings) {
+  console.log(`warning: ${warning}`);
 }
 const stepCount = spec.rampSteps ?? 11;
-
-const GENERATED_THEMES = ['light', 'dark', 'high-contrast'] as const;
-const ALIAS_PATTERN = /^\{[a-z0-9.-]+\}$/;
-if (spec.overrides !== undefined) {
-  for (const [theme, paths] of Object.entries(spec.overrides)) {
-    if (!(GENERATED_THEMES as readonly string[]).includes(theme)) {
-      console.error(`invalid style-spec: overrides theme "${theme}" is not a generated theme`);
-      process.exit(1);
-    }
-    for (const [path, alias] of Object.entries(paths)) {
-      if (!path.startsWith('semantic.') || !ALIAS_PATTERN.test(alias)) {
-        console.error(
-          `invalid style-spec: override "${path}" must start semantic. with an alias value like {color.neutral.300}`,
-        );
-        process.exit(1);
-      }
-    }
-  }
-}
-for (const entry of spec.palette) {
-  const clamped = clampToSrgb(entry.anchor);
-  if (clamped.c !== entry.anchor.c) {
-    console.log(
-      `warning: anchor for ${entry.name} clamped to sRGB (chroma ${entry.anchor.c} → ${clamped.c})`,
-    );
-  }
-}
-
-if (spec.clusterBounds !== undefined) {
-  const bounds = spec.clusterBounds;
-  const inRange = (value: number, [min, max]: [number, number]): boolean =>
-    min <= max ? value >= min && value <= max : value >= min || value <= max;
-  for (const entry of spec.palette) {
-    const a = entry.anchor;
-    if (!inRange(a.h, bounds.h) || !inRange(a.c, bounds.c) || !inRange(a.l, bounds.l)) {
-      console.log(
-        `warning: ${entry.name} anchor outside cluster ${spec.cluster ?? 'recorded'} bounds (creative departure?)`,
-      );
-    }
-  }
-}
-if (!spec.typography || !(spec.typography.ratio > 1) || !(spec.typography.baseSizePx > 0)) {
-  console.error('invalid style-spec: typography.baseSizePx > 0 and typography.ratio > 1 required');
-  process.exit(1);
-}
 const baseLineHeight = spec.typography.baseLineHeight ?? 1.5;
-if (baseLineHeight < 1 || baseLineHeight > 2.5) {
-  console.error('invalid style-spec: typography.baseLineHeight must be 1–2.5');
-  process.exit(1);
-}
-
-const HARMONY_METHODS: readonly HarmonyMethod[] = [
-  'triadic',
-  'analogous',
-  'complementary',
-  'split-complementary',
-  'tetradic',
-  'monochromatic',
-];
-if (spec.harmony !== undefined && !HARMONY_METHODS.includes(spec.harmony)) {
-  console.error(`invalid style-spec: harmony must be one of ${HARMONY_METHODS.join(', ')}`);
-  process.exit(1);
-}
-
 if (dryRun) {
   console.log(`would generate 3-tier tokens for "${spec.name}" → ${outDir}`);
   console.log('would copy: templates/tokens/** (semantic/component aliases, tier templates)');
