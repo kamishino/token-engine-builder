@@ -37,3 +37,19 @@ export function hasFlag(argv: string[], flag: string): boolean {
 export function fromCwd(path: string): string {
   return resolve(process.cwd(), path);
 }
+
+/** True when the module is invoked directly from the CLI rather than imported. */
+export function isMainModule(importMetaUrl: string, ...extraSuffixes: string[]): boolean {
+  if (process.argv[1] === undefined) return false;
+  try {
+    const entry = resolve(process.argv[1]);
+    const target = resolve(fileURLToPath(importMetaUrl));
+    if (entry === target) return true;
+  } catch {
+    // ignore unparseable or relative file URL
+  }
+  for (const suffix of extraSuffixes) {
+    if (process.argv[1].endsWith(suffix)) return true;
+  }
+  return false;
+}

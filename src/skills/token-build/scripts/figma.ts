@@ -10,10 +10,9 @@
  *   node ./scripts/figma.mjs --from-figma <figma-variables.json> --out tokens
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import { dtcgColorValue, oklchToHex, parseToOklch } from '../../../shared/colors.js';
-import { fromCwd, getArg, hasFlag } from '../../../shared/paths.js';
+import { fromCwd, getArg, hasFlag, isMainModule } from '../../../shared/paths.js';
 import { findTokenFiles } from '../../../shared/tokens.js';
 import type { DtcgColorValue } from '../../../shared/types.js';
 
@@ -294,12 +293,6 @@ function runCli(): void {
   }
 }
 
-const isMain =
-  process.argv[1] !== undefined &&
-  (resolve(process.argv[1]) === fileURLToPath(import.meta.url) ||
-    process.argv[1].endsWith('figma.mjs') ||
-    process.argv[1].endsWith('figma.ts'));
-
-if (isMain) {
+if (isMainModule(import.meta.url, 'figma.mjs', 'figma.ts')) {
   runCli();
 }
