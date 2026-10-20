@@ -60,13 +60,24 @@ export function runAudit(argv = process.argv.slice(2)): number {
   );
 
   function auditTheme(themeName: string): AuditReport {
+    const semanticFile = join(tokensDir, 'semantic', `${themeName}.tokens.json`);
+    if (!existsSync(semanticFile)) {
+      return {
+        pairs: [],
+        unresolvedAliases: [`missing semantic theme: ${themeName} (${semanticFile})`],
+        rawValueViolations: [],
+        pass: false,
+      };
+    }
     let tree;
     try {
       tree = loadTokenTree(tokensDir, { theme: themeName });
-    } catch {
+    } catch (error) {
       return {
         pairs: [],
-        unresolvedAliases: [`missing semantic theme: ${themeName}`],
+        unresolvedAliases: [
+          `unreadable token tree for ${themeName}: ${error instanceof Error ? error.message : String(error)}`,
+        ],
         rawValueViolations: [],
         pass: false,
       };
@@ -114,7 +125,9 @@ export function runAudit(argv = process.argv.slice(2)): number {
   const reports = new Map(themes.map((name) => [name, auditTheme(name)]));
   const provenance: TamperReport = checkTokensProvenance(tokensDir);
   const provenanceFails = provenance.status === 'tampered' || provenance.status === 'unreadable';
-  const overallPass = [...reports.values()].every((report) => report.pass) && !provenanceFails;
+  const noThemes = themes.length === 0;
+  const overallPass =
+    !noThemes && [...reports.values()].every((report) => report.pass) && !provenanceFails;
 
   if (asJson) {
     console.log(
@@ -143,6 +156,9 @@ export function runAudit(argv = process.argv.slice(2)): number {
       console.log(`  FAIL  provenance: ${parts.join('; ') || provenance.status}`);
     } else if (provenance.status === 'absent') {
       console.log('  note: no provenance manifest (tree predates the guard)');
+    }
+    if (noThemes) {
+      console.log(`  FAIL  no semantic themes found under ${semanticDir}`);
     }
     console.log(`\naudit ${overallPass ? 'PASS' : 'FAIL'}`);
   }

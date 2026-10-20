@@ -41,6 +41,10 @@ test('audit stamp write, check, and computeTreeHash cycle cleanly', () => {
     // Modifying tokens invalidates stamp
     writeFileSync(join(dir, 'test.tokens.json'), '{"token":2}', 'utf8');
     assert.equal(checkAuditStamp(dir), 'stale');
+
+    // Corrupt stamp is unreadable, not missing
+    writeFileSync(join(dir, '.token-engine-audit.json'), 'not json', 'utf8');
+    assert.equal(checkAuditStamp(dir), 'unreadable');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

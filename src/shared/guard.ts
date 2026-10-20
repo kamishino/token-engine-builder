@@ -132,19 +132,19 @@ export function computeTreeHash(tokensDir: string): string {
 }
 
 /** Check if the audit stamp exists, is fresh, stale, or failing for tokensDir. */
-export function checkAuditStamp(tokensDir: string): 'pass' | 'stale' | 'fail' | 'missing' {
+export function checkAuditStamp(
+  tokensDir: string,
+): 'pass' | 'stale' | 'fail' | 'missing' | 'unreadable' {
   const stampPath = join(tokensDir, AUDIT_STAMP_NAME);
+  if (!existsSync(stampPath)) return 'missing';
+  let stamp: { pass?: unknown; treeHash?: unknown };
   try {
-    const stamp = JSON.parse(readFileSync(stampPath, 'utf8')) as {
-      pass?: unknown;
-      treeHash?: unknown;
-    };
-    if (stamp.pass !== true || typeof stamp.treeHash !== 'string') return 'fail';
-    const current = computeTreeHash(tokensDir);
-    return current === stamp.treeHash ? 'pass' : 'stale';
+    stamp = JSON.parse(readFileSync(stampPath, 'utf8')) as { pass?: unknown; treeHash?: unknown };
   } catch {
-    return 'missing';
+    return 'unreadable';
   }
+  if (stamp.pass !== true || typeof stamp.treeHash !== 'string') return 'fail';
+  return computeTreeHash(tokensDir) === stamp.treeHash ? 'pass' : 'stale';
 }
 
 /** Record a passing audit stamp with the current tree hash. */
