@@ -4,8 +4,7 @@ Internal planning document. Items move horizons only by editing this file with t
 
 ## Product snapshot
 
-token-engine-builder is an agent-skill pipeline that turns a recorded brand palette into certified 3-tier W3C DTCG design tokens and CSS/Tailwind v4 output: `token-extract`/`token-style` → `token-math` → `token-audit` → `token-build`. Primary user: the owner's daily design-token work. Secondary: public installers via GitHub release zips. Success = daily-driver reliability and publicly installable quality — explicitly not adoption metrics. Current state: v0.2.0 shipped; 5 skills; palette-first spec v2 (creative palette, user-chosen ramp steps, named primitives); dual WCAG + APCA audit gate (24 pairs/theme); sRGB gamut clamping; anti-tampering provenance manifests; atomic layout + rhythm spacing.
-
+token-engine-builder is an agent-skill pipeline that turns a recorded brand palette into certified 3-tier W3C DTCG design tokens, 8 UI-library profiles, and CSS/Tailwind v4 output: `token-extract`/`token-style` → `token-math` → `token-audit` → `token-build`. Primary user: the owner's daily design-token work. Secondary: public installers via signed GitHub release zips. Current state: v0.14.0 shipped; 5 skills partitioned into Creation & Governance buckets; dual Claude Code & OpenAI Agent manifests; 144-color vendored offline naming catalog; CycloneDX 1.5 JSON SBOM & Ed25519 Minisign release signing; rendered DOM extraction (`--url` / `--html`); 8 UI-library profiles (`shadcn`, `bootstrap`, `primevue`, `antd`, `mui`, `chakra`, `radix`, `fluent`); component & composite pattern specs.
 ## Principles (decision filters)
 
 - Deterministic math downstream of recorded decisions.
@@ -15,30 +14,43 @@ token-engine-builder is an agent-skill pipeline that turns a recorded brand pale
 - No reference doc without its engine.
 - Clean cutovers over compatibility shims.
 
-## Now — next item unselected
+## Now — Active Cycle (Target: v1.0.0)
 
-The v0.3.0 Now items shipped (below); the next Now item is unselected — promote from Next/Later by editing this file with the reason.
+With all v0.x foundation epics (N1, N3, X1–X8, L1, L2, L4, L5, L6, L7, L8) shipped, the pipeline enters its v1.0 stabilization and consumer adoption cycle.
 
-### N1. Component specifications with states — ✅ shipped in v0.3.0
+### N2. Restore CI trust (standing blocker)
 
-- **Why**: The NN/g mapping (`docs/research/design-systems-vs-style-guides.md`) shows the component-library child is missing: we ship component _tokens_ (button/card/input) but no per-component specification with states and usage.
-- **Scope** (epic sketch; gets its own grill + plan before code): generated per-component spec documents binding semantic/component tokens across states — enabled, hover, focus, disabled — for all themes, with audit coverage for state contrast pairs (disabled exempt, documented).
-- **Exit criteria**: specs generate for 3 components × 3 themes from the example spec; the audit matrix covers the state pairs; specs ship inside the skill packages.
+- **Why**: GitHub Actions workflow fails at 0s with 0 jobs scheduled (account/billing signature). Local `npm run check` is 100% green.
+- **Scope**: Owner checks GitHub billing / Actions permissions in repository settings; verify `check.yml` passes on `main`.
+- **Exit criteria**: GitHub Actions workflow conclusion = success on `main`.
 
-### N2. Restore CI trust (still open)
+### N4. Interactive Visualizer Surface (HTML Inspector)
 
-- **Why**: Every GitHub Actions run since 2026-10-18 fails in 0 seconds with no jobs started (platform/account signature; local `npm run check` is green and the workflow is unchanged since its last success).
-- **Scope**: owner checks Actions billing/settings, re-runs the check workflow; if it turns out to be a workflow defect, the fix is recorded here.
-- **Exit criteria**: `check` workflow conclusion = success on `main`.
-- **Status (2026-10-19)**: diagnosed account-side — Dependabot's own dynamic workflow fails with the same signature, Actions is enabled with the workflow active, and this workflow is unchanged since its last successful run. Owner action: check GitHub billing/Actions settings; then re-run.
+- **Why**: Per AGENTS.md Charter Policy #8 (*"reserve Interactive HTML strictly for visual inspection"*), agents and human designers benefit from an interactive visualizer verifying color ramps, APCA/WCAG contrast matrix, and component states in a single rendered HTML page before deployment.
+- **Scope**: `token-build --visualizer` or standalone HTML report generator rendering the live token system into an inspection artifact.
+- **Exit criteria**: Standalone zero-dep HTML inspector emitted under `build/visualizer.html` displaying palette ramps, contrast chips, and component specimens.
 
-### N3. Ship v0.3.0 — ✅ shipped (tag `v0.3.0`)
+### N5. Comprehensive Verification Matrix & v1.0.0 Cut
 
-- **Why**: The changeset flow is the single versioning mechanism; N1 deserves a tagged, packaged release.
-- **Scope**: changeset → `npm run release` → `npm run package` → GitHub release with per-skill zips + SHA256SUMS.
-- **Exit criteria**: `v0.3.0` tag and release published; artifacts verified against `SHA256SUMS.txt`.
+- **Why**: Mark the transition from rapid v0.x capability expansion to production-grade stability guarantee with semantic versioning 1.0.0.
+- **Exit criteria**: Full regression pass across all 8 UI profiles, 5 skills, both bucket packages, CycloneDX SBOM validation, and signed v1.0.0 release.
 
-## Next — target v0.15.0 (unselected)
+## Next — v1.x Horizon (unselected)
+
+### Y1. Extended Component Catalog (6 additional components)
+
+- **Why**: Expand beyond core button/card/input to badge, alert, dialog, avatar, tooltip, and table.
+- **Depends on**: v1.0.0 stabilization.
+
+### Y2. Figma DTCG Token Sync Bridge
+
+- **Why**: Bi-directional translation between W3C DTCG JSON format and Figma Variables REST API.
+
+### Y3. Dynamic Custom Theme Authoring
+
+- **Why**: Move beyond hardcoded `light`/`dark`/`high-contrast` to arbitrary named themes (e.g. `sepia`, `solarized`, brand sub-themes) defined in `style-spec.json`.
+
+## Shipped History (v0.3.0 – v0.14.0)
 
 ### X1. Human style-guide surface (DESIGN.md, Stitch format) — ✅ shipped in v0.4.0
 
