@@ -20,8 +20,6 @@ Read when choosing or adding an output profile (`build.mjs --profile <id>`). Pro
 | Library           | Target format                           | Blocker / decision needed                                                                |
 | ----------------- | --------------------------------------- | ---------------------------------------------------------------------------------------- |
 | Material UI (MUI) | JS theme object (`createTheme` palette) | Needs a JSON/TS renderer, not CSS vars                                                   |
-| Material UI (MUI) | JS theme object (`createTheme` palette) | Needs a JSON/TS renderer, not CSS vars                                                   |
-| Ant Design        | ConfigProvider theme-token JSON         | JSON renderer; its seed/map/alias token tiers need a mapping review                      |
 | Chakra UI v3      | TS semantic-token theme                 | TS renderer + recipe model review                                                        |
 | Radix Themes      | 1–12 accent/gray step scales            | Step-scale mismatch: our ramps are 5/9/11 steps; needs an explicit step-mapping decision |
 | Fluent UI 2       | Theme JSON (colorPalette)               | Enterprise audience; lowest priority for this product                                    |
