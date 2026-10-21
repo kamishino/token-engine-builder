@@ -1,5 +1,10 @@
 import { checkContrast } from './colors.js';
-import { checkTokensProvenance, type TamperReport } from './guard.js';
+import {
+  checkSpecBinding,
+  checkTokensProvenance,
+  type SpecBinding,
+  type TamperReport,
+} from './guard.js';
 import { AUDIT_PAIRS } from './roles.js';
 import { loadTokenTree, semanticThemes, type LoadedTokenTree } from './tokens.js';
 import type { AuditReport, ContrastKind } from './types.js';
@@ -48,12 +53,18 @@ export interface AuditResult {
   minRatio: number;
   minApca: number;
   provenance: TamperReport;
+  specBinding?: SpecBinding;
   themes: Record<string, AuditReport>;
 }
 
 export function auditTokens(
   tokensDir: string,
-  options: { theme?: string; minRatio?: number; minApca?: number } = {},
+  options: {
+    theme?: string;
+    minRatio?: number;
+    minApca?: number;
+    specHash?: string | undefined;
+  } = {},
 ): AuditResult {
   const minRatio = options.minRatio ?? 4.5;
   const minApca = options.minApca ?? 60;
@@ -83,8 +94,20 @@ export function auditTokens(
 
   const provenance = checkTokensProvenance(tokensDir);
   const provenanceFails = provenance.status === 'tampered' || provenance.status === 'unreadable';
+  const specBinding =
+    options.specHash === undefined ? undefined : checkSpecBinding(tokensDir, options.specHash);
   const noThemes = themes.length === 0;
   const pass =
-    !noThemes && [...reports.values()].every((report) => report.pass) && !provenanceFails;
-  return { pass, minRatio, minApca, provenance, themes: Object.fromEntries(reports) };
+    !noThemes &&
+    [...reports.values()].every((report) => report.pass) &&
+    !provenanceFails &&
+    (specBinding === undefined || specBinding === 'match');
+  return {
+    pass,
+    minRatio,
+    minApca,
+    provenance,
+    ...(specBinding === undefined ? {} : { specBinding }),
+    themes: Object.fromEntries(reports),
+  };
 }

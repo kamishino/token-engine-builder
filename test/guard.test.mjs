@@ -7,9 +7,12 @@ import test from 'node:test';
 import {
   assertSafeOutDir,
   checkAuditStamp,
+  checkSpecBinding,
   computeTreeHash,
   decideWrite,
   sha256Hex,
+  specInputHash,
+  TOKENS_MANIFEST_NAME,
   writeAuditStamp,
 } from '../src/shared/guard.ts';
 
@@ -123,6 +126,66 @@ test('audit stamp write, check, and computeTreeHash cycle cleanly', () => {
     // Corrupt stamp is unreadable, not missing
     writeFileSync(join(dir, '.token-engine-audit.json'), 'not json', 'utf8');
     assert.equal(checkAuditStamp(dir), 'unreadable');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('specInputHash ignores key order and whitespace', () => {
+  const specA = {
+    name: 'A',
+    rampSteps: 11,
+    palette: [{ role: 'primary', name: 'blue', anchor: { l: 0.5, c: 0.1, h: 200 } }],
+  };
+  const specB = {
+    palette: [{ anchor: { h: 200, l: 0.5, c: 0.1 }, name: 'blue', role: 'primary' }],
+    rampSteps: 11,
+    name: 'A',
+  };
+  const specC = {
+    name: 'A',
+    rampSteps: 11,
+    palette: [{ role: 'primary', name: 'blue', anchor: { l: 0.55, c: 0.1, h: 200 } }],
+  };
+  assert.equal(specInputHash(specA), specInputHash(specB));
+  assert.notEqual(specInputHash(specA), specInputHash(specC));
+});
+
+test('checkSpecBinding classifies absent, match, mismatch, and unreadable', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'spec-binding-'));
+  try {
+    assert.equal(checkSpecBinding(dir, 'some-hash'), 'absent');
+
+    const manifestPath = join(dir, TOKENS_MANIFEST_NAME);
+    writeFileSync(
+      manifestPath,
+      JSON.stringify({
+        version: 1,
+        kind: 'tokens',
+        generator: 'token-engine-builder',
+        inputHash: 'hash-abc',
+        files: {},
+      }),
+      'utf8',
+    );
+    assert.equal(checkSpecBinding(dir, 'hash-abc'), 'match');
+    assert.equal(checkSpecBinding(dir, 'hash-xyz'), 'mismatch');
+
+    writeFileSync(
+      manifestPath,
+      JSON.stringify({
+        version: 1,
+        kind: 'tokens',
+        generator: 'token-engine-builder',
+        inputHash: null,
+        files: {},
+      }),
+      'utf8',
+    );
+    assert.equal(checkSpecBinding(dir, 'hash-abc'), 'absent');
+
+    writeFileSync(manifestPath, 'corrupt json', 'utf8');
+    assert.equal(checkSpecBinding(dir, 'hash-abc'), 'unreadable');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

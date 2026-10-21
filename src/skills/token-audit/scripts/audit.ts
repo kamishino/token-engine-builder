@@ -5,7 +5,7 @@
 import { existsSync } from 'node:fs';
 import { auditTokens } from '../../../shared/audit-report.js';
 import { usageText } from '../../../shared/cli-flags.js';
-import { removeAuditStamp, writeAuditStamp } from '../../../shared/guard.js';
+import { removeAuditStamp, specInputHash, writeAuditStamp } from '../../../shared/guard.js';
 import { fromCwd, getArg, hasFlag, isMainModule } from '../../../shared/paths.js';
 import { loadStyleSpec } from '../../../shared/spec.js';
 import { semanticDir } from '../../../shared/tokens.js';
@@ -20,10 +20,14 @@ export function runAudit(argv = process.argv.slice(2)): number {
   const theme = getArg(argv, '--theme', 'both');
   const specArg = getArg(argv, '--spec');
   let minRatio = Number(getArg(argv, '--min-ratio', '4.5'));
-  if (!argv.includes('--min-ratio') && specArg !== undefined) {
+  let specHash: string | undefined;
+  if (specArg !== undefined) {
     try {
       const spec = loadStyleSpec(fromCwd(specArg)).spec;
-      if (typeof spec.targets?.minWcagRatio === 'number') minRatio = spec.targets.minWcagRatio;
+      if (!argv.includes('--min-ratio') && typeof spec.targets?.minWcagRatio === 'number') {
+        minRatio = spec.targets.minWcagRatio;
+      }
+      specHash = specInputHash(spec);
     } catch {
       console.error(`style-spec not readable: ${specArg}`);
       return 1;
@@ -37,7 +41,12 @@ export function runAudit(argv = process.argv.slice(2)): number {
     return 1;
   }
 
-  const result = auditTokens(tokensDir, { theme, minRatio, minApca });
+  const result = auditTokens(tokensDir, {
+    theme,
+    minRatio,
+    minApca,
+    ...(specHash === undefined ? {} : { specHash }),
+  });
   const semanticDirectory = semanticDir(tokensDir);
 
   if (asJson) {
@@ -48,6 +57,7 @@ export function runAudit(argv = process.argv.slice(2)): number {
           minRatio: result.minRatio,
           minApca: result.minApca,
           provenance: result.provenance,
+          ...(result.specBinding === undefined ? {} : { specBinding: result.specBinding }),
           themes: result.themes,
         },
         null,
@@ -81,6 +91,11 @@ export function runAudit(argv = process.argv.slice(2)): number {
       console.log(`  FAIL  provenance: ${parts.join('; ') || result.provenance.status}`);
     } else if (result.provenance.status === 'absent') {
       console.log('  note: no provenance manifest (tree predates the guard)');
+    }
+    if (result.specBinding !== undefined && result.specBinding !== 'match') {
+      console.log(
+        `  FAIL  spec binding: ${result.specBinding} (tokens were generated from a different spec)`,
+      );
     }
     if (Object.keys(result.themes).length === 0) {
       console.log(`  FAIL  no semantic themes found under ${semanticDirectory}`);

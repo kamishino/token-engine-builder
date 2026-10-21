@@ -11,6 +11,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, join, relative, resolve, sep } from 'node:path';
+import type { StyleSpec } from './types.js';
 
 export interface GuardManifest {
   version: 1;
@@ -129,6 +130,33 @@ export function computeTreeHash(tokensDir: string): string {
       .map(([path, hash]) => `${path}:${hash}`)
       .join('\n'),
   );
+}
+
+function canonicalJson(value: unknown): string {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value) ?? 'null';
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  const entries = Object.entries(value as Record<string, unknown>)
+    .filter(([, entry]) => entry !== undefined)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, entry]) => `${JSON.stringify(key)}:${canonicalJson(entry)}`);
+  return `{${entries.join(',')}}`;
+}
+
+/** Key-order- and whitespace-insensitive hash of a normalized spec. */
+export function specInputHash(spec: StyleSpec): string {
+  return sha256Hex(canonicalJson(spec));
+}
+
+export type SpecBinding = 'match' | 'mismatch' | 'absent' | 'unreadable';
+
+/** Compare a spec hash against the tokens manifest's recorded inputHash. */
+export function checkSpecBinding(tokensDir: string, specHash: string): SpecBinding {
+  const manifestPath = join(tokensDir, TOKENS_MANIFEST_NAME);
+  if (!existsSync(manifestPath)) return 'absent';
+  const manifest = readManifest(manifestPath);
+  if (manifest === null) return 'unreadable';
+  if (typeof manifest.inputHash !== 'string' || manifest.inputHash === '') return 'absent';
+  return manifest.inputHash === specHash ? 'match' : 'mismatch';
 }
 
 /** Check if the audit stamp exists, is fresh, stale, or failing for tokensDir. */

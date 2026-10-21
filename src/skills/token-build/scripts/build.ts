@@ -10,8 +10,10 @@ import {
   assertSafeOutDir,
   checkAuditStamp,
   checkCssProvenance,
+  checkSpecBinding,
   decideWrite,
   publishCssOutputs,
+  specInputHash,
 } from '../../../shared/guard.js';
 import { fromCwd, getArg, hasFlag, isMainModule } from '../../../shared/paths.js';
 import {
@@ -40,14 +42,18 @@ export async function runBuild(argv = process.argv.slice(2)): Promise<number> {
   const specArg = getArg(argv, '--spec');
 
   let guide: BuildTokensOptions['guide'];
+  let loadedSpec: ReturnType<typeof loadStyleSpec>['spec'] | undefined;
+  let specPath: string | undefined;
   if (specArg !== undefined) {
-    const specPath = fromCwd(specArg);
+    specPath = fromCwd(specArg);
     if (!existsSync(specPath)) {
       console.error(`style-spec not found: ${specPath}`);
       return 1;
     }
     try {
-      guide = guideFromSpec(loadStyleSpec(specPath).spec);
+      const loaded = loadStyleSpec(specPath);
+      loadedSpec = loaded.spec;
+      guide = guideFromSpec(loaded.spec);
     } catch (error) {
       console.error(
         `style-spec not readable: ${error instanceof Error ? error.message : String(error)}`,
@@ -59,6 +65,19 @@ export async function runBuild(argv = process.argv.slice(2)): Promise<number> {
   if (!existsSync(tokensDir)) {
     console.error(`tokens dir not found: ${tokensDir} (run token-math generate first)`);
     return 1;
+  }
+
+  let specBindingStatus: string | undefined;
+  if (loadedSpec !== undefined && specPath !== undefined) {
+    const specHash = specInputHash(loadedSpec);
+    const binding = checkSpecBinding(tokensDir, specHash);
+    specBindingStatus = binding;
+    if (!dryRun && binding !== 'match') {
+      console.error(
+        `refusing to build: tokens do not match ${specPath} (binding: ${binding}); re-run token-math generate`,
+      );
+      return 1;
+    }
   }
 
   // Any theme with a semantic/<theme>.tokens.json file is buildable.
@@ -92,6 +111,7 @@ export async function runBuild(argv = process.argv.slice(2)): Promise<number> {
     );
     if (decision.replaces) console.log(`provenance: ${tamper.status}`);
     console.log(`audit stamp: ${auditStamp}`);
+    if (specBindingStatus !== undefined) console.log(`spec binding: ${specBindingStatus}`);
     return 0;
   }
 

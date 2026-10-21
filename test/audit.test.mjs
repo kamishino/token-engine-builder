@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -53,6 +53,33 @@ test('auditTokens returns a passing report for the generated example tree', () =
     assert.equal(result.provenance.status, 'clean');
     assert.equal(result.themes.light.pairs.length, 42);
     assert.ok(result.themes.light.pairs.every((pair) => pair.pass));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('runAudit with --spec checks spec binding and fails on mismatch', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'audit-spec-'));
+  try {
+    const specPath = join(dir, 'style-spec.json');
+    const changedSpecPath = join(dir, 'style-spec-changed.json');
+    const specData = JSON.parse(
+      readFileSync('src/skills/token-style/assets/style-spec.example.json', 'utf8'),
+    );
+    writeFileSync(specPath, JSON.stringify(specData, null, 2), 'utf8');
+    specData.palette[0].anchor.l = 0.55;
+    writeFileSync(changedSpecPath, JSON.stringify(specData, null, 2), 'utf8');
+
+    const tokensDir = join(dir, 'tokens');
+    assert.equal(runGenerate(['--spec', specPath, '--out', tokensDir]), 0);
+
+    // Matching spec -> pass, stamp written
+    assert.equal(runAudit(['--tokens', tokensDir, '--spec', specPath]), 0);
+    assert.equal(existsSync(join(tokensDir, '.token-engine-audit.json')), true);
+
+    // Changed spec -> fail, stamp removed
+    assert.equal(runAudit(['--tokens', tokensDir, '--spec', changedSpecPath]), 1);
+    assert.equal(existsSync(join(tokensDir, '.token-engine-audit.json')), false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

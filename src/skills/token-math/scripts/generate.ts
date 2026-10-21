@@ -2,14 +2,14 @@
  * generate — scaffold the 3-tier token tree from bundled templates and
  * populate Tier-1 primitives from a style-spec.json (skill token-style output).
  */
-import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { usageText } from '../../../shared/cli-flags.js';
 import {
   assertSafeOutDir,
   checkTokensProvenance,
   decideWrite,
-  sha256Hex,
+  specInputHash,
   writeTokensProvenance,
 } from '../../../shared/guard.js';
 import { fromCwd, getArg, hasFlag, isMainModule, templatePath } from '../../../shared/paths.js';
@@ -102,7 +102,7 @@ export function runGenerate(argv = process.argv.slice(2)): number {
     writeTokenFile(segments, data);
   }
 
-  writeTokensProvenance(outDir, sha256Hex(readFileSync(specPath)));
+  writeTokensProvenance(outDir, specInputHash(spec));
   console.log(`generated 3-tier tokens for "${spec.name}" → ${outDir}`);
   console.log(
     'next: node <token-audit>/scripts/audit.mjs --tokens ' + getArg(argv, '--out', 'tokens'),
