@@ -2,20 +2,35 @@
 
 > Comprehensive audit and runtime validation of the token-engine-builder smoke harness (`scripts/smoke-all.mjs`) and all 7 packaged AI agent skills. Evaluated on 2026-10-21 against the agent-agnostic path contract.
 
+## Post-Remediation Verification (2026-10-21)
+
+Re-run on the current tree after commits `5811c5d`, `caf6adc`, and `5ef5a5e`.
+
+| Gate              | Command                       | Result                                                                                              |
+| :---------------- | :---------------------------- | :-------------------------------------------------------------------------------------------------- |
+| Format            | `npm run format`              | PASS                                                                                                |
+| Unit, lint, build | `npm run check`               | PASS — 144/144 tests, 7 scripts built, CSS gold match                                               |
+| Integration smoke | `npm run smoke`               | PASS — 40/40 scenarios                                                                              |
+| Agent contract    | `npm run smoke`               | PASS — all 7 skill contracts, documented entrypoints, and routing-table targets respond to `--help` |
+| CI wiring         | `.github/workflows/check.yml` | PASS — runs both smoke scripts after `npm run check` and installs Chromium first                    |
+
+The 38/39 result and findings in §§2–4 are the pre-remediation baseline, retained as historical evidence. Current harness changes: `P3` added; `R1` asserts the resolved absolute sibling path and rejects cwd-relative commands; `scripts/smoke-skill-contract.mjs` is permanent; CI runs both suites.
 ---
 
 ## 1. Scope & Methodology
 
 - **Evaluation Date**: 2026-10-21
-- **Scope Constraint**: This evaluation document introduces zero functional or source-code modifications. It records empirical test execution, categorizes gaps, audits the smoke harness against production agent usage, and defines a companion remediation plan in `local://smoke-fix-plan.md`.
+- **Scope Constraint**: This evaluation document introduces zero functional or source-code modifications. It records empirical test execution, categorizes gaps, and audits the smoke harness against production agent usage. The implemented remediations are recorded in §6.
 - **Harness Evaluated**:
   1. `npm run check`: standard repo gate (144 unit tests via `node:test`, TypeScript compiler `tsc`, ESLint, Prettier, `lint:skills`, multi-pass Vite build `scripts/build-all.mjs`, and CSS gold diff `scripts/sample-css.mjs`).
-  2. `npm run smoke`: end-to-end integration harness executing 39 test scenarios across an isolated temporary installation tree (`scripts/smoke-all.mjs`).
+  2. `npm run smoke`: end-to-end integration harness executing 39 scenarios at evaluation time (40 after `P3`; see the post-remediation section) across an isolated temporary installation tree (`scripts/smoke-all.mjs`).
   3. `smoke-skill-contract.mjs`: isolated agent-contract validation probing all 7 `dist/<skill>/SKILL.md` instructions, resolving `<...-root>` placeholders, checking literal-execution guards, and verifying `--help` execution for all documented CLI commands.
 
 ---
 
-## 2. Executive Summary
+## 2. Pre-Remediation Baseline
+
+The table and findings below are the pre-remediation snapshot. S1–S4 and S7 are resolved by the commits listed in the post-remediation section; S5 and S6 are unchanged by design.
 
 | Category                                  | Metric                                   | Status                         |
 | :---------------------------------------- | :--------------------------------------- | :----------------------------- |
@@ -87,9 +102,9 @@ All 7 bundled agent skills are functionally sound. Built scripts execute cleanly
 
 ---
 
-## 4. Smoke Scenario Inventory & Execution Matrix
+## 4. Pre-Remediation Scenario Inventory (39 Cases)
 
-All 39 scenarios from `scripts/smoke-all.mjs` evaluated against `dist/` (Node 22.12 on win32 x64):
+The 39 scenarios below are the pre-remediation snapshot, evaluated against `dist/` (Node 22.12 on win32 x64). The current harness has 40 cases; `P3` passes, and `R1` asserts the resolved absolute path.
 
 |   ID   | Category      | Skill Under Test                                                                | Scenario Description                                                             | Expected Outcome                    |             Actual Result             |
 | :----: | :------------ | :------------------------------------------------------------------------------ | :------------------------------------------------------------------------------- | :---------------------------------- | :-----------------------------------: |
@@ -151,17 +166,16 @@ All 39 scenarios from `scripts/smoke-all.mjs` evaluated against `dist/` (Node 22
 
 ---
 
-## 6. Actionable Fix Recommendations
+## 6. Implemented Remediations
 
-The companion implementation plan `local://smoke-fix-plan.md` details the following atomic remediations:
+| Finding | Change                                                                                     | Commit    |
+| :------ | :----------------------------------------------------------------------------------------- | :-------- |
+| S1      | `R1` asserts normalized `/token-extract/scripts/extract.mjs` and rejects `node ./scripts/` | `5811c5d` |
+| S2      | Permanent `scripts/smoke-skill-contract.mjs`, wired into `npm run smoke`                   | `caf6adc` |
+| S3      | CI runs both smoke scripts after `npm run check` and installs Chromium first               | `5ef5a5e` |
+| S4      | `P3` verifies static directories for all 7 skills                                          | `5811c5d` |
+| S7      | CI installs Chromium before smoke                                                          | `5ef5a5e` |
+| S5      | Prompt-only surfaces remain covered by the `SKILL.md` contract, not executable smoke       | —         |
+| S6      | Local `npm run smoke` still rebuilds; CI invokes the scripts directly to avoid a rebuild   | —         |
 
-1. **Fix `R1` Assertion in `scripts/smoke-all.mjs`**:
-   Replace the hardcoded `./scripts/extract.mjs` substring match with a normalized path check matching `/token-extract/scripts/extract.mjs --root . --out style-spec.json` and asserting absence of `node ./scripts`.
-2. **Promote Agent-Contract Smoke to Permanent Test Script**:
-   Create `scripts/smoke-skill-contract.mjs` permanently in the repository. Add `"smoke:contract": "node scripts/smoke-skill-contract.mjs"` and wire into `npm run smoke`.
-3. **Wire Smoke Harness into CI**:
-   Update `.github/workflows/check.yml` to run `node scripts/smoke-all.mjs` and `node scripts/smoke-skill-contract.mjs` immediately following `npm run check`.
-4. **Expand Packaging Verification (`P2` -> `P3`)**:
-   Add scenario `P3` in `scripts/smoke-all.mjs` to verify presence and readability of all static directories (`templates/`, `assets/`, `references/`, `examples/`) across all 7 bundled skills.
-5. **Add Comprehensive Changeset**:
-   Record all test harness improvements and assertions under `.changeset/smoke-contract-and-path-assertion.md`.
+The release note for the code changes is `.changeset/smoke-contract-and-ci.md`.
