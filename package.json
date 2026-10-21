@@ -22,7 +22,8 @@
     "format": "prettier --check .",
     "format:write": "prettier --write .",
     "check": "npm run typecheck && npm run lint && npm run lint:skills && npm run test && npm run build && npm run lint:css",
-    "smoke": "npm run build && node scripts/smoke-all.mjs"
+    "smoke:contract": "node scripts/smoke-skill-contract.mjs",
+    "smoke": "npm run build && node scripts/smoke-all.mjs && node scripts/smoke-skill-contract.mjs"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.3",
