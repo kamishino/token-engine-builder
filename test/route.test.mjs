@@ -24,6 +24,11 @@ test('runRoute returns 0 and prints missing spec state on empty directory', () =
       console.log = originalLog;
     }
     assert.match(output, /^next: token-style$/m);
+    assert.match(
+      output,
+      /next: token-extract — node .*extract\.mjs --root \. --out style-spec\.json/,
+    );
+    assert.doesNotMatch(output, /node \.\/scripts/);
     assert.doesNotMatch(output, /token-style — .*generate\.mjs/);
     assert.equal(runRoute(['--root', dir, '--json']), 0);
   } finally {

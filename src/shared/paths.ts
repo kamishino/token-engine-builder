@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -20,6 +21,24 @@ export function skillRoot(importMetaUrl: string): string {
 
 export function templatePath(importMetaUrl: string, ...segments: string[]): string {
   return resolve(skillRoot(importMetaUrl), 'templates', ...segments);
+}
+
+/** The installed folder of a sibling skill (`<skills-dir>/<skillName>`). */
+export function siblingSkillRoot(importMetaUrl: string, skillName: string): string {
+  return resolve(skillRoot(importMetaUrl), '..', skillName);
+}
+
+/**
+ * Replace `<skill-root>` with this skill's root and `<name-root>` with a
+ * co-located sibling skill's root. Missing targets stay as written so the
+ * agent or human can resolve them.
+ */
+export function resolveSkillPathPlaceholders(command: string, importMetaUrl: string): string {
+  return command.replace(/<([a-z0-9-]+)-root>/g, (match, skillName: string) => {
+    if (skillName === 'skill') return skillRoot(importMetaUrl);
+    const dir = siblingSkillRoot(importMetaUrl, skillName);
+    return existsSync(dir) ? dir : match;
+  });
 }
 
 /** `--flag value` lookup; returns `fallback` when absent. */

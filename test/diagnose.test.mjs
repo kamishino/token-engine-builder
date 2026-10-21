@@ -21,6 +21,8 @@ test('diagnoseDesignSystem reports spec-missing and routing nextActions on empty
     const extractAction = diagnosis.nextActions.find((a) => a.skill === 'token-extract');
     assert.ok(extractAction !== undefined);
     assert.ok(extractAction.command.includes('extract.mjs'));
+    assert.ok(extractAction.command.includes('<token-extract-root>'));
+    assert.doesNotMatch(extractAction.command, /~\/\.agents/);
     const styleAction = diagnosis.nextActions.find((a) => a.skill === 'token-style');
     assert.ok(styleAction !== undefined);
     assert.equal(styleAction.command, undefined);

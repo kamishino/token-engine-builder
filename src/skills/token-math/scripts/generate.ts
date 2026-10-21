@@ -12,7 +12,14 @@ import {
   specInputHash,
   writeTokensProvenance,
 } from '../../../shared/guard.js';
-import { fromCwd, getArg, hasFlag, isMainModule, templatePath } from '../../../shared/paths.js';
+import {
+  fromCwd,
+  getArg,
+  hasFlag,
+  isMainModule,
+  resolveSkillPathPlaceholders,
+  templatePath,
+} from '../../../shared/paths.js';
 import { loadStyleSpec } from '../../../shared/spec.js';
 import { planTokenFiles } from '../../../shared/token-plan.js';
 import type { StyleSpec } from '../../../shared/types.js';
@@ -110,9 +117,11 @@ export function runGenerate(argv = process.argv.slice(2)): number {
 
   writeTokensProvenance(outDir, specInputHash(spec));
   console.log(`generated 3-tier tokens for "${spec.name}" → ${outDir}`);
-  console.log(
-    'next: node <token-audit>/scripts/audit.mjs --tokens ' + getArg(argv, '--out', 'tokens'),
+  const auditCommand = resolveSkillPathPlaceholders(
+    `node <token-audit-root>/scripts/audit.mjs --tokens ${getArg(argv, '--out', 'tokens')} --min-ratio 4.5`,
+    import.meta.url,
   );
+  console.log(`next: ${auditCommand}`);
   return 0;
 }
 

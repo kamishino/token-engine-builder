@@ -344,7 +344,7 @@ export function diagnoseDesignSystem(root: string, paths: SystemPaths): Diagnosi
     nextActions.push(
       {
         skill: 'token-extract',
-        command: 'node ./scripts/extract.mjs --root . --out style-spec.json',
+        command: 'node <token-extract-root>/scripts/extract.mjs --root . --out style-spec.json',
         reason: 'existing project with colors or fonts in code: extract a candidate spec',
       },
       {
@@ -360,32 +360,33 @@ export function diagnoseDesignSystem(root: string, paths: SystemPaths): Diagnosi
   } else if (state.tokens.status === 'missing' || state.tokens.themes.length === 0) {
     nextActions.push({
       skill: 'token-math',
-      command: 'node ./scripts/generate.mjs --spec style-spec.json --out tokens',
+      command: 'node <token-math-root>/scripts/generate.mjs --spec style-spec.json --out tokens',
       reason: 'generate the 3-tier DTCG token tree from style-spec.json',
     });
   } else if (state.auditStamp !== 'pass' || (auditSummary && !auditSummary.pass)) {
     nextActions.push({
       skill: 'token-audit',
-      command: 'node ./scripts/audit.mjs --tokens tokens --spec style-spec.json',
+      command: 'node <token-audit-root>/scripts/audit.mjs --tokens tokens --min-ratio 4.5',
       reason: 'verify WCAG 2.1 and APCA contrast floors and record passing audit stamp',
     });
   } else if (state.binding !== 'match' && state.binding !== 'unverified') {
     nextActions.push({
       skill: 'token-math',
-      command: 'node ./scripts/generate.mjs --spec style-spec.json --out tokens --force',
+      command:
+        'node <token-math-root>/scripts/generate.mjs --spec style-spec.json --out tokens --force',
       reason: 're-generate tokens to match the updated style-spec.json',
     });
   } else if (state.build.status === 'missing' || state.build.artifacts.length < 4) {
     nextActions.push({
       skill: 'token-build',
       command:
-        'node ./scripts/build.mjs --tokens tokens --out build --theme light --spec style-spec.json',
+        'node <token-build-root>/scripts/build.mjs --tokens tokens --out build --theme light --spec style-spec.json',
       reason: 'compile audited tokens to CSS variables, Tailwind @theme, and DESIGN.md',
     });
   } else {
     nextActions.push({
       skill: 'improve-design-system',
-      command: 'node ./scripts/diagnose.mjs --root .',
+      command: 'node <improve-design-system-root>/scripts/diagnose.mjs --root .',
       reason: 'pipeline is healthy; run full design system review for holes and optimizations',
     });
   }

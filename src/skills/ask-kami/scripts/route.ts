@@ -3,7 +3,13 @@
  */
 import { usageText } from '../../../shared/cli-flags.js';
 import { diagnoseDesignSystem } from '../../../shared/diagnose.js';
-import { fromCwd, getArg, hasFlag, isMainModule } from '../../../shared/paths.js';
+import {
+  fromCwd,
+  getArg,
+  hasFlag,
+  isMainModule,
+  resolveSkillPathPlaceholders,
+} from '../../../shared/paths.js';
 import { resolveSystemPaths } from '../../../shared/system-state.js';
 
 export function runRoute(argv = process.argv.slice(2)): number {
@@ -25,7 +31,14 @@ export function runRoute(argv = process.argv.slice(2)): number {
       JSON.stringify(
         {
           state: diagnosis.state,
-          nextActions: diagnosis.nextActions,
+          nextActions: diagnosis.nextActions.map((action) =>
+            action.command === undefined
+              ? action
+              : {
+                  ...action,
+                  command: resolveSkillPathPlaceholders(action.command, import.meta.url),
+                },
+          ),
           summary: { errors: errorCount, warnings: warningCount, infos: infoCount },
         },
         null,
@@ -47,7 +60,10 @@ export function runRoute(argv = process.argv.slice(2)): number {
   }
 
   for (const action of diagnosis.nextActions.slice(0, 3)) {
-    const suffix = action.command === undefined ? '' : ` — ${action.command}`;
+    const suffix =
+      action.command === undefined
+        ? ''
+        : ` — ${resolveSkillPathPlaceholders(action.command, import.meta.url)}`;
     console.log(`next: ${action.skill}${suffix}`);
     console.log(`why:  ${action.reason}`);
   }

@@ -3,7 +3,13 @@
  */
 import { usageText } from '../../../shared/cli-flags.js';
 import { diagnoseDesignSystem } from '../../../shared/diagnose.js';
-import { fromCwd, getArg, hasFlag, isMainModule } from '../../../shared/paths.js';
+import {
+  fromCwd,
+  getArg,
+  hasFlag,
+  isMainModule,
+  resolveSkillPathPlaceholders,
+} from '../../../shared/paths.js';
 import { resolveSystemPaths, type SystemPaths } from '../../../shared/system-state.js';
 
 export function runDiagnose(argv = process.argv.slice(2)): number {
@@ -25,7 +31,12 @@ export function runDiagnose(argv = process.argv.slice(2)): number {
 
   const paths = resolveSystemPaths(root, overrides);
   const diagnosis = diagnoseDesignSystem(root, paths);
-  console.log(JSON.stringify(diagnosis, null, 2));
+  const nextActions = diagnosis.nextActions.map((action) =>
+    action.command === undefined
+      ? action
+      : { ...action, command: resolveSkillPathPlaceholders(action.command, import.meta.url) },
+  );
+  console.log(JSON.stringify({ ...diagnosis, nextActions }, null, 2));
   return 0;
 }
 
