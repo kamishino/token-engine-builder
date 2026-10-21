@@ -1,5 +1,7 @@
 # SKILL.md content-structure best practices (Agent Skills official docs)
 
+> **Historical note:** This research note records architectural comparisons from v0.3.0–v0.4.0 (4 skills, pre-test-suite). See `README.md` and `ARCHITECTURE.md` for current system status.
+
 Distillation of the AGENT-friendly SKILL.md authoring rules from the official Agent Skills docs (agentskills.io). Each practice states the rule, why it matters for agents as the docs explain it, and — clearly marked — the researcher's observation on how our 4 pipeline skills (`src/skills/*/SKILL.md`) stand against it.
 
 ## 1. Frontmatter rules

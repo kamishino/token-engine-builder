@@ -2,7 +2,7 @@
 
 ![check](https://github.com/kamishino/token-engine-builder/actions/workflows/check.yml/badge.svg) ![release](https://img.shields.io/github/v/release/kamishino/token-engine-builder) ![license](https://img.shields.io/github/license/kamishino/token-engine-builder)
 
-Builds and packages self-contained AI agent skills for 3-tier W3C DTCG design tokens. Each skill under `src/skills/<skill-name>/` builds 1:1 into `dist/<skill-name>/` — copy that folder to `~/agents/skills/<skill-name>/` and it runs standalone with plain `node`, no `npm install`.
+Builds and packages self-contained AI agent skills for 3-tier W3C DTCG design tokens. Each skill under `src/skills/<skill-name>/` builds 1:1 into `dist/<skill-name>/` — copy that folder to `~/.agents/skills/<skill-name>/` and it runs standalone with plain `node`, no `npm install`.
 
 ## Skills
 
@@ -55,7 +55,7 @@ Download a per-skill zip (or the full bundle) from the [latest release](https://
 ```bash
 npm install        # everything is a devDependency — Vite inlines it at build time
 npm run check      # typecheck + lint + skill/style lints + build
-npm run build      # → dist/<skill>/ (SKILL.md + scripts/*.mjs + templates/ + assets/)
+npm run build      # → dist/<skill>/ (SKILL.md + scripts/*.mjs + templates/ + assets/ + references/ + agents/)
 npm run deploy     # junction-link dist/* into ~/.agents/skills (rebuilds stale, prunes dead)
 ```
 
@@ -76,7 +76,7 @@ node dist/token-build/scripts/build.mjs --tokens tokens --out build --theme ligh
 npm run deploy   # junction-link dist/* into ~/.agents/skills (rebuilds stale, prunes dead)
 ```
 
-Each `dist/<skill>/` also carries its own `SKILL.md` (agent instructions), `templates/`, and `assets/` — see `ARCHITECTURE.md` §1. Agents working in this repo should start at `AGENTS.md`.
+Each `dist/<skill>/` also carries its own `SKILL.md` (agent instructions), `templates/`, `assets/`, `references/`, and `agents/` — see `ARCHITECTURE.md` §1. Agents working in this repo should start at `AGENTS.md`.
 
 ## Releases
 

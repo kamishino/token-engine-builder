@@ -1,5 +1,7 @@
 # Skills architecture comparison: Matt Pocock vs Stitch, reflected against token-engine-builder
 
+> **Historical note:** This research note records architectural comparisons from v0.3.0–v0.4.0 (4 skills, pre-test-suite). See `README.md` and `ARCHITECTURE.md` for current system status.
+
 Comparison of the two in-repo research notes, reflected against this repo's own architecture doc. Observations only — no action plan.
 
 ## 1. Side-by-side comparison

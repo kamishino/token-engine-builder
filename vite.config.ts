@@ -10,7 +10,7 @@ const distDir = resolve(rootDir, 'dist');
 
 /**
  * Mirrors every `src/skills/<skill>/` package into `dist/<skill>/`:
- * SKILL.md + templates/ + assets/ + examples/ copied verbatim; bundled
+ * SKILL.md + templates/ + assets/ + examples/ + references/ + agents/ copied verbatim; bundled
  * scripts made executable. dist/ is production-readiness: per-skill README.md
  * files stay in src/ only and never ship.
  */
@@ -26,7 +26,7 @@ function syncSkillPackagesPlugin(): Plugin {
 // `npm run build` (scripts/build-all.mjs) builds ONE skill per Vite pass via
 // SKILL_ENTRY=<skill>, so Rollup inlines shared code into that skill's .mjs
 // instead of emitting a dist/_chunks/ shared chunk — each dist/<skill>/ folder
-// must run standalone after being copied to ~/agents/skills/.
+// must run standalone after being copied to ~/.agents/skills/.
 // A bare `vite build` (all entries, shared chunk) still works for quick checks.
 const onlySkill = process.env['SKILL_ENTRY'];
 const allEntries = discoverSkillEntries(skillsDir);
