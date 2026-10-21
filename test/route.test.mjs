@@ -1,0 +1,39 @@
+import assert from 'node:assert/strict';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import test from 'node:test';
+import { runRoute } from '../src/skills/ask-kami/scripts/route.ts';
+import { runAudit } from '../src/skills/token-audit/scripts/audit.ts';
+import { runGenerate } from '../src/skills/token-math/scripts/generate.ts';
+
+const exampleSpec = 'src/skills/token-style/assets/style-spec.example.json';
+
+test('runRoute returns 0 and prints missing spec state on empty directory', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'route-empty-'));
+  try {
+    assert.equal(runRoute(['--root', dir]), 0);
+    assert.equal(runRoute(['--root', dir, '--json']), 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('runRoute detects generated tree and suggests next action', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'route-tokens-'));
+  try {
+    const specPath = join(dir, 'style-spec.json');
+    writeFileSync(specPath, readFileSync(exampleSpec, 'utf8'), 'utf8');
+    const tokensDir = join(dir, 'tokens');
+    assert.equal(runGenerate(['--spec', specPath, '--out', tokensDir]), 0);
+
+    // Audit stamp is missing -> next action is token-audit
+    assert.equal(runRoute(['--root', dir]), 0);
+
+    // Audit passes -> next action is token-build
+    assert.equal(runAudit(['--tokens', tokensDir, '--spec', specPath]), 0);
+    assert.equal(runRoute(['--root', dir]), 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

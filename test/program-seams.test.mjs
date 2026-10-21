@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { getArg, isMainModule } from '../src/shared/paths.ts';
+import { runRoute } from '../src/skills/ask-kami/scripts/route.ts';
 import { runAudit } from '../src/skills/token-audit/scripts/audit.ts';
 import { runBuild } from '../src/skills/token-build/scripts/build.ts';
 import { runFigma } from '../src/skills/token-build/scripts/figma.ts';
@@ -36,4 +37,7 @@ test('runGenerate, runAudit, runBuild, runExtract, runFigma execute through prog
 
   const figmaErrCode = runFigma([]);
   assert.equal(figmaErrCode, 1);
+
+  const routeCode = runRoute(['--help']);
+  assert.equal(routeCode, 0);
 });

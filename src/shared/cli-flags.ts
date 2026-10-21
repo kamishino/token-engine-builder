@@ -17,6 +17,7 @@ export interface ScriptSpec {
 }
 
 export const SCRIPT_KEYS = [
+  'ask-kami/scripts/route.mjs',
   'token-audit/scripts/audit.mjs',
   'token-build/scripts/build.mjs',
   'token-build/scripts/figma.mjs',
@@ -27,6 +28,9 @@ export const SCRIPT_KEYS = [
 export type ScriptKey = (typeof SCRIPT_KEYS)[number];
 
 export const SCRIPTS: Record<ScriptKey, ScriptSpec> = {
+  'ask-kami/scripts/route.mjs': {
+    flags: [{ flag: '--root', arg: '<dir>' }, { flag: '--json' }],
+  },
   'token-audit/scripts/audit.mjs': {
     flags: [
       { flag: '--tokens', arg: '<dir>', required: true },

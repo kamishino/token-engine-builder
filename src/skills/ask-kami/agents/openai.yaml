@@ -1,0 +1,5 @@
+interface:
+  display_name: 'Ask Kami'
+  short_description: 'Detect design-system state and propose the next skill'
+policy:
+  allow_implicit_invocation: false
