@@ -4,7 +4,7 @@
 
 ## WHAT — stack and layout
 
-TypeScript + Vite (SSR/Node lib mode) builder that packages colocated AI agent skills. `src/skills/<skill>/` → `dist/<skill>/`, 1:1. Each skill is standalone after copy to `~/.agents/skills/<skill>/` (node only, no install).
+TypeScript + Vite (SSR/Node lib mode) builder that packages colocated AI agent skills. `src/skills/<skill>/` → `dist/<skill>/`, 1:1. Each skill is standalone after copy into an agent's skills directory (for example `~/.agents/skills/<skill>/`; node only, no install).
 
 - `src/shared/` — bundled engine: `colors.ts` (OKLCH), `scales.ts` (type/spacing), `compiler.ts` (Style Dictionary v5), `paths.ts` (portable resolution), `types.ts` (DTCG types).
 - `src/skills/` — 7 skills across creation, governance, and routing buckets: `ask-kami` (entry router), `token-extract` (alternative entry: code → candidate spec), `token-style` (interview/read-back → `style-spec.json`), `token-math` (`generate.mjs` → `tokens/`), `token-audit` (`audit.mjs` → WCAG+APCA gate), `token-build` (`build.mjs` → CSS + Tailwind v4), and `improve-design-system` (diagnosis → `REPORT_HTML`).
@@ -21,7 +21,7 @@ Tiers: raw values only in `primitive/`; `semantic/` (per-theme, same paths) and 
 npm install        # all deps are devDependencies — Vite inlines them
 npm run check      # typecheck + lint + lint:skills + test + build + lint:css
 npm run build      # → dist/<skill>/ via scripts/build-all.mjs (names as args build one skill)
-npm run deploy     # junction-link dist/* into ~/.agents/skills (rebuilds stale, prunes dead)
+npm run deploy     # link dist/* into ~/.agents/skills (default; --dir <path> for others; rebuilds stale, prunes dead)
 ```
 
 Node `>=22.12`. Pure contracts verified via `npm test` (`node:test` unit tests in `test/`); portable smoke (`lint:css`) proves `dist/*` generation and gold parity.
@@ -32,6 +32,7 @@ Node `>=22.12`. Pure contracts verified via `npm test` (`node:test` unit tests i
 2. `devDependencies` only. Vite inlines everything; `node:*` stays external.
 3. Bundled scripts resolve `templates/` + `assets/` from `import.meta.url` (`paths.ts`), never from `process.cwd()`. User inputs (specs, `--out`) are cwd-relative by design.
 4. Tier discipline: no `#hex`/`oklch()`/px literals outside `primitive/`; semantic + component tokens alias only.
+5. Agent-facing paths: SKILL.md commands use `<skill-root>` (the folder containing the loaded `SKILL.md`) and `<target-skill-root>` for a handoff target. Never hardcode a home-directory install path; the agent resolves the placeholder, the human substitutes their install folder.
 
 ## Working rules
 
@@ -45,7 +46,7 @@ Node `>=22.12`. Pure contracts verified via `npm test` (`node:test` unit tests i
 
 ## Skill lifecycle (adding, renaming, deprecating)
 
-- New skill: folder `src/skills/<slug>/` with `SKILL.md` (`name` = slug, quoted trigger-style `description`, `license`, `compatibility`), `scripts/`, `templates/`, `assets/` as needed. Register it: pipeline order words in description, README pipeline + Use sections, ARCHITECTURE diagram if it moves a seam, changeset file. `lint:skills` enforces frontmatter; `check` proves the bundle.
+- New skill: folder `src/skills/<slug>/` with `SKILL.md` (`name` = slug, quoted trigger-style `description`, `license`, `compatibility`), `scripts/`, `templates/`, `assets/` as needed. Use `<skill-root>`/`<target-skill-root>` in commands; never hardcode an install directory. Register it: pipeline order words in description, README pipeline + Use sections, ARCHITECTURE diagram if it moves a seam, changeset file. `lint:skills` enforces frontmatter; `check` proves the bundle.
 - Rename: move folder + update every reference (grep the old slug, excluding lock/dist) + docs + changeset, one commit, no aliases.
 - Deprecate: keep the folder one release with a `deprecated:` frontmatter note and a changeset, remove next release.
 

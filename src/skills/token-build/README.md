@@ -5,18 +5,20 @@ Final stage of the pipeline: compiles an audited 3-tier token tree into CSS cust
 ## Install
 
 ```bash
-cp -r dist/token-build ~/.agents/skills/token-build
+cp -r dist/token-build <skills-dir>/token-build
 ```
+
+See [Where skills install](../../README.md#where-skills-install) for common `<skills-dir>` locations.
 
 Requires Node `>=22.12`. No install step: Style Dictionary is inlined into `scripts/build.mjs` at build time.
 
 ## Use
 
 ```bash
-node ~/.agents/skills/token-build/scripts/build.mjs --tokens tokens --out build --theme light
-node ~/.agents/skills/token-build/scripts/build.mjs --tokens tokens --out build/dark --theme dark
-node ~/.agents/skills/token-build/scripts/figma.mjs --to-figma tokens --out figma-variables.json
-node ~/.agents/skills/token-build/scripts/figma.mjs --from-figma figma-variables.json --out tokens
+node <skills-dir>/token-build/scripts/build.mjs --tokens tokens --out build --theme light
+node <skills-dir>/token-build/scripts/build.mjs --tokens tokens --out build/dark --theme dark
+node <skills-dir>/token-build/scripts/figma.mjs --to-figma tokens --out figma-variables.json
+node <skills-dir>/token-build/scripts/figma.mjs --from-figma figma-variables.json --out tokens
 ```
 
 Entry condition: `token-audit` exits 0 on this exact tree. Each build emits `tokens.css` (`:root`, OKLCH colors, rem dimensions), `theme.css` (Tailwind v4 `@theme`), `components.md` (component specifications with states and composite patterns), and `DESIGN.md` (Stitch-format guide; `--spec <style-spec.json>` renders frontmatter/prose from the recorded palette). Optional `--visualizer` emits `visualizer.html` for interactive visual inspection in browsers. UI-library profiles (`--profile shadcn|bootstrap|primevue|antd|mui|chakra|radix|fluent`) emit one dual-theme CSS file mapped to that library's variables — see `references/ui-library-profiles.md` for the full library list. Gold standards live in `examples/`. The full procedure is in [SKILL.md](SKILL.md).

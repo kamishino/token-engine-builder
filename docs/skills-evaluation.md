@@ -17,6 +17,8 @@ This document evaluates the seven design-system skills packaged in this reposito
 - **Command verification:** executed full clean repo validation (`npm run check`), verifying `typecheck`, `lint`, `lint:skills`, `test` (141 tests), `build` (7 bundled scripts across 6 skills), and `lint:css` (zero gold drift).
 - **Scope constraint:** this evaluation makes no source-code changes. The command run wrote only to gitignored `dist/`. The actionable execution spec for remediating all findings is catalogued separately in `local://skills-fix-plan.md`.
 
+> **Path policy update (2026-10-21):** the H1/H4 recommendations below are superseded by the install-agnostic `<skill-root>` contract in `AGENTS.md` invariant 5. Keep `~/.agents/skills` only as the deploy default and one example, never as a required path.
+
 ## Executive summary
 
 The audit identified **ten total findings**: four High severity, four Medium severity, and two Low severity.
@@ -47,7 +49,7 @@ The top four architectural issues are:
   - Per-skill READMEs conversely document the deployed absolute pattern: `node ~/agents/skills/<skill>/scripts/<script>.mjs` (e.g. `src/skills/token-math/README.md:16`).
 - **Why it matters:** Agent skills are invoked while the agent is operating within a consumer's project directory. If the agent executes `node ./scripts/generate.mjs`, Node looks for `./scripts/` in the consumer's repository, which does not exist. If the agent changes working directory to the skill folder to satisfy `./scripts`, all input/output flags (`--spec style-spec.json`, `--out tokens`, `--root .`) resolve against the skill package itself instead of the consumer project.
 - **Verification nature:** Static structural fact confirmed by path resolution inspection in `src/shared/paths.ts` (`fromCwd` binds to `process.cwd()`).
-- **Recommended fix:** Standardize all agent instructions in `SKILL.md` and `routing-table.md` to reference the canonical installed script path: `node ~/.agents/skills/<skill>/scripts/<script>.mjs`. Explicitly document the cwd contract once per skill: `"Run commands from the user's project root; ~/.agents/skills/<skill> is this skill's installed directory."`
+- **Recommended fix:** Standardize all agent instructions in `SKILL.md` and `routing-table.md` to reference `node <skill-root>/scripts/<script>.mjs`. Explicitly document the path contract once per skill: "Run commands from the user's project root; `<skill-root>` is the folder containing this `SKILL.md`."
 
 ---
 
@@ -97,7 +99,7 @@ The top four architectural issues are:
   - `README.md:59,76` and `AGENTS.md:24`: deploy commands state `junction-link dist/* into ~/.agents/skills`
 - **Why it matters:** Users following manual install instructions in `README.md` or per-skill `README.md` files copy artifacts into `~/agents/skills/` (a visible folder in `$HOME`). However, the automated deployment toolchain (`npm run deploy` via `scripts/link-skills.mjs`), host agent discoverers (e.g. Claude Code, Codex, Skills Protocol), and standard conventions look in `~/.agents/skills/` (a dotfile directory in `$HOME`). Following the written documentation results in skills failing to load because they sit in the wrong directory.
 - **Verification nature:** Grep and script header comparison against `scripts/link-skills.mjs`.
-- **Recommended fix:** Standardize all documentation, `AGENTS.md`, and per-skill `README.md` files on the canonical path: `~/.agents/skills/<skill>`. Ensure all H1 script path remediations target `~/.agents/skills/`.
+- **Recommended fix:** Do not standardize on one home-directory path. Use `<skill-root>` in `SKILL.md`; document common skills directories and `npm run deploy -- --dir <path>` in `README.md`.
 
 ---
 
