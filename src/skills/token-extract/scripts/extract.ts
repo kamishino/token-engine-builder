@@ -168,8 +168,10 @@ export function composeStyleSpec(evidence: ExtractionEvidence): ComposedSpec | n
       anchor: resolvedAccent,
     });
   }
+  let usedHarmony = false;
   for (const derivedColor of buildHarmony(anchor, 'analogous')) {
     if (palette.length >= 3) break;
+    usedHarmony = true;
     palette.push({
       role: palette.length === 1 ? 'secondary' : 'accent',
       name: uniqueName(derivedColor),
@@ -179,7 +181,7 @@ export function composeStyleSpec(evidence: ExtractionEvidence): ComposedSpec | n
 
   const spec: StyleSpec = {
     name: evidence.projectName,
-    harmony: 'analogous',
+    ...(usedHarmony ? { harmony: 'analogous' as const } : {}),
     palette,
     rampSteps: 11,
     neutralHue: anchor.h,

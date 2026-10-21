@@ -27,6 +27,7 @@ test('composeStyleSpec builds a three-role palette from evidence', () => {
   assert.equal(composed.spec.palette[0].role, 'primary');
   assert.equal(composed.spec.name, 'demo');
   assert.equal(composed.spec.radius.md, 8);
+  assert.equal(composed.spec.harmony, undefined);
 });
 
 test('composeStyleSpec returns null when there is no color evidence', () => {
