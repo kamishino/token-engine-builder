@@ -99,6 +99,22 @@ export function dtcgTokensToFigma(
   const defaultModeId = options.defaultModeId ?? '1:0';
   const variables: FigmaVariable[] = [];
   const losses: FigmaLoss[] = [];
+  const pushVariable = (
+    path: string,
+    resolvedType: FigmaVariable['resolvedType'],
+    description: string,
+    value: unknown,
+  ): void => {
+    variables.push({
+      id: `VariableID:${variables.length + 1}`,
+      name: path,
+      key: path.replaceAll('/', '_'),
+      variableCollectionId: collectionId,
+      resolvedType,
+      description,
+      valuesByMode: { [defaultModeId]: value },
+    });
+  };
   const visitLeaf = (path: string, rec: JsonObject): void => {
     const val = rec['$value'];
     const type = (rec['$type'] as string) || '';
@@ -106,15 +122,7 @@ export function dtcgTokensToFigma(
 
     if (typeof val === 'string' && val.startsWith('{')) {
       losses.push({ path, kind: 'alias', detail: `exported as literal STRING: ${val}` });
-      variables.push({
-        id: `VariableID:${variables.length + 1}`,
-        name: path,
-        key: path.replaceAll('/', '_'),
-        variableCollectionId: collectionId,
-        resolvedType: 'STRING',
-        description: `Alias to ${val}`,
-        valuesByMode: { [defaultModeId]: val },
-      });
+      pushVariable(path, 'STRING', `Alias to ${val}`, val);
       return;
     }
 
@@ -129,15 +137,7 @@ export function dtcgTokensToFigma(
       if (rounded) {
         losses.push({ path, kind: 'precision', detail: 'RGBA rounded to 4 decimal places' });
       }
-      variables.push({
-        id: `VariableID:${variables.length + 1}`,
-        name: path,
-        key: path.replaceAll('/', '_'),
-        variableCollectionId: collectionId,
-        resolvedType: 'COLOR',
-        description: desc,
-        valuesByMode: { [defaultModeId]: rgb },
-      });
+      pushVariable(path, 'COLOR', desc, rgb);
     } else if (type === 'dimension' || typeof val === 'number' || hasNumericValue(val)) {
       let num = typeof val === 'number' ? val : 0;
       if (hasNumericValue(val)) {
@@ -164,25 +164,9 @@ export function dtcgTokensToFigma(
           num = 0;
         }
       }
-      variables.push({
-        id: `VariableID:${variables.length + 1}`,
-        name: path,
-        key: path.replaceAll('/', '_'),
-        variableCollectionId: collectionId,
-        resolvedType: 'FLOAT',
-        description: desc,
-        valuesByMode: { [defaultModeId]: num },
-      });
+      pushVariable(path, 'FLOAT', desc, num);
     } else {
-      variables.push({
-        id: `VariableID:${variables.length + 1}`,
-        name: path,
-        key: path.replaceAll('/', '_'),
-        variableCollectionId: collectionId,
-        resolvedType: 'STRING',
-        description: desc,
-        valuesByMode: { [defaultModeId]: String(val) },
-      });
+      pushVariable(path, 'STRING', desc, String(val));
     }
   };
 

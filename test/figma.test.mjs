@@ -149,3 +149,20 @@ test('fromFigmaFile reports a payload loss for malformed meta', () => {
   assert.equal(parsed.losses[0]?.kind, 'payload');
   assert.equal(parsed.losses[0]?.path, 'meta.variables');
 });
+
+test('dtcgTokensToFigma gives every variable a stable id and slash-free key', () => {
+  const tree = {
+    a: { b: { $value: '#112233', $type: 'color' } },
+    c: { d: { $value: '{a.b}', $type: 'color' } },
+  };
+  const { variables } = dtcgTokensToFigma([tree]);
+  assert.deepEqual(
+    variables.map((variable) => variable.id),
+    ['VariableID:1', 'VariableID:2'],
+  );
+  assert.deepEqual(
+    variables.map((variable) => variable.key),
+    ['a_b', 'c_d'],
+  );
+  assert.ok(variables.every((variable) => !variable.key.includes('/')));
+});
