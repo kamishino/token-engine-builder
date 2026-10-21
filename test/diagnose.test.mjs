@@ -18,8 +18,35 @@ test('diagnoseDesignSystem reports spec-missing and routing nextActions on empty
     const diagnosis = diagnoseDesignSystem(dir, paths);
     assert.equal(diagnosis.state.spec.status, 'missing');
     assert.ok(diagnosis.findings.some((f) => f.id === 'spec-missing'));
-    assert.ok(diagnosis.nextActions.some((a) => a.skill === 'token-extract'));
-    assert.ok(diagnosis.nextActions.some((a) => a.skill === 'token-style'));
+    const extractAction = diagnosis.nextActions.find((a) => a.skill === 'token-extract');
+    assert.ok(extractAction !== undefined);
+    assert.ok(extractAction.command.includes('extract.mjs'));
+    const styleAction = diagnosis.nextActions.find((a) => a.skill === 'token-style');
+    assert.ok(styleAction !== undefined);
+    assert.equal(styleAction.command, undefined);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+test('diagnoseDesignSystem reports spec-invalid with scriptless token-style nextAction', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'diag-invalid-'));
+  try {
+    const specPath = join(dir, 'style-spec.json');
+    const specData = JSON.parse(readFileSync(exampleSpec, 'utf8'));
+    specData.palette.push({
+      role: 'primary',
+      name: 'crimson',
+      anchor: { l: 0.5, c: 0.2, h: 25, alpha: 1 },
+    });
+    writeFileSync(specPath, JSON.stringify(specData, null, 2), 'utf8');
+
+    const paths = resolveSystemPaths(dir, { spec: specPath });
+    const diagnosis = diagnoseDesignSystem(dir, paths);
+    assert.equal(diagnosis.state.spec.status, 'invalid');
+    assert.ok(diagnosis.findings.some((f) => f.id === 'spec-invalid'));
+    const styleAction = diagnosis.nextActions.find((a) => a.skill === 'token-style');
+    assert.ok(styleAction !== undefined);
+    assert.equal(styleAction.command, undefined);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

@@ -2,11 +2,11 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { auditTokens } from './audit-report.js';
 import { verifyGeneratedFiles } from './compiler.js';
+import type { SpecBinding } from './guard.js';
 import { profileFileName, UI_PROFILE_IDS } from './profile-registry.js';
 import { AUDIT_PAIRS } from './roles.js';
 import { inspectSystem, type SystemPaths, type SystemState } from './system-state.js';
 import { findTokenFiles, semanticDir } from './tokens.js';
-import type { SpecBinding } from './guard.js';
 import type { ContrastResult } from './types.js';
 
 export interface Finding {
@@ -26,7 +26,7 @@ export interface NextAction {
     | 'token-audit'
     | 'token-build'
     | 'improve-design-system';
-  command: string;
+  command?: string;
   reason: string;
 }
 
@@ -349,14 +349,12 @@ export function diagnoseDesignSystem(root: string, paths: SystemPaths): Diagnosi
       },
       {
         skill: 'token-style',
-        command: 'node ./scripts/generate.mjs --spec style-spec.json',
         reason: 'greenfield project: interview for brand personality and choose palette',
       },
     );
   } else if (state.spec.status === 'invalid') {
     nextActions.push({
       skill: 'token-style',
-      command: 'node ./scripts/generate.mjs --spec style-spec.json',
       reason: `style-spec.json is invalid: ${state.spec.error ?? 'validation error'}`,
     });
   } else if (state.tokens.status === 'missing' || state.tokens.themes.length === 0) {

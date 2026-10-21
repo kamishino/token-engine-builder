@@ -47,7 +47,8 @@ export function runRoute(argv = process.argv.slice(2)): number {
   }
 
   for (const action of diagnosis.nextActions.slice(0, 3)) {
-    console.log(`next: ${action.skill} — ${action.command}`);
+    const suffix = action.command === undefined ? '' : ` — ${action.command}`;
+    console.log(`next: ${action.skill}${suffix}`);
     console.log(`why:  ${action.reason}`);
   }
   return 0;

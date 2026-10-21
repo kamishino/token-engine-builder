@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import console from 'node:console';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -12,7 +13,18 @@ const exampleSpec = 'src/skills/token-style/assets/style-spec.example.json';
 test('runRoute returns 0 and prints missing spec state on empty directory', () => {
   const dir = mkdtempSync(join(tmpdir(), 'route-empty-'));
   try {
-    assert.equal(runRoute(['--root', dir]), 0);
+    let output = '';
+    const originalLog = console.log;
+    console.log = (msg) => {
+      output += `${msg}\n`;
+    };
+    try {
+      assert.equal(runRoute(['--root', dir]), 0);
+    } finally {
+      console.log = originalLog;
+    }
+    assert.match(output, /^next: token-style$/m);
+    assert.doesNotMatch(output, /token-style — .*generate\.mjs/);
     assert.equal(runRoute(['--root', dir, '--json']), 0);
   } finally {
     rmSync(dir, { recursive: true, force: true });

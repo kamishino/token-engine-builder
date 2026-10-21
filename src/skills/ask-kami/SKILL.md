@@ -29,7 +29,7 @@ node ./scripts/route.mjs [--root <dir>] [--json]
 
 2. **Propose next action**: read the `next:` and `why:` recommendations from the output:
    - When `style-spec.json` is missing, the router proposes both `token-extract` (for existing projects with CSS/code colors) and `token-style` (for greenfield projects). Ask the user which path fits their project.
-   - For all other states, present the single recommended skill, exact copy-pasteable command, and reason.
+   - For all other states, present the single recommended skill, exact copy-pasteable command when the skill ships a script (`token-style` has none), and reason.
    - Do not execute the next skill in this turn — hand off cleanly.
    - Done when: the user has the concrete next skill command and knows why it is needed.
 
