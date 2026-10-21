@@ -21,7 +21,8 @@
     "lint:skills": "node --experimental-strip-types scripts/lint-skills.mjs",
     "format": "prettier --check .",
     "format:write": "prettier --write .",
-    "check": "npm run typecheck && npm run lint && npm run lint:skills && npm run test && npm run build && npm run lint:css"
+    "check": "npm run typecheck && npm run lint && npm run lint:skills && npm run test && npm run build && npm run lint:css",
+    "smoke": "npm run build && node scripts/smoke-all.mjs"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.3",
@@ -30,6 +31,7 @@
     "@types/node": "^22.0.0",
     "colorjs.io": "^0.7.1",
     "eslint": "^10.13.0",
+    "playwright": "^1.64.1",
     "postcss-scss": "^4.0.9",
     "prettier": "^3.9.10",
     "style-dictionary": "^5.7.0",
