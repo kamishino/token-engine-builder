@@ -252,11 +252,11 @@ export function parseDesignFrontmatter(text: string, rel: string): DesignFrontma
   const fm = block[1];
   const pick = (pattern: RegExp): string | undefined => pattern.exec(fm)?.[1];
   const colorOf = (key: string): string | undefined =>
-    pick(new RegExp(`"?${key}"?\\s*:\\s*"((?:#[0-9a-fA-F]{3,8})|oklch\\([^)]*\\))"`));
+    pick(new RegExp(`"?${key}"?\\s*:\\s*["']((?:#[0-9a-fA-F]{3,8})|oklch\\([^)]*\\))["']`));
   const rounded: DesignFrontmatter['rounded'] = (() => {
-    const sm = pick(/"?sm"?\s*:\s*"([0-9.]+)px"/);
-    const md = pick(/"?md"?\s*:\s*"([0-9.]+)px"/);
-    const lg = pick(/"?lg"?\s*:\s*"([0-9.]+)px"/);
+    const sm = pick(/"?sm"?\s*:\s*["']([0-9.]+)px["']/);
+    const md = pick(/"?md"?\s*:\s*["']([0-9.]+)px["']/);
+    const lg = pick(/"?lg"?\s*:\s*["']([0-9.]+)px["']/);
     return sm !== undefined && md !== undefined && lg !== undefined
       ? { sm: Number(sm), md: Number(md), lg: Number(lg) }
       : undefined;
@@ -264,9 +264,9 @@ export function parseDesignFrontmatter(text: string, rel: string): DesignFrontma
   const componentsRaw = pick(/components:\s*\[([^\]]*)\]/);
   const primary = colorOf('primary');
   const secondary = colorOf('secondary');
-  const fontSans = pick(/"?fontSans"?\s*:\s*"([^"]+)"/);
-  const scaleRaw = Number(pick(/"?scale"?\s*:\s*"?([0-9.]+)/)) || undefined;
-  const density = pick(/"?density"?\s*:\s*"(\w+)"/);
+  const fontSans = pick(/"?fontSans"?\s*:\s*["']([^"']+)["']/);
+  const scaleRaw = Number(pick(/"?scale"?\s*:\s*["']?([0-9.]+)["']?/)) || undefined;
+  const density = pick(/"?density"?\s*:\s*["'](\w+)["']/);
   return {
     ...(primary === undefined ? {} : { primary }),
     ...(secondary === undefined ? {} : { secondary }),

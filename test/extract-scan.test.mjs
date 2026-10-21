@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import test from 'node:test';
@@ -31,14 +31,31 @@ test('scanFile reads Tailwind v3 and v4 palettes into roles', () => {
   assert.ok(v4.tailwindColors.has('secondary'));
 });
 
-test('parseDesignFrontmatter reads the machine-readable contract', () => {
-  const parsed = parseDesignFrontmatter(
+test('parseDesignFrontmatter reads the machine-readable contract with double or single quotes', () => {
+  const doubleQuoted = parseDesignFrontmatter(
     '---\nprimary: "#112233"\nfontSans: "Inter"\nrounded:\n  md: "8px"\ncomponents: [button, card]\n---\n# prose',
     'DESIGN.md',
   );
-  assert.equal(parsed.primary, '#112233');
-  assert.equal(parsed.fontSans, 'Inter');
-  assert.deepEqual(parsed.components, ['button', 'card']);
+  assert.equal(doubleQuoted.primary, '#112233');
+  assert.equal(doubleQuoted.fontSans, 'Inter');
+  assert.deepEqual(doubleQuoted.components, ['button', 'card']);
+
+  const singleQuoted = parseDesignFrontmatter(
+    "---\nprimary: '#112233'\nsecondary: '#445566'\nfontSans: 'Inter'\nrounded:\n  md: '8px'\n  sm: '4px'\n  lg: '16px'\ndensity: 'compact'\ncomponents: [button, card]\n---\n# prose",
+    'DESIGN.md',
+  );
+  assert.equal(singleQuoted.primary, '#112233');
+  assert.equal(singleQuoted.secondary, '#445566');
+  assert.equal(singleQuoted.fontSans, 'Inter');
+  assert.deepEqual(singleQuoted.rounded, { sm: 4, md: 8, lg: 16 });
+  assert.equal(singleQuoted.density, 'compact');
+
+  const fixture = readFileSync('src/skills/token-extract/examples/DESIGN.md', 'utf8');
+  const parsedFixture = parseDesignFrontmatter(fixture, 'DESIGN.md');
+  assert.equal(parsedFixture.primary, '#b3541e');
+  assert.equal(parsedFixture.secondary, '#2e6f6a');
+  assert.equal(parsedFixture.fontSans, 'Fraunces, Georgia, serif');
+  assert.equal(parsedFixture.scale, 1.333);
 });
 
 test('scanTextColors captures named and bare colors plus typography', () => {
