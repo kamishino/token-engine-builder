@@ -24,6 +24,12 @@ test('planTokenFiles covers primitives and every semantic theme in write order',
   assert.equal(color.color.cerulean['500'].$type, 'color');
   assert.equal(color.color.neutral['500'].$type, 'color');
   assert.ok(color.color.feedback.success);
+  assert.equal(color.color.cerulean['500'].$extensions['token-engine'].role, 'primary');
+  assert.equal(color.color.teal['500'].$extensions['token-engine'].role, 'secondary');
+  assert.equal(color.color.sky['500'].$extensions['token-engine'].role, 'accent');
+  assert.equal(color.color.cerulean['700'].$extensions, undefined);
+  assert.equal(color.color.neutral['500'].$extensions, undefined);
+  assert.equal(color.color.feedback.success['500'].$extensions, undefined);
   const typography = files[4].data;
   assert.equal(typography['font-family'].sans.$value, spec.typography.fontFamily);
   assert.ok(typography['font-size'].base);

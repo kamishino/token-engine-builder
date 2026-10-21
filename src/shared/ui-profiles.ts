@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { formatOklch, oklchToHex, parseToOklch } from './colors.js';
 import { loadThemeTokens, ResolvedDictionary, tokenValue, type ResolvedToken } from './compiler.js';
 import { profileFileName, type UiProfileId } from './profile-registry.js';
-import { feedbackBgPath, feedbackTextPath, SEMANTIC_ROLE_PATHS } from './roles.js';
+import { feedbackBgPath, feedbackTextPath, paletteRoleOf, SEMANTIC_ROLE_PATHS } from './roles.js';
 
 interface ProfileMapping {
   variable: string;
@@ -180,9 +180,7 @@ function renderRadixProfile(
     return points;
   };
 
-  const primaryToken = light.tokens.find(
-    (token) => (token.$description ?? '').startsWith('primary —') && token.path[2] === '500',
-  );
+  const primaryToken = light.tokens.find((token) => paletteRoleOf(token) === 'primary');
   if (primaryToken === undefined) throw new Error('profile radix: primary ramp not found');
   const primarySlug = primaryToken.path[1] as string;
 
@@ -254,9 +252,7 @@ function renderMuiProfile(
 ): string {
   const muiTheme = (theme: string): Record<string, unknown> => {
     const dict = theme === 'light' ? light : dark;
-    const secondary = dict.tokens.find(
-      (token) => (token.$description ?? '').startsWith('secondary —') && token.path[2] === '500',
-    );
+    const secondary = dict.tokens.find((token) => paletteRoleOf(token) === 'secondary');
     return {
       palette: {
         mode: theme,

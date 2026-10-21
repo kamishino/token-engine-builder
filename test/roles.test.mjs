@@ -5,8 +5,11 @@ import {
   FEEDBACK_ROLES,
   feedbackBgPath,
   feedbackTextPath,
+  paletteRoleExtensions,
+  paletteRoleOf,
   SEMANTIC_COLOR_ROLES,
   SEMANTIC_ROLE_PATHS,
+  TOKEN_ENGINE_EXTENSION,
 } from '../src/shared/roles.ts';
 
 test('AUDIT_PAIRS contains exactly 42 canonical pairs', () => {
@@ -44,4 +47,18 @@ test('SEMANTIC_COLOR_ROLES covers every semantic path exactly once', () => {
     assert.equal(role.path, `semantic.color.${role.keys.join('.')}`);
   }
   assert.deepEqual(paths, Object.values(SEMANTIC_ROLE_PATHS).sort());
+});
+
+test('paletteRoleOf reads the structured role marker', () => {
+  const anchor = { $extensions: { [TOKEN_ENGINE_EXTENSION]: { role: 'primary' } } };
+  assert.equal(paletteRoleOf(anchor), 'primary');
+  assert.equal(paletteRoleOf({}), undefined);
+  assert.equal(
+    paletteRoleOf({ $extensions: { [TOKEN_ENGINE_EXTENSION]: { role: 7 } } }),
+    undefined,
+  );
+  assert.equal(paletteRoleOf({ $extensions: { [TOKEN_ENGINE_EXTENSION]: null } }), undefined);
+  assert.deepEqual(paletteRoleExtensions('secondary'), {
+    [TOKEN_ENGINE_EXTENSION]: { role: 'secondary' },
+  });
 });

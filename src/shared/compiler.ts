@@ -32,6 +32,7 @@ export interface ResolvedToken {
   name: string;
   path: string[];
   original?: { $value?: unknown; value?: unknown };
+  $extensions?: Record<string, unknown>;
 }
 type SdToken = ResolvedToken;
 

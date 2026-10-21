@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { GOLD_PAIRS } from '../scripts/sample-css.mjs';
+import { oklchToHex, parseToOklch } from '../src/shared/colors.ts';
 import { loadThemeTokens, ResolvedDictionary } from '../src/shared/compiler.ts';
 import { profileFileName, UI_PROFILE_IDS } from '../src/shared/profile-registry.ts';
 import { SEMANTIC_ROLE_PATHS } from '../src/shared/roles.ts';
@@ -147,4 +148,64 @@ test('every profile id has a filename and a gold example', () => {
   }
   assert.equal(GOLD_PAIRS.length, 4 + UI_PROFILE_IDS.length);
   assert.ok(GOLD_PAIRS.some(([built]) => built === `build/profiles/${profileFileName('radix')}`));
+});
+
+const roleAnchor = (role) => ({ $extensions: { 'token-engine': { role } } });
+
+function renderDict(entries) {
+  return new ResolvedDictionary(
+    entries.map(([path, value, extra]) => ({
+      name: path,
+      path: path.split('.'),
+      $value: value,
+      ...extra,
+    })),
+  );
+}
+
+test('renderProfile resolves MUI secondary from the role marker, not the description', () => {
+  const semantic = [
+    ['semantic.color.action.primary', '#000001'],
+    ['semantic.color.action.primary-hover', '#000002'],
+    ['semantic.color.action.primary-text', '#ffffff'],
+    ['semantic.color.feedback.danger.text', '#aa0000'],
+    ['semantic.color.feedback.warning.text', '#aa8800'],
+    ['semantic.color.feedback.success.text', '#00aa00'],
+    ['semantic.color.feedback.info.text', '#0000aa'],
+    ['semantic.color.text.primary', '#111111'],
+    ['semantic.color.text.secondary', '#222222'],
+    ['semantic.color.text.disabled', '#333333'],
+    ['semantic.color.bg.canvas', '#ffffff'],
+    ['semantic.color.bg.surface', '#f8f9fa'],
+    ['semantic.color.border.default', '#dddddd'],
+    ['font-family.sans', 'Inter'],
+    ['font-size.base', '1rem'],
+    ['radius.md', '0.5rem'],
+  ];
+  const dict = renderDict([
+    ...semantic,
+    ['color.alpha.500', '#112233', roleAnchor('primary')],
+    ['color.beta.500', '#445566', roleAnchor('secondary')],
+  ]);
+  const { content } = renderProfile('mui', dict, dict);
+  const parsed = JSON.parse(content);
+  assert.equal(parsed.light.palette.secondary.main, oklchToHex(parseToOklch('#445566')));
+  assert.notEqual(parsed.light.palette.secondary.main, oklchToHex(parseToOklch('#000002')));
+});
+
+test('renderProfile resolves the radix primary ramp from the role marker', () => {
+  const dict = renderDict([
+    ['color.alpha.300', '#99aabb', roleAnchor('primary')],
+    ['color.alpha.500', '#556677'],
+    ['color.alpha.700', '#112233'],
+    ['color.neutral.300', '#dddddd'],
+    ['color.neutral.500', '#888888'],
+    ['color.neutral.700', '#333333'],
+    ['semantic.color.action.primary-text', '#ffffff'],
+  ]);
+  const { content } = renderProfile('radix', dict, dict);
+  assert.ok(content.includes(':root {'));
+  assert.ok(content.includes('.dark {'));
+  assert.ok(content.includes('--accent-1:'));
+  assert.ok(content.includes('--gray-1:'));
 });

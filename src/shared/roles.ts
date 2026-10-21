@@ -7,6 +7,23 @@ export interface AuditPair {
 export const FEEDBACK_ROLES = ['success', 'warning', 'danger', 'info', 'help'] as const;
 export type FeedbackRole = (typeof FEEDBACK_ROLES)[number];
 
+export const TOKEN_ENGINE_EXTENSION = 'token-engine';
+
+/** `$extensions` payload carried by a palette ramp's anchor token (step 500). */
+export function paletteRoleExtensions(role: string): Record<string, unknown> {
+  return { [TOKEN_ENGINE_EXTENSION]: { role } };
+}
+
+/** Read the palette role stamped on a ramp anchor; malformed extensions are ignored. */
+export function paletteRoleOf(token: {
+  $extensions?: Record<string, unknown>;
+}): string | undefined {
+  const extension = token.$extensions?.[TOKEN_ENGINE_EXTENSION];
+  if (extension === null || typeof extension !== 'object') return undefined;
+  const role = (extension as { role?: unknown }).role;
+  return typeof role === 'string' ? role : undefined;
+}
+
 export const SEMANTIC_ROLE_PATHS = {
   BG_CANVAS: 'semantic.color.bg.canvas',
   BG_SURFACE: 'semantic.color.bg.surface',

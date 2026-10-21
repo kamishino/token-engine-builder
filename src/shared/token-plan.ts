@@ -1,4 +1,5 @@
 import { buildFeedbackColors, buildRamp, dtcgColorValue } from './colors.js';
+import { paletteRoleExtensions } from './roles.js';
 import {
   baselinePx,
   pairedLineHeights,
@@ -17,13 +18,16 @@ export interface PlannedTokenFile {
   note?: string;
 }
 
-function rampGroup(ramp: ColorRamp, description?: string): TokenGroup {
+function rampGroup(ramp: ColorRamp, description?: string, role?: string): TokenGroup {
   const group: TokenGroup = {};
   for (const [step, color] of Object.entries(ramp)) {
     group[step] = {
       $value: dtcgColorValue(color),
       $type: 'color',
       ...(description === undefined ? {} : { $description: description }),
+      ...(role === undefined || Number(step) !== 500
+        ? {}
+        : { $extensions: paletteRoleExtensions(role) }),
     };
   }
   return group;
@@ -46,7 +50,11 @@ export function planTokenFiles(spec: StyleSpec): PlannedTokenFile[] {
         ...Object.fromEntries(
           spec.palette.map((entry) => [
             entry.name,
-            rampGroup(buildRamp(entry.anchor, stepCount), `${entry.role} — ${entry.name}`),
+            rampGroup(
+              buildRamp(entry.anchor, stepCount),
+              `${entry.role} — ${entry.name}`,
+              entry.role,
+            ),
           ]),
         ),
         neutral: rampGroup(
