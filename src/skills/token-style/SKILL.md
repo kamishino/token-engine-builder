@@ -29,6 +29,10 @@ The leading word is **palette**: 3–5 named colors the whole system derives fro
    - Done when: `style-spec.json` parses, palette has exactly one primary, and every anchor is `{ l: 0–1, c: ≥0, h: 0–360 }`.
      Run the next command from the user's project root. `<token-math-root>` is the `token-math` skill's installed folder; resolve it with your skill loader, or invoke the `token-math` skill by name.
 
+**Before running a command:** state the resolved value of `<token-math-root>` in your reply, then substitute it. If you cannot resolve it, stop and ask the user for the `token-math` skill folder. Never run a command containing literal `<` or `>`.
+
+Example: if `token-math/SKILL.md` is at `~/.claude/skills/token-math/SKILL.md`, then `<token-math-root>` is `~/.claude/skills/token-math`.
+
 6. **Hand off**: tell the user the next command is skill `token-math` (`node <token-math-root>/scripts/generate.mjs --spec style-spec.json --out tokens`).
    - Done when: the user sees the palette with names and OKLCH anchors, plus the hand-off command.
 

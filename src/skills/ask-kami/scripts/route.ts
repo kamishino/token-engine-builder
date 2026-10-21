@@ -59,13 +59,21 @@ export function runRoute(argv = process.argv.slice(2)): number {
     return 0;
   }
 
+  let unresolved = false;
   for (const action of diagnosis.nextActions.slice(0, 3)) {
-    const suffix =
+    const command =
       action.command === undefined
-        ? ''
-        : ` — ${resolveSkillPathPlaceholders(action.command, import.meta.url)}`;
+        ? undefined
+        : resolveSkillPathPlaceholders(action.command, import.meta.url);
+    unresolved ||= command?.includes('-root>') ?? false;
+    const suffix = command === undefined ? '' : ` — ${command}`;
     console.log(`next: ${action.skill}${suffix}`);
     console.log(`why:  ${action.reason}`);
+  }
+  if (unresolved) {
+    console.log(
+      'note: replace any <...-root> placeholder in the command with the installed folder of that skill before running it.',
+    );
   }
   return 0;
 }

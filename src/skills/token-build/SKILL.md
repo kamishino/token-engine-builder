@@ -14,6 +14,10 @@ Entry condition: `token-audit` exits 0 on this exact tree — enforced technical
 
 Run commands from the user's project root. `<skill-root>` is the absolute path to this skill's installed folder (the folder containing this `SKILL.md`); resolve it with your skill loader or by locating this file.
 
+**Before running a command:** state the resolved value of `<skill-root>` (and any other `<...-root>` placeholder in the command) in your reply, then substitute it. If you cannot resolve it, stop and ask the user for the skill folder. Never run a command containing literal `<` or `>`.
+
+Example: if this file is at `~/.claude/skills/token-build/SKILL.md`, then `<skill-root>` is `~/.claude/skills/token-build`.
+
 1. **Build one theme at a time** (all semantic themes share paths; any `semantic/<name>.tokens.json` is buildable):
 
    ```bash

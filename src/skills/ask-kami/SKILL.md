@@ -15,6 +15,10 @@ Entry point to the token pipeline: inspects the current workspace, classifies th
 
 Run commands from the user's project root. `<skill-root>` is the absolute path to this skill's installed folder (the folder containing this `SKILL.md`); resolve it with your skill loader or by locating this file.
 
+**Before running a command:** state the resolved value of `<skill-root>` (and any other `<...-root>` placeholder in the command) in your reply, then substitute it. If you cannot resolve it, stop and ask the user for the skill folder. Never run a command containing literal `<` or `>`.
+
+Example: if this file is at `~/.claude/skills/ask-kami/SKILL.md`, then `<skill-root>` is `~/.claude/skills/ask-kami`.
+
 ```bash
 node <skill-root>/scripts/route.mjs [--root <dir>] [--json]
 ```

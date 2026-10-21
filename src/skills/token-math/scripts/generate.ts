@@ -122,6 +122,11 @@ export function runGenerate(argv = process.argv.slice(2)): number {
     import.meta.url,
   );
   console.log(`next: ${auditCommand}`);
+  if (auditCommand.includes('-root>')) {
+    console.log(
+      'note: install token-audit or replace <token-audit-root> with its installed folder.',
+    );
+  }
   return 0;
 }
 

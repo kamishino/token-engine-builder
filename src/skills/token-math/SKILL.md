@@ -14,6 +14,10 @@ Deterministic: same spec in, same tokens out. The script does the math (OKLCH ra
 
 Run commands from the user's project root. `<skill-root>` is this skill's installed folder (the folder containing this `SKILL.md`); `<token-audit-root>` is the `token-audit` skill's installed folder. Resolve both with your skill loader, or invoke the target skill by name.
 
+**Before running a command:** state the resolved value of `<skill-root>` (and any other `<...-root>` placeholder in the command) in your reply, then substitute it. If you cannot resolve it, stop and ask the user for the skill folder. Never run a command containing literal `<` or `>`.
+
+Example: if this file is at `~/.claude/skills/token-math/SKILL.md`, then `<skill-root>` is `~/.claude/skills/token-math`.
+
 1. **Generate**:
 
    ```bash

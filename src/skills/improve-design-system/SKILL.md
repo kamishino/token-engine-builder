@@ -15,6 +15,10 @@ Evaluates a project's design system health (spec validity, token tier coverage, 
 
 Run commands from the user's project root. `<skill-root>` is the absolute path to this skill's installed folder (the folder containing this `SKILL.md`); resolve it with your skill loader or by locating this file.
 
+**Before running a command:** state the resolved value of `<skill-root>` (and any other `<...-root>` placeholder in the command) in your reply, then substitute it. If you cannot resolve it, stop and ask the user for the skill folder. Never run a command containing literal `<` or `>`.
+
+Example: if this file is at `~/.claude/skills/improve-design-system/SKILL.md`, then `<skill-root>` is `~/.claude/skills/improve-design-system`.
+
 ```bash
 node <skill-root>/scripts/diagnose.mjs [--root <dir>] [--spec <style-spec.json>] [--tokens <dir>] [--build <dir>]
 ```
