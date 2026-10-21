@@ -2,10 +2,15 @@
  * build — compile a 3-tier token tree to CSS custom properties + Tailwind v4 `@theme`
  * via Style Dictionary v5 (programmatic, bundled).
  */
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { usageText } from '../../../shared/cli-flags.js';
-import { ARTIFACT_NAMES, buildTokens, guideFromSpec } from '../../../shared/compiler.js';
+import {
+  ARTIFACT_NAMES,
+  buildTokens,
+  guideFromSpec,
+  verifyGeneratedFiles,
+} from '../../../shared/compiler.js';
 import {
   assertSafeOutDir,
   checkAuditStamp,
@@ -183,6 +188,24 @@ export async function runBuild(argv = process.argv.slice(2)): Promise<number> {
         `build failed: Style Dictionary produced no tokens for ${published.missing.join(', ')}`,
       );
       return 1;
+    }
+    if (profile === undefined) {
+      const css = readFileSync(join(outDir, 'tokens.css'), 'utf8');
+      const themeCss = readFileSync(join(outDir, 'theme.css'), 'utf8');
+      const designPath = join(outDir, 'DESIGN.md');
+      const design = existsSync(designPath) ? readFileSync(designPath, 'utf8') : undefined;
+      const problems = verifyGeneratedFiles({
+        css,
+        theme: themeCss,
+        ...(design === undefined ? {} : { design }),
+        ...(guide?.primaryHex === undefined ? {} : { expectedPrimaryHex: guide.primaryHex }),
+      });
+      if (problems.length > 0) {
+        for (const problem of problems) {
+          console.error(`build failed: ${problem}`);
+        }
+        return 1;
+      }
     }
     console.log(
       profile === undefined

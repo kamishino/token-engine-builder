@@ -13,7 +13,7 @@
 import { existsSync } from 'node:fs';
 import StyleDictionary from 'style-dictionary';
 import { fileHeader, formattedVariables, usesReferences } from 'style-dictionary/utils';
-import { dtcgToOklch, formatOklch, oklchToHex, parseToOklch } from './colors.js';
+import { clampToSrgb, dtcgToOklch, formatOklch, oklchToHex, parseToOklch } from './colors.js';
 import { SEMANTIC_ROLE_PATHS } from './roles.js';
 import {
   loadTokenSources,
@@ -554,11 +554,32 @@ export function guideFromSpec(spec: StyleSpec): NonNullable<BuildTokensOptions['
     ...(spec.guide?.overview === undefined ? {} : { overview: spec.guide.overview }),
     ...(spec.guide?.dos === undefined ? {} : { dos: spec.guide.dos }),
     ...(spec.guide?.donts === undefined ? {} : { donts: spec.guide.donts }),
-    ...(primary === undefined ? {} : { primaryHex: oklchToHex(primary.anchor) }),
-    ...(secondary === undefined ? {} : { secondaryHex: oklchToHex(secondary.anchor) }),
+    ...(primary === undefined ? {} : { primaryHex: oklchToHex(clampToSrgb(primary.anchor)) }),
+    ...(secondary === undefined ? {} : { secondaryHex: oklchToHex(clampToSrgb(secondary.anchor)) }),
     scale: spec.typography.ratio,
     density: spec.density,
   };
+}
+
+export function verifyGeneratedFiles(input: {
+  css: string;
+  theme: string;
+  design?: string | undefined;
+  expectedPrimaryHex?: string | undefined;
+}): string[] {
+  const problems: string[] = [];
+  if (!input.css.includes('oklch(')) problems.push('tokens.css carries no oklch() values');
+  if (!/@theme\b/.test(input.theme)) problems.push('theme.css has no @theme block');
+  if (!/color-/.test(input.theme)) problems.push('theme.css has no --color-* entries');
+  if (input.design !== undefined && input.expectedPrimaryHex !== undefined) {
+    const match = /^ {2}primary: "([^"]+)"/m.exec(input.design);
+    if (!match || match[1]?.toLowerCase() !== input.expectedPrimaryHex.toLowerCase()) {
+      problems.push(
+        `DESIGN.md primary ${match?.[1] ?? 'missing'} ≠ spec anchor ${input.expectedPrimaryHex}`,
+      );
+    }
+  }
+  return problems;
 }
 
 export async function buildTokens(options: BuildTokensOptions): Promise<CompiledOutputs> {

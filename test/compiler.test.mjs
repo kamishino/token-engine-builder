@@ -3,7 +3,12 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { buildTokens, loadThemeTokens, ResolvedDictionary } from '../src/shared/compiler.ts';
+import {
+  buildTokens,
+  loadThemeTokens,
+  ResolvedDictionary,
+  verifyGeneratedFiles,
+} from '../src/shared/compiler.ts';
 import { runGenerate } from '../src/skills/token-math/scripts/generate.ts';
 
 test('buildTokens compiles DTCG tokens to CSS, Tailwind @theme, docs, and visualizer', async () => {
@@ -117,4 +122,27 @@ test('loadThemeTokens fails closed on a missing theme file', async () => {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('verifyGeneratedFiles returns no problems for valid artifacts', () => {
+  const problems = verifyGeneratedFiles({
+    css: ':root { --color-blue: oklch(60% 0.15 250); }',
+    theme: '@theme { --color-blue: oklch(60% 0.15 250); }',
+    design: '---\ncolors:\n  primary: "#2563eb"\n---',
+    expectedPrimaryHex: '#2563eb',
+  });
+  assert.deepEqual(problems, []);
+});
+
+test('verifyGeneratedFiles reports missing oklch, missing theme block, or design primary mismatch', () => {
+  const problems = verifyGeneratedFiles({
+    css: ':root { --color-blue: #2563eb; }',
+    theme: ':root { --color-blue: #2563eb; }',
+    design: '---\ncolors:\n  primary: "#112233"\n---',
+    expectedPrimaryHex: '#2563eb',
+  });
+  assert.equal(problems.length, 3);
+  assert.ok(problems.some((p) => p.includes('tokens.css carries no oklch()')));
+  assert.ok(problems.some((p) => p.includes('theme.css has no @theme block')));
+  assert.ok(problems.some((p) => p.includes('DESIGN.md primary #112233 ≠ spec anchor #2563eb')));
 });
