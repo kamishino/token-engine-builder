@@ -32,7 +32,7 @@ Node `>=22.12`. Pure contracts verified via `npm test` (`node:test` unit tests i
 2. `devDependencies` only. Vite inlines everything; `node:*` stays external.
 3. Bundled scripts resolve `templates/` + `assets/` from `import.meta.url` (`paths.ts`), never from `process.cwd()`. User inputs (specs, `--out`) are cwd-relative by design.
 4. Tier discipline: no `#hex`/`oklch()`/px literals outside `primitive/`; semantic + component tokens alias only.
-5. Agent-facing paths: SKILL.md commands use `<skill-root>` (the folder containing the loaded `SKILL.md`) and `<target-skill-root>` for a handoff target. Never hardcode a home-directory install path; the agent resolves the placeholder, the human substitutes their install folder.
+5. Agent-facing paths: SKILL.md commands use `<skill-root>` (the folder containing the loaded `SKILL.md`) and `<target-skill-root>` for a handoff target. Never hardcode a home-directory install path; the agent resolves the placeholder, the human substitutes their install folder. Every SKILL.md with a <...-root> command carries the literal-execution guard; lint:skills enforces it.
 
 ## Working rules
 

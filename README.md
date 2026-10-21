@@ -25,7 +25,7 @@ Agent tools read skills from different folders. Common locations (check your age
 - OpenCode: `.opencode/skills` (also reads `.claude/skills` and `.agents/skills`)
 - Codex, Gemini CLI, Cursor, and other tools: use the skills/plugin directory that tool installs into
 
-`SKILL.md` uses `<skill-root>` for the folder containing that file and `<target-skill-root>` for a handoff target. The agent resolves them from its skill loader; a human replaces them with the install folder.
+`SKILL.md` uses `<skill-root>` for the folder containing that file and `<target-skill-root>` for a handoff target. The agent resolves them from its skill loader; a human replaces them with the install folder. The agent is instructed to state the resolved path before running and to stop if it cannot resolve it; a command containing literal `<...>` is a failure, not a shell redirect.
 
 ## Why this exists
 

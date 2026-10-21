@@ -17,7 +17,7 @@ This document evaluates the seven design-system skills packaged in this reposito
 - **Command verification:** executed full clean repo validation (`npm run check`), verifying `typecheck`, `lint`, `lint:skills`, `test` (141 tests), `build` (7 bundled scripts across 6 skills), and `lint:css` (zero gold drift).
 - **Scope constraint:** this evaluation makes no source-code changes. The command run wrote only to gitignored `dist/`. The actionable execution spec for remediating all findings is catalogued separately in `local://skills-fix-plan.md`.
 
-> **Path policy update (2026-10-21):** the H1/H4 recommendations below are superseded by the install-agnostic `<skill-root>` contract in `AGENTS.md` invariant 5. Keep `~/.agents/skills` only as the deploy default and one example, never as a required path.
+> **Path policy update (2026-10-21):** the H1/H4 recommendations below are superseded by the install-agnostic `<skill-root>` contract in `AGENTS.md` invariant 5. Keep `~/.agents/skills` only as the deploy default and one example, never as a required path. Every SKILL.md with a <...-root> command now requires the agent to state the resolved root and stop on failure; lint:skills enforces the guard.
 
 ## Executive summary
 
