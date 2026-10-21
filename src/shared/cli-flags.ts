@@ -54,13 +54,14 @@ export const SCRIPTS: Record<ScriptKey, ScriptSpec> = {
   'token-build/scripts/figma.mjs': {
     usage: `Usage:
   Export to Figma:
-    node figma.mjs --to-figma <tokens-dir> --out <figma-variables.json>
+    node figma.mjs --to-figma <tokens-dir> --out <figma-variables.json> [--force]
   Import from Figma:
-    node figma.mjs --from-figma <figma-variables.json> --out <tokens-dir>`,
+    node figma.mjs --from-figma <figma-variables.json> --out <tokens-dir> [--force]`,
     flags: [
       { flag: '--to-figma', arg: '<tokens-dir>' },
       { flag: '--from-figma', arg: '<figma-variables.json>' },
       { flag: '--out', arg: '<path>' },
+      { flag: '--force' },
     ],
   },
   'token-extract/scripts/extract.mjs': {

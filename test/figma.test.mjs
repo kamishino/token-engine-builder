@@ -1,10 +1,15 @@
 import assert from 'node:assert/strict';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
+import { checkTokensProvenance, sha256Hex, TOKENS_MANIFEST_NAME } from '../src/shared/guard.ts';
 import {
   dtcgTokensToFigma,
   figmaVariablesToDtcg,
   fromFigmaFile,
   loadTokenTrees,
+  runFigma,
   toFigmaFile,
 } from '../src/skills/token-build/scripts/figma.ts';
 
@@ -165,4 +170,39 @@ test('dtcgTokensToFigma gives every variable a stable id and slash-free key', ()
     ['a_b', 'c_d'],
   );
   assert.ok(variables.every((variable) => !variable.key.includes('/')));
+});
+
+test('runFigma from-figma import writes provenance and enforces --force on existing targets', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'figma-import-guard-'));
+  try {
+    const figmaJsonPath = join(dir, 'figma.json');
+    const payload = toFigmaFile([
+      {
+        id: 'VariableID:1',
+        name: 'color/primary',
+        key: 'color_primary',
+        variableCollectionId: 'VariableCollectionId:1:1',
+        resolvedType: 'COLOR',
+        description: 'Primary',
+        valuesByMode: { '1:0': { r: 0.1, g: 0.5, b: 0.9, a: 1 } },
+      },
+    ]);
+    const payloadBytes = JSON.stringify(payload, null, 2);
+    writeFileSync(figmaJsonPath, payloadBytes, 'utf8');
+
+    const outTokensDir = join(dir, 'tokens');
+    assert.equal(runFigma(['--from-figma', figmaJsonPath, '--out', outTokensDir]), 0);
+
+    const report = checkTokensProvenance(outTokensDir);
+    assert.equal(report.status, 'clean');
+
+    const manifest = JSON.parse(readFileSync(join(outTokensDir, TOKENS_MANIFEST_NAME), 'utf8'));
+    assert.equal(manifest.inputHash, sha256Hex(payloadBytes));
+
+    assert.equal(runFigma(['--from-figma', figmaJsonPath, '--out', outTokensDir]), 1);
+
+    assert.equal(runFigma(['--from-figma', figmaJsonPath, '--out', outTokensDir, '--force']), 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

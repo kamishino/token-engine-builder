@@ -9,6 +9,13 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { usageText } from '../../../shared/cli-flags.js';
 import { dtcgColorValue, oklchToHex, parseToOklch } from '../../../shared/colors.js';
+import {
+  assertSafeOutDir,
+  checkTokensProvenance,
+  decideWrite,
+  sha256Hex,
+  writeTokensProvenance,
+} from '../../../shared/guard.js';
 import { fromCwd, getArg, hasFlag, isMainModule } from '../../../shared/paths.js';
 import { findTokenFiles, walkTokenLeaves, type JsonObject } from '../../../shared/tokens.js';
 import type { DtcgColorValue } from '../../../shared/types.js';
@@ -312,6 +319,8 @@ export function runFigma(argv = process.argv.slice(2)): number {
     return 0;
   }
 
+  const force = hasFlag(argv, '--force');
+
   const toFigmaArg = getArg(argv, '--to-figma');
   const fromFigmaArg = getArg(argv, '--from-figma');
   const outArg = getArg(argv, '--out', toFigmaArg ? 'figma-variables.json' : 'tokens');
@@ -368,7 +377,11 @@ export function runFigma(argv = process.argv.slice(2)): number {
     }
 
     const outTokensDir = fromCwd(outArg);
-    mkdirSync(outTokensDir, { recursive: true });
+    const safeError = assertSafeOutDir(outTokensDir, process.cwd());
+    if (safeError !== null) {
+      console.error(safeError);
+      return 1;
+    }
 
     const { tokensTree: rootObj, losses } = figmaVariablesToDtcg(vars);
     for (const loss of losses) {
@@ -376,12 +389,27 @@ export function runFigma(argv = process.argv.slice(2)): number {
     }
 
     const outPrimitive = join(outTokensDir, 'primitive');
+    const target = join(outPrimitive, 'figma-imported.tokens.json');
+    const tamper = existsSync(outTokensDir) ? checkTokensProvenance(outTokensDir) : null;
+    const decision = decideWrite({ paths: [target], tamper, force });
+    if (decision.kind === 'refuse') {
+      if (decision.reason === 'tampered') {
+        console.error(`refusing to overwrite hand-edited tokens in ${outTokensDir}:`);
+        for (const path of decision.changed) console.error(`  changed: ${path}`);
+        for (const path of decision.missing) console.error(`  missing: ${path}`);
+        console.error('pass --force to overwrite deliberately');
+      } else {
+        console.error(`output exists: ${target} (pass --force to overwrite)`);
+      }
+      return 1;
+    }
+    if (decision.replaces && force && tamper?.status !== 'absent') {
+      console.log('adopting existing tree: provenance manifest rewritten over the whole directory');
+    }
+
     mkdirSync(outPrimitive, { recursive: true });
-    writeFileSync(
-      join(outPrimitive, 'figma-imported.tokens.json'),
-      `${JSON.stringify(rootObj, null, 2)}\n`,
-      'utf8',
-    );
+    writeFileSync(target, `${JSON.stringify(rootObj, null, 2)}\n`, 'utf8');
+    writeTokensProvenance(outTokensDir, sha256Hex(readFileSync(figmaPath)));
     console.log(
       `imported ${vars.length} Figma variables → ${join(outArg, 'primitive/figma-imported.tokens.json')}`,
     );

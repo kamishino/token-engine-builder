@@ -37,5 +37,7 @@ Synchronize W3C DTCG tokens with Figma Variables via `./scripts/figma.mjs`:
 node ./scripts/figma.mjs --to-figma tokens --out figma-variables.json
 
 # Import Figma Variables JSON into DTCG 3-tier tokens
-node ./scripts/figma.mjs --from-figma figma-variables.json --out tokens
+node ./scripts/figma.mjs --from-figma figma-variables.json --out tokens [--force]
 ```
+
+Import refuses to overwrite an existing tokens directory or an already-imported token file without `--force`.
