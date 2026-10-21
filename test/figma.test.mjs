@@ -3,7 +3,9 @@ import test from 'node:test';
 import {
   dtcgTokensToFigma,
   figmaVariablesToDtcg,
+  fromFigmaFile,
   loadTokenTrees,
+  toFigmaFile,
 } from '../src/skills/token-build/scripts/figma.ts';
 
 test('dtcgTokensToFigma exports dimension objects to FLOAT and returns loss reports', () => {
@@ -116,4 +118,34 @@ test('loadTokenTrees reports unreadable files as typed losses', () => {
   const loaded = loadTokenTrees(['does-not-exist.tokens.json']);
   assert.equal(loaded.trees.length, 0);
   assert.equal(loaded.losses[0]?.kind, 'unreadable');
+});
+
+test('toFigmaFile and fromFigmaFile round-trip the REST envelope', () => {
+  const variables = [
+    {
+      id: 'VariableID:1',
+      name: 'color/primary',
+      key: 'color_primary',
+      variableCollectionId: 'VariableCollectionId:1:1',
+      resolvedType: 'COLOR',
+      description: 'Primary',
+      valuesByMode: { '1:0': { r: 0.1, g: 0.5, b: 0.9, a: 1 } },
+    },
+  ];
+  const file = toFigmaFile(variables);
+  assert.equal(
+    file.meta.variableCollections['VariableCollectionId:1:1']?.name,
+    'Design Tokens (DTCG)',
+  );
+  assert.equal(file.meta.variableCollections['VariableCollectionId:1:1']?.defaultModeId, '1:0');
+  const parsed = fromFigmaFile(file);
+  assert.deepEqual(parsed.variables, variables);
+  assert.deepEqual(parsed.losses, []);
+});
+
+test('fromFigmaFile reports a payload loss for malformed meta', () => {
+  const parsed = fromFigmaFile({ meta: { variables: [] } });
+  assert.equal(parsed.variables.length, 0);
+  assert.equal(parsed.losses[0]?.kind, 'payload');
+  assert.equal(parsed.losses[0]?.path, 'meta.variables');
 });

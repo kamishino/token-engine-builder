@@ -52,7 +52,8 @@ function hasNumericValue(obj: unknown): obj is { value: number } {
   return typeof obj.value === 'number';
 }
 
-export type FigmaLossKind = 'alias' | 'unreadable' | 'precision' | 'dimension' | 'mode' | 'type';
+export type FigmaLossKind =
+  'alias' | 'unreadable' | 'precision' | 'dimension' | 'mode' | 'type' | 'payload';
 
 export interface FigmaLoss {
   path: string;
@@ -257,6 +258,67 @@ export function figmaVariablesToDtcg(variables: FigmaVariable[]): {
   return { tokensTree: rootObj, losses };
 }
 
+export interface FigmaCollection {
+  id: string;
+  name: string;
+  modes: Array<{ modeId: string; name: string }>;
+  defaultModeId: string;
+}
+
+export interface FigmaFile {
+  status: 200;
+  error: false;
+  meta: {
+    variableCollections: Record<string, FigmaCollection>;
+    variables: Record<string, FigmaVariable>;
+  };
+}
+
+/** Build the Figma Variables REST file envelope from converted variables. */
+export function toFigmaFile(
+  variables: FigmaVariable[],
+  options: {
+    collectionId?: string;
+    defaultModeId?: string;
+    collectionName?: string;
+    modeName?: string;
+  } = {},
+): FigmaFile {
+  const collectionId = options.collectionId ?? 'VariableCollectionId:1:1';
+  const defaultModeId = options.defaultModeId ?? '1:0';
+  return {
+    status: 200,
+    error: false,
+    meta: {
+      variableCollections: {
+        [collectionId]: {
+          id: collectionId,
+          name: options.collectionName ?? 'Design Tokens (DTCG)',
+          modes: [{ modeId: defaultModeId, name: options.modeName ?? 'Value' }],
+          defaultModeId,
+        },
+      },
+      variables: Object.fromEntries(variables.map((variable) => [variable.id, variable])),
+    },
+  };
+}
+
+/** Read variables out of a Figma file envelope; malformed `meta.variables` is a typed loss. */
+export function fromFigmaFile(payload: unknown): {
+  variables: FigmaVariable[];
+  losses: FigmaLoss[];
+} {
+  const meta = (payload as { meta?: { variables?: unknown } } | null)?.meta;
+  const record = meta?.variables;
+  if (record === null || typeof record !== 'object' || Array.isArray(record)) {
+    return {
+      variables: [],
+      losses: [{ path: 'meta.variables', kind: 'payload', detail: 'missing or not an object' }],
+    };
+  }
+  return { variables: Object.values(record as Record<string, FigmaVariable>), losses: [] };
+}
+
 // -------------------------------------------------------------
 // 1. EXPORT: DTCG tokens -> Figma Variables JSON
 // -------------------------------------------------------------
@@ -293,21 +355,7 @@ export function runFigma(argv = process.argv.slice(2)): number {
     for (const loss of [...loaded.losses, ...losses]) {
       console.log(`[figma] note: [${loss.kind}] ${loss.path}: ${loss.detail}`);
     }
-    const figmaPayload = {
-      status: 200,
-      error: false,
-      meta: {
-        variableCollections: {
-          [collectionId]: {
-            id: collectionId,
-            name: 'Design Tokens (DTCG)',
-            modes: [{ modeId: defaultModeId, name: 'Value' }],
-            defaultModeId,
-          },
-        },
-        variables: Object.fromEntries(variables.map((v) => [v.id, v])),
-      },
-    };
+    const figmaPayload = toFigmaFile(variables, { collectionId, defaultModeId });
 
     const outFile = fromCwd(outArg);
     mkdirSync(dirname(outFile), { recursive: true });
@@ -323,13 +371,13 @@ export function runFigma(argv = process.argv.slice(2)): number {
       return 1;
     }
 
-    const payload = JSON.parse(readFileSync(figmaPath, 'utf8')) as {
-      meta?: {
-        variables?: Record<string, FigmaVariable>;
-      };
-    };
+    const { variables: vars, losses: payloadLosses } = fromFigmaFile(
+      JSON.parse(readFileSync(figmaPath, 'utf8')),
+    );
+    for (const loss of payloadLosses) {
+      console.log(`[figma] note: [${loss.kind}] ${loss.path}: ${loss.detail}`);
+    }
 
-    const vars = Object.values(payload.meta?.variables ?? {});
     if (vars.length === 0) {
       console.error('no variables found in figma payload');
       return 1;
