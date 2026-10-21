@@ -44,6 +44,14 @@ export function runLint({ root = rootDir } = {}) {
       }
 
       const skillContent = readFileSync(skillFile, 'utf8');
+      if (
+        /<([a-z0-9-]+)-root>\/scripts\//.test(skillContent) &&
+        !skillContent.includes('Never run a command containing literal')
+      ) {
+        failures.push(
+          `${entry.name}: command uses a <...-root> placeholder without the literal-execution guard`,
+        );
+      }
       const match = skillContent.match(/^---\n([\s\S]*?)\n---/);
       if (match?.[1] === undefined) {
         failures.push(`${entry.name}: missing frontmatter block`);

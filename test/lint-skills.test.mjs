@@ -41,3 +41,21 @@ test('runLint reports version drift between plugin.json and package.json', () =>
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('runLint reports a <...-root> command without the literal-execution guard', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'lint-guard-'));
+  try {
+    const skillDir = join(dir, 'src', 'skills', 'demo');
+    mkdirSync(skillDir, { recursive: true });
+    writeFileSync(
+      join(skillDir, 'SKILL.md'),
+      `---\nname: demo\ndescription: 'Demo'\nlicense: MIT\ncompatibility: Node.js >=22.12\nallowed-tools: 'Bash Read'\n---\n\nnode <skill-root>/scripts/tool.mjs\n`,
+      'utf8',
+    );
+
+    const failures = runLint({ root: dir });
+    assert.ok(failures.some((f) => f.includes('literal-execution guard')));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
