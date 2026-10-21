@@ -10,6 +10,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SCRIPTS } from '../src/shared/cli-flags.ts';
+import { isMainModule } from '../src/shared/paths.ts';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -113,10 +114,7 @@ export function runLint({ root = rootDir } = {}) {
   return failures;
 }
 
-const isMain =
-  process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-
-if (isMain) {
+if (isMainModule(import.meta.url, 'lint-skills.mjs')) {
   const failures = runLint();
   if (failures.length > 0) {
     for (const failure of failures) console.error(`[lint:skills] FAIL ${failure}`);

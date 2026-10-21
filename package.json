@@ -9,9 +9,9 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "build": "node scripts/build-all.mjs",
-    "deploy": "node scripts/link-skills.mjs",
-    "package": "node scripts/package-release.mjs",
+    "build": "node --experimental-strip-types scripts/build-all.mjs",
+    "deploy": "node --experimental-strip-types scripts/link-skills.mjs",
+    "package": "node --experimental-strip-types scripts/package-release.mjs",
     "changeset": "changeset",
     "release": "changeset version",
     "typecheck": "tsc --noEmit",

@@ -11,6 +11,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isMainModule } from '../src/shared/paths.ts';
 import {
   discoverScriptEntries,
   listSkills,
@@ -87,9 +88,6 @@ export function runBuildAll(argv = process.argv.slice(2), { root = rootDir, runV
   return plan;
 }
 
-const isMain =
-  process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-
-if (isMain) {
+if (isMainModule(import.meta.url, 'build-all.mjs')) {
   runBuildAll();
 }

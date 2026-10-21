@@ -24,6 +24,7 @@ import {
 } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { hasFlag, isMainModule } from '../src/shared/paths.ts';
 import { listSkills } from './build-engine.mjs';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -199,8 +200,8 @@ export function planArtifacts(root, version, options) {
 }
 
 export function runPackage(argv = process.argv.slice(2), { root = rootDir } = {}) {
-  const dryRun = argv.includes('--dry-run');
-  const skipBuild = argv.includes('--skip-build');
+  const dryRun = hasFlag(argv, '--dry-run');
+  const skipBuild = hasFlag(argv, '--skip-build');
   const currentDistDir = join(root, 'dist');
   const currentReleaseDir = join(root, 'release');
   const currentPkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
@@ -244,10 +245,14 @@ export function runPackage(argv = process.argv.slice(2), { root = rootDir } = {}
   }
 
   if (!skipBuild) {
-    execFileSync(process.execPath, [join(root, 'scripts', 'build-all.mjs')], {
-      cwd: root,
-      stdio: 'inherit',
-    });
+    execFileSync(
+      process.execPath,
+      ['--experimental-strip-types', join(root, 'scripts', 'build-all.mjs')],
+      {
+        cwd: root,
+        stdio: 'inherit',
+      },
+    );
   }
   if (!existsSync(currentDistDir)) {
     console.error('[package] dist/ missing — run npm run build first (or drop --skip-build)');
@@ -379,12 +384,7 @@ export function runPackage(argv = process.argv.slice(2), { root = rootDir } = {}
   return 0;
 }
 
-const isMain =
-  process.argv[1] !== undefined &&
-  (resolve(process.argv[1]) === fileURLToPath(import.meta.url) ||
-    process.argv[1].endsWith('package-release.mjs'));
-
-if (isMain) {
+if (isMainModule(import.meta.url, 'package-release.mjs')) {
   const code = runPackage();
   if (code !== 0) process.exit(code);
 }

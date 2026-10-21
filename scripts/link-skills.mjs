@@ -23,28 +23,24 @@ import {
 import { homedir, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { getArg, hasFlag, isMainModule } from '../src/shared/paths.ts';
 import { isSkillStale } from './build-engine.mjs';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 export function runLink(argv = process.argv.slice(2), { root = rootDir } = {}) {
-  if (argv.includes('--help')) {
+  if (hasFlag(argv, '--help')) {
     console.log('Usage: link-skills.mjs [--dir <path>] [--copy] [--force] [--no-prune] [--unlink]');
     return 0;
   }
 
-  function flagValue(flag) {
-    const index = argv.indexOf(flag);
-    return index === -1 ? undefined : argv[index + 1];
-  }
-
   const currentSkillsDir = join(root, 'src', 'skills');
   const currentDistDir = join(root, 'dist');
-  const targetDir = resolve(flagValue('--dir') ?? join(homedir(), '.agents', 'skills'));
-  const copyMode = argv.includes('--copy');
-  const forceCopy = argv.includes('--force');
-  const prune = !argv.includes('--no-prune');
-  const unlinkOnly = argv.includes('--unlink');
+  const targetDir = resolve(getArg(argv, '--dir') ?? join(homedir(), '.agents', 'skills'));
+  const copyMode = hasFlag(argv, '--copy');
+  const forceCopy = hasFlag(argv, '--force');
+  const prune = !hasFlag(argv, '--no-prune');
+  const unlinkOnly = hasFlag(argv, '--unlink');
 
   // Self-check for Windows throwaway dirs (hoisted before mutation)
   if (targetDir.startsWith(tmpdir())) {
@@ -86,10 +82,11 @@ export function runLink(argv = process.argv.slice(2), { root = rootDir } = {}) {
   const stale = skills.filter(isStale);
   if (stale.length > 0) {
     console.log(`[deploy] refreshing stale: ${stale.join(', ')}`);
-    execFileSync(process.execPath, [join(root, 'scripts', 'build-all.mjs'), ...stale], {
-      cwd: root,
-      stdio: 'inherit',
-    });
+    execFileSync(
+      process.execPath,
+      ['--experimental-strip-types', join(root, 'scripts', 'build-all.mjs'), ...stale],
+      { cwd: root, stdio: 'inherit' },
+    );
   } else {
     console.log('[deploy] all bundles up to date');
   }
@@ -139,12 +136,7 @@ export function runLink(argv = process.argv.slice(2), { root = rootDir } = {}) {
   return 0;
 }
 
-const isMain =
-  process.argv[1] !== undefined &&
-  (resolve(process.argv[1]) === fileURLToPath(import.meta.url) ||
-    process.argv[1].endsWith('link-skills.mjs'));
-
-if (isMain) {
+if (isMainModule(import.meta.url, 'link-skills.mjs')) {
   const code = runLink();
   if (code !== 0) process.exit(code);
 }

@@ -10,6 +10,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isMainModule } from '../src/shared/paths.ts';
 import { PROFILE_FILE_NAMES, UI_PROFILE_IDS } from '../src/shared/profile-registry.ts';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -112,9 +113,6 @@ export function runSampleCss({ root = rootDir } = {}) {
   }
 }
 
-const isMain =
-  process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-
-if (isMain) {
+if (isMainModule(import.meta.url, 'sample-css.mjs')) {
   process.exitCode = runSampleCss();
 }
