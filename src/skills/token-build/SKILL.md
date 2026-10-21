@@ -12,14 +12,14 @@ Entry condition: `token-audit` exits 0 on this exact tree — enforced technical
 
 ## Steps
 
-Run commands from the user's project root directory; `~/.agents/skills/token-build` is this skill's installed folder.
+Run commands from the user's project root. `<skill-root>` is the absolute path to this skill's installed folder (the folder containing this `SKILL.md`); resolve it with your skill loader or by locating this file.
 
 1. **Build one theme at a time** (all semantic themes share paths; any `semantic/<name>.tokens.json` is buildable):
 
    ```bash
-   node ~/.agents/skills/token-build/scripts/build.mjs --tokens tokens --out build --theme light
-   node ~/.agents/skills/token-build/scripts/build.mjs --tokens tokens --out build/dark --theme dark
-   node ~/.agents/skills/token-build/scripts/build.mjs --tokens tokens --out build/high-contrast --theme high-contrast
+   node <skill-root>/scripts/build.mjs --tokens tokens --out build --theme light
+   node <skill-root>/scripts/build.mjs --tokens tokens --out build/dark --theme dark
+   node <skill-root>/scripts/build.mjs --tokens tokens --out build/high-contrast --theme high-contrast
    ```
 
    Outputs per build: `tokens.css` (`:root` custom properties, OKLCH colors, rem dimensions), `theme.css` (Tailwind v4 `@theme`), `components.md` (component specifications: state → token → resolved value per component), and `DESIGN.md` (Stitch-format guide; pass `--spec <style-spec.json>` to render frontmatter/prose from the recorded palette and guide block). Pass `--force` to overwrite existing outputs deliberately. Preview actions with `--dry-run`. Optional `--visualizer` emits `visualizer.html` (zero-dep interactive HTML inspector for color ramps and component specimens). Optional `--prefix <name>` namespaces the CSS variables. UI-library profiles: `--profile shadcn|bootstrap|primevue|antd|mui|chakra|radix|fluent` emits one dual-theme CSS file instead (see `references/ui-library-profiles.md`).
@@ -32,14 +32,14 @@ Run commands from the user's project root directory; `~/.agents/skills/token-bui
 
 ### Figma Sync Bridge
 
-Synchronize W3C DTCG tokens with Figma Variables via `node ~/.agents/skills/token-build/scripts/figma.mjs`:
+Synchronize W3C DTCG tokens with Figma Variables via `node <skill-root>/scripts/figma.mjs`:
 
 ```bash
 # Export DTCG tokens directory to Figma Variables JSON
-node ~/.agents/skills/token-build/scripts/figma.mjs --to-figma tokens --out figma-variables.json
+node <skill-root>/scripts/figma.mjs --to-figma tokens --out figma-variables.json
 
 # Import Figma Variables JSON into DTCG 3-tier tokens
-node ~/.agents/skills/token-build/scripts/figma.mjs --from-figma figma-variables.json --out tokens [--force]
+node <skill-root>/scripts/figma.mjs --from-figma figma-variables.json --out tokens [--force]
 ```
 
 Import refuses to overwrite an existing tokens directory or an already-imported token file without `--force`.

@@ -12,15 +12,15 @@ Extraction is evidence, not migration: the scan is read-only and the candidate i
 
 ## Steps
 
-Run commands from the user's project root directory; `~/.agents/skills/token-extract` is this skill's installed folder.
+Run commands from the user's project root. `<skill-root>` is the absolute path to this skill's installed folder (the folder containing this `SKILL.md`); resolve it with your skill loader or by locating this file.
 
 1. **Extract**:
 
    ```bash
-   node ~/.agents/skills/token-extract/scripts/extract.mjs --root . --out style-spec.json
+   node <skill-root>/scripts/extract.mjs --root . --out style-spec.json
    # Or from a rendered URL / HTML document:
-   node ~/.agents/skills/token-extract/scripts/extract.mjs --url https://example.com --out style-spec.json
-   node ~/.agents/skills/token-extract/scripts/extract.mjs --html page.html --out style-spec.json
+   node <skill-root>/scripts/extract.mjs --url https://example.com --out style-spec.json
+   node <skill-root>/scripts/extract.mjs --html page.html --out style-spec.json
    ```
 
    (`--force` overwrites; preview with `--dry-run`. `--url` requires Playwright with Chromium installed in the host environment; `--html` falls back to text scanning when Playwright is unavailable.) Automatically extracts theme and palette definitions from Tailwind v3 (`tailwind.config.{js,ts,cjs,mjs}`), Tailwind v4 (`@theme { --color-* }`), CSS root variables, and Stitch-format `DESIGN.md` frontmatter, preserving primary and secondary color roles into candidate `style-spec.json`. Other files fall through to heuristic pattern scanning. Scoring rules: `references/heuristics.md`.

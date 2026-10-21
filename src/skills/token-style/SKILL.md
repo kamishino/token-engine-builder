@@ -27,7 +27,9 @@ The leading word is **palette**: 3–5 named colors the whole system derives fro
    - Done when: the user confirms, vetoes a color/cluster, or overrides with explicit colors.
 5. **Record**: write `style-spec.json` matching `assets/style-spec.example.json` exactly (OKLCH numbers, no hex): `palette` entries `{role, name, anchor}`, `rampSteps`, `cluster` when one resolved (plus `clusterBounds` copied from the cluster's row in `references/style-clusters.md`), `harmony` when a guidance method was used, and a `guide` block (2–3 sentence `overview` plus 3–5 `dos`/`donts` for the generated DESIGN.md; omit it only when the user has nothing to add). If `style-spec.json` already exists, show the current palette/cluster and ask before overwriting it. Neutral hue = primary anchor hue; neutral chroma 0.008–0.015 so grays carry brand temperature.
    - Done when: `style-spec.json` parses, palette has exactly one primary, and every anchor is `{ l: 0–1, c: ≥0, h: 0–360 }`.
-6. **Hand off**: tell the user the next command is skill `token-math` (`node ~/.agents/skills/token-math/scripts/generate.mjs --spec style-spec.json --out tokens`).
+     Run the next command from the user's project root. `<token-math-root>` is the `token-math` skill's installed folder; resolve it with your skill loader, or invoke the `token-math` skill by name.
+
+6. **Hand off**: tell the user the next command is skill `token-math` (`node <token-math-root>/scripts/generate.mjs --spec style-spec.json --out tokens`).
    - Done when: the user sees the palette with names and OKLCH anchors, plus the hand-off command.
 
 Judgement lives here; arithmetic does not. Ramp steps, contrast, and scales are generated downstream — a hand-guessed ramp here silently breaks the audit gate later.

@@ -13,10 +13,10 @@ Entry point to the token pipeline: inspects the current workspace, classifies th
 
 ## Usage
 
-Run commands from the user's project root directory; `~/.agents/skills/ask-kami` is this skill's installed folder.
+Run commands from the user's project root. `<skill-root>` is the absolute path to this skill's installed folder (the folder containing this `SKILL.md`); resolve it with your skill loader or by locating this file.
 
 ```bash
-node ~/.agents/skills/ask-kami/scripts/route.mjs [--root <dir>] [--json]
+node <skill-root>/scripts/route.mjs [--root <dir>] [--json]
 ```
 
 ## Steps
@@ -24,7 +24,7 @@ node ~/.agents/skills/ask-kami/scripts/route.mjs [--root <dir>] [--json]
 1. **Detect state**: run the router script:
 
    ```bash
-   node ~/.agents/skills/ask-kami/scripts/route.mjs --root .
+   node <skill-root>/scripts/route.mjs --root .
    ```
 
    (Pass `--json` when structured machine output is required.)
