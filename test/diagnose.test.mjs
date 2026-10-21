@@ -1,0 +1,88 @@
+import assert from 'node:assert/strict';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import test from 'node:test';
+import { diagnoseDesignSystem } from '../src/shared/diagnose.ts';
+import { resolveSystemPaths } from '../src/shared/system-state.ts';
+import { runAudit } from '../src/skills/token-audit/scripts/audit.ts';
+import { runBuild } from '../src/skills/token-build/scripts/build.ts';
+import { runGenerate } from '../src/skills/token-math/scripts/generate.ts';
+
+const exampleSpec = 'src/skills/token-style/assets/style-spec.example.json';
+
+test('diagnoseDesignSystem reports spec-missing and routing nextActions on empty directory', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'diag-empty-'));
+  try {
+    const paths = resolveSystemPaths(dir);
+    const diagnosis = diagnoseDesignSystem(dir, paths);
+    assert.equal(diagnosis.state.spec.status, 'missing');
+    assert.ok(diagnosis.findings.some((f) => f.id === 'spec-missing'));
+    assert.ok(diagnosis.nextActions.some((a) => a.skill === 'token-extract'));
+    assert.ok(diagnosis.nextActions.some((a) => a.skill === 'token-style'));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('diagnoseDesignSystem flags low-contrast override with audit-fail and remedy', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'diag-remedy-'));
+  try {
+    const specPath = join(dir, 'style-spec.json');
+    const specData = JSON.parse(readFileSync(exampleSpec, 'utf8'));
+    specData.overrides = {
+      light: {
+        'semantic.color.text.tertiary': '{color.neutral.200}',
+      },
+    };
+    writeFileSync(specPath, JSON.stringify(specData, null, 2), 'utf8');
+
+    const tokensDir = join(dir, 'tokens');
+    assert.equal(runGenerate(['--spec', specPath, '--out', tokensDir]), 0);
+
+    const paths = resolveSystemPaths(dir, { spec: specPath, tokens: tokensDir });
+    const diagnosis = diagnoseDesignSystem(dir, paths);
+
+    const auditFinding = diagnosis.findings.find((f) => f.id.startsWith('audit-fail-'));
+    assert.ok(auditFinding !== undefined);
+    assert.equal(auditFinding.severity, 'error');
+    assert.ok(auditFinding.evidence.some((e) => e.includes('remedy:')));
+    assert.ok(diagnosis.nextActions.some((a) => a.skill === 'token-audit'));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('diagnoseDesignSystem reports healthy tree with no error findings', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'diag-healthy-'));
+  try {
+    const specPath = join(dir, 'style-spec.json');
+    writeFileSync(specPath, readFileSync(exampleSpec, 'utf8'), 'utf8');
+
+    const tokensDir = join(dir, 'tokens');
+    assert.equal(runGenerate(['--spec', specPath, '--out', tokensDir]), 0);
+    assert.equal(runAudit(['--tokens', tokensDir, '--spec', specPath]), 0);
+
+    const buildDir = join(dir, 'build');
+    const buildCode = await runBuild([
+      '--tokens',
+      tokensDir,
+      '--out',
+      buildDir,
+      '--theme',
+      'light',
+      '--spec',
+      specPath,
+    ]);
+    assert.equal(buildCode, 0);
+
+    const paths = resolveSystemPaths(dir, { spec: specPath, tokens: tokensDir, build: buildDir });
+    const diagnosis = diagnoseDesignSystem(dir, paths);
+
+    const errors = diagnosis.findings.filter((f) => f.severity === 'error');
+    assert.equal(errors.length, 0);
+    assert.ok(diagnosis.nextActions.some((a) => a.skill === 'improve-design-system'));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

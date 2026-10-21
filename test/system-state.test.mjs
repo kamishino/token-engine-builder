@@ -1,0 +1,47 @@
+import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import test from 'node:test';
+import { inspectSystem, resolveSystemPaths } from '../src/shared/system-state.ts';
+import { runGenerate } from '../src/skills/token-math/scripts/generate.ts';
+
+const exampleSpec = 'src/skills/token-style/assets/style-spec.example.json';
+
+test('inspectSystem correctly classifies missing system in empty directory', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'system-empty-'));
+  try {
+    const paths = resolveSystemPaths(dir);
+    const state = inspectSystem(dir, paths);
+    assert.equal(state.spec.status, 'missing');
+    assert.equal(state.tokens.status, 'missing');
+    assert.equal(state.build.status, 'missing');
+    assert.equal(state.auditStamp, 'missing');
+    assert.equal(state.binding, 'unverified');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('inspectSystem reflects generated token tree and detects tampered provenance', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'system-generated-'));
+  try {
+    const tokensDir = join(dir, 'tokens');
+    assert.equal(runGenerate(['--spec', exampleSpec, '--out', tokensDir]), 0);
+
+    const paths = resolveSystemPaths(dir, { spec: exampleSpec, tokens: tokensDir });
+    const stateClean = inspectSystem(dir, paths);
+    assert.equal(stateClean.spec.status, 'valid');
+    assert.equal(stateClean.tokens.status, 'present');
+    assert.equal(stateClean.tokens.themes.length, 3);
+    assert.equal(stateClean.provenance.status, 'clean');
+    assert.equal(stateClean.binding, 'match');
+
+    // Tamper a token file
+    writeFileSync(join(tokensDir, 'primitive', 'color.tokens.json'), '{"tampered":true}', 'utf8');
+    const stateTampered = inspectSystem(dir, paths);
+    assert.equal(stateTampered.provenance.status, 'tampered');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
