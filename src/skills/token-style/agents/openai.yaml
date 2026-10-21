@@ -1,5 +1,3 @@
 interface:
   display_name: 'Token Style'
   short_description: 'Socratic aesthetic interview to record 3-tier design token brand style-spec'
-policy:
-  allow_implicit_invocation: false

@@ -1,5 +1,3 @@
 interface:
   display_name: 'Token Build'
   short_description: 'Compile DTCG token trees to CSS variables, Tailwind v4 @theme, and UI-library profiles'
-policy:
-  allow_implicit_invocation: false

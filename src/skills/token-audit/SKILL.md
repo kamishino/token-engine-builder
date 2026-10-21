@@ -12,10 +12,12 @@ Binary dual gate: every pair must clear BOTH WCAG ratio (--min-ratio, default 4.
 
 ## Steps
 
+Run commands from the user's project root directory; `~/.agents/skills/token-audit` is this skill's installed folder.
+
 1. **Run the gate** (every theme under `semantic/` by default):
 
    ```bash
-   node ./scripts/audit.mjs --tokens tokens --min-ratio 4.5
+   node ~/.agents/skills/token-audit/scripts/audit.mjs --tokens tokens --min-ratio 4.5
    ```
 
    Checks: every fg/bg role pair (body text, secondary text, action, button, card, input), every alias resolves, zero raw values above Tier 1. Role floors and marginal-pass reading: `references/contrast.md`. Pass `--theme <name>` to check a single theme instead of all discovered themes. Pass `--json` for machine-readable JSON output. Pass `--spec <style-spec.json>` to take the text floor from the spec's recorded `targets.minWcagRatio` when `--min-ratio` is not given explicitly.

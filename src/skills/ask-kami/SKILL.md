@@ -1,9 +1,10 @@
 ---
 name: ask-kami
-description: 'Entry router: detect design-system state (spec, tokens, audit, build), then propose the next skill and exact command. Use when the user asks where to start or what to do next.'
+description: 'Design-system entry router: detect spec, tokens, audit, and build state, then name the next skill and exact command.'
 license: MIT
 compatibility: Node.js >=22.12
 allowed-tools: 'Bash Read'
+disable-model-invocation: true
 ---
 
 # Ask Kami — Design System Router
@@ -12,8 +13,10 @@ Entry point to the token pipeline: inspects the current workspace, classifies th
 
 ## Usage
 
+Run commands from the user's project root directory; `~/.agents/skills/ask-kami` is this skill's installed folder.
+
 ```bash
-node ./scripts/route.mjs [--root <dir>] [--json]
+node ~/.agents/skills/ask-kami/scripts/route.mjs [--root <dir>] [--json]
 ```
 
 ## Steps
@@ -21,11 +24,11 @@ node ./scripts/route.mjs [--root <dir>] [--json]
 1. **Detect state**: run the router script:
 
    ```bash
-   node ./scripts/route.mjs --root .
+   node ~/.agents/skills/ask-kami/scripts/route.mjs --root .
    ```
 
    (Pass `--json` when structured machine output is required.)
-   - Done when: the command exits 0 and prints the `state:` status line.
+   - Done when: the command exits 0 and prints a `state:` status line plus a `next:` recommendation line (or `next: none`).
 
 2. **Propose next action**: read the `next:` and `why:` recommendations from the output:
    - When `style-spec.json` is missing, the router proposes both `token-extract` (for existing projects with CSS/code colors) and `token-style` (for greenfield projects). Ask the user which path fits their project.

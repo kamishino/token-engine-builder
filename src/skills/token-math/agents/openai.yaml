@@ -1,5 +1,3 @@
 interface:
   display_name: 'Token Math'
   short_description: 'Deterministic OKLCH ramps and 3-tier DTCG token scaffold generator'
-policy:
-  allow_implicit_invocation: false
