@@ -106,3 +106,33 @@ test('validateStyleSpec requires typography.fontFamily', () => {
   assert.equal(result.valid, false);
   assert.ok(result.errors.some((e) => e.includes('fontFamily')));
 });
+
+test('validateStyleSpec warns on non-catalog palette names and passes catalog names', () => {
+  const withNonCatalog = validateStyleSpec({
+    name: 'test-brand',
+    palette: [
+      { role: 'primary', name: 'cerulean', anchor: { l: 0.6, c: 0.15, h: 250 } },
+      { role: 'secondary', name: 'teal', anchor: { l: 0.6, c: 0.1275, h: 285 } },
+      { role: 'accent', name: 'sky', anchor: { l: 0.6, c: 0.1275, h: 215 } },
+    ],
+    typography: { fontFamily: 'Inter, sans-serif', baseSizePx: 16, ratio: 1.25 },
+  });
+  assert.equal(withNonCatalog.valid, true);
+  assert.ok(
+    withNonCatalog.warnings.some((w) =>
+      w.includes('palette "teal" is not a vendored catalog color name'),
+    ),
+  );
+
+  const withCatalog = validateStyleSpec({
+    name: 'test-brand',
+    palette: [
+      { role: 'primary', name: 'cerulean', anchor: { l: 0.6, c: 0.15, h: 250 } },
+      { role: 'secondary', name: 'amethyst', anchor: { l: 0.6, c: 0.1275, h: 285 } },
+      { role: 'accent', name: 'sky', anchor: { l: 0.6, c: 0.1275, h: 215 } },
+    ],
+    typography: { fontFamily: 'Inter, sans-serif', baseSizePx: 16, ratio: 1.25 },
+  });
+  assert.equal(withCatalog.valid, true);
+  assert.ok(!withCatalog.warnings.some((w) => w.includes('is not a vendored catalog color name')));
+});

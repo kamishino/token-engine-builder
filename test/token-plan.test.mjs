@@ -25,7 +25,7 @@ test('planTokenFiles covers primitives and every semantic theme in write order',
   assert.equal(color.color.neutral['500'].$type, 'color');
   assert.ok(color.color.feedback.success);
   assert.equal(color.color.cerulean['500'].$extensions['token-engine'].role, 'primary');
-  assert.equal(color.color.teal['500'].$extensions['token-engine'].role, 'secondary');
+  assert.equal(color.color.amethyst['500'].$extensions['token-engine'].role, 'secondary');
   assert.equal(color.color.sky['500'].$extensions['token-engine'].role, 'accent');
   assert.equal(color.color.cerulean['700'].$extensions, undefined);
   assert.equal(color.color.neutral['500'].$extensions, undefined);
