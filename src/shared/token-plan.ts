@@ -8,6 +8,7 @@ import {
   typographyScale,
 } from './scales.js';
 import { planThemes } from './theme-plan.js';
+import { semanticThemeFileName, TOKEN_TIER_DIRS } from './tokens.js';
 import type { ColorRamp, StyleSpec, TokenGroup } from './types.js';
 
 export interface PlannedTokenFile {
@@ -62,7 +63,10 @@ export function planTokenFiles(spec: StyleSpec): PlannedTokenFile[] {
   });
 
   for (const { theme, data } of planThemes(spec)) {
-    planned.push({ segments: ['semantic', `${theme}.tokens.json`], data });
+    planned.push({
+      segments: [TOKEN_TIER_DIRS.semantic, semanticThemeFileName(theme)],
+      data,
+    });
   }
 
   planned.push({

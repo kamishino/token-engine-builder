@@ -11,12 +11,16 @@
  * being re-bundled into a standalone .mjs, and this keeps builds portable.
  */
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
 import StyleDictionary from 'style-dictionary';
 import { fileHeader, formattedVariables, usesReferences } from 'style-dictionary/utils';
 import { dtcgToOklch, formatOklch, oklchToHex, parseToOklch } from './colors.js';
 import { SEMANTIC_ROLE_PATHS } from './roles.js';
-import { loadTokenSources, tokenSourcePatterns, type JsonObject } from './tokens.js';
+import {
+  loadTokenSources,
+  semanticThemeFile,
+  tokenSourcePatterns,
+  type JsonObject,
+} from './tokens.js';
 import type { BuildTokensOptions, DtcgColorValue, StyleSpec } from './types.js';
 
 export interface ResolvedToken {
@@ -719,7 +723,7 @@ export async function loadThemeTokens(
   tokensDir: string,
   theme: string,
 ): Promise<ResolvedDictionary> {
-  const semanticFile = join(tokensDir, 'semantic', `${theme}.tokens.json`);
+  const semanticFile = semanticThemeFile(tokensDir, theme);
   if (!existsSync(semanticFile)) {
     throw new Error(`semantic theme file not found: ${semanticFile}`);
   }

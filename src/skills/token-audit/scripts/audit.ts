@@ -3,12 +3,12 @@
  * Exit 0 = pass, 1 = contrast failure / unresolved alias / raw value above Tier 1.
  */
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
 import { auditTokens } from '../../../shared/audit-report.js';
 import { usageText } from '../../../shared/cli-flags.js';
 import { removeAuditStamp, writeAuditStamp } from '../../../shared/guard.js';
 import { fromCwd, getArg, hasFlag, isMainModule } from '../../../shared/paths.js';
 import { loadStyleSpec } from '../../../shared/spec.js';
+import { semanticDir } from '../../../shared/tokens.js';
 
 export function runAudit(argv = process.argv.slice(2)): number {
   if (hasFlag(argv, '--help')) {
@@ -38,7 +38,7 @@ export function runAudit(argv = process.argv.slice(2)): number {
   }
 
   const result = auditTokens(tokensDir, { theme, minRatio, minApca });
-  const semanticDir = join(tokensDir, 'semantic');
+  const semanticDirectory = semanticDir(tokensDir);
 
   if (asJson) {
     console.log(
@@ -83,7 +83,7 @@ export function runAudit(argv = process.argv.slice(2)): number {
       console.log('  note: no provenance manifest (tree predates the guard)');
     }
     if (Object.keys(result.themes).length === 0) {
-      console.log(`  FAIL  no semantic themes found under ${semanticDir}`);
+      console.log(`  FAIL  no semantic themes found under ${semanticDirectory}`);
     }
     console.log(`\naudit ${result.pass ? 'PASS' : 'FAIL'}`);
   }

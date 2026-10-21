@@ -21,13 +21,45 @@ export interface LoadedTokenTree {
 
 const ALIAS = /^\{([^}]+)\}$/;
 
+/** 3-tier tree layout: the only definition of tier directory names. */
+export const TOKEN_TIER_DIRS = {
+  primitive: 'primitive',
+  semantic: 'semantic',
+  component: 'component',
+} as const;
+
+const THEME_TOKEN_SUFFIX = '.tokens.json';
+
+export function semanticThemeFileName(theme: string): string {
+  return `${theme}${THEME_TOKEN_SUFFIX}`;
+}
+
+export function semanticDir(tokensDir: string): string {
+  return join(tokensDir, TOKEN_TIER_DIRS.semantic);
+}
+
+/** `<tokensDir>/semantic/<theme>.tokens.json` — the only definition of the theme file path. */
+export function semanticThemeFile(tokensDir: string, theme: string): string {
+  return join(semanticDir(tokensDir), semanticThemeFileName(theme));
+}
+
+/** Theme names present under `<tokensDir>/semantic`, sorted. */
+export function semanticThemes(tokensDir: string): string[] {
+  const dir = semanticDir(tokensDir);
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir)
+    .filter((file) => file.endsWith(THEME_TOKEN_SUFFIX))
+    .map((file) => file.slice(0, -THEME_TOKEN_SUFFIX.length))
+    .sort();
+}
+
 export function tokenSourcePatterns(base: string, theme: string): string[] {
   const normalized = base.replaceAll('\\', '/').replace(/\/+$/, '');
   const prefix = normalized === '' ? '.' : normalized;
   return [
-    `${prefix}/primitive/**/*.tokens.json`,
-    `${prefix}/semantic/${theme}.tokens.json`,
-    `${prefix}/component/**/*.tokens.json`,
+    `${prefix}/${TOKEN_TIER_DIRS.primitive}/**/*.tokens.json`,
+    `${prefix}/${TOKEN_TIER_DIRS.semantic}/${semanticThemeFileName(theme)}`,
+    `${prefix}/${TOKEN_TIER_DIRS.component}/**/*.tokens.json`,
   ];
 }
 
@@ -149,26 +181,25 @@ export function flattenTokens(
 export function loadTokenTree(tokensDir: string, options?: { theme?: string }): LoadedTokenTree {
   const files: Array<{ path: string; tier: string }> = [];
 
-  for (const path of findTokenFiles(join(tokensDir, 'primitive'))) {
-    files.push({ path, tier: 'primitive' });
+  for (const path of findTokenFiles(join(tokensDir, TOKEN_TIER_DIRS.primitive))) {
+    files.push({ path, tier: TOKEN_TIER_DIRS.primitive });
   }
 
-  const semanticDir = join(tokensDir, 'semantic');
   if (options?.theme !== undefined) {
-    const semanticFile = join(semanticDir, `${options.theme}.tokens.json`);
+    const semanticFile = semanticThemeFile(tokensDir, options.theme);
     if (existsSync(semanticFile)) {
-      files.push({ path: semanticFile, tier: 'semantic' });
+      files.push({ path: semanticFile, tier: TOKEN_TIER_DIRS.semantic });
     } else {
       throw new Error(`semantic theme file not found: ${semanticFile}`);
     }
-  } else if (existsSync(semanticDir)) {
-    for (const path of findTokenFiles(semanticDir)) {
-      files.push({ path, tier: 'semantic' });
+  } else {
+    for (const path of findTokenFiles(semanticDir(tokensDir))) {
+      files.push({ path, tier: TOKEN_TIER_DIRS.semantic });
     }
   }
 
-  for (const path of findTokenFiles(join(tokensDir, 'component'))) {
-    files.push({ path, tier: 'component' });
+  for (const path of findTokenFiles(join(tokensDir, TOKEN_TIER_DIRS.component))) {
+    files.push({ path, tier: TOKEN_TIER_DIRS.component });
   }
 
   const flat = new Map<string, FlattenedToken>();

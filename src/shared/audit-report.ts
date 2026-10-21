@@ -1,9 +1,7 @@
-import { existsSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
 import { checkContrast } from './colors.js';
 import { checkTokensProvenance, type TamperReport } from './guard.js';
 import { AUDIT_PAIRS } from './roles.js';
-import { loadTokenTree, type LoadedTokenTree } from './tokens.js';
+import { loadTokenTree, semanticThemes, type LoadedTokenTree } from './tokens.js';
 import type { AuditReport, ContrastKind } from './types.js';
 
 export interface AuditFloors {
@@ -17,15 +15,6 @@ export function floorTable(minRatio: number, minApca: number): Record<ContrastKi
     border: { ratio: 3, apca: 30 },
     decorative: { ratio: 1, apca: 0 },
   };
-}
-
-export function discoverSemanticThemes(tokensDir: string): string[] {
-  const semanticDir = join(tokensDir, 'semantic');
-  if (!existsSync(semanticDir)) return [];
-  return readdirSync(semanticDir)
-    .filter((file) => file.endsWith('.tokens.json'))
-    .map((file) => file.replace(/\.tokens\.json$/, ''))
-    .sort();
 }
 
 export function evaluateTheme(
@@ -69,22 +58,12 @@ export function auditTokens(
   const minRatio = options.minRatio ?? 4.5;
   const minApca = options.minApca ?? 60;
   const floors = floorTable(minRatio, minApca);
-  const discovered = discoverSemanticThemes(tokensDir);
+  const discovered = semanticThemes(tokensDir);
   const themes =
     options.theme === undefined || options.theme === 'both' ? discovered : [options.theme];
   const reports = new Map<string, AuditReport>();
 
   for (const themeName of themes) {
-    const semanticFile = join(tokensDir, 'semantic', `${themeName}.tokens.json`);
-    if (!existsSync(semanticFile)) {
-      reports.set(themeName, {
-        pairs: [],
-        unresolvedAliases: [`missing semantic theme: ${themeName} (${semanticFile})`],
-        rawValueViolations: [],
-        pass: false,
-      });
-      continue;
-    }
     let tree: LoadedTokenTree;
     try {
       tree = loadTokenTree(tokensDir, { theme: themeName });

@@ -7,6 +7,9 @@ import {
   deepMerge,
   flattenTokens,
   loadTokenTree,
+  semanticThemeFile,
+  semanticThemeFileName,
+  semanticThemes,
   tokenSourcePatterns,
   walkTokenLeaves,
 } from '../src/shared/tokens.ts';
@@ -122,4 +125,27 @@ test('tokenSourcePatterns normalizes separators and trailing slashes', () => {
     './semantic/dark.tokens.json',
     './component/**/*.tokens.json',
   ]);
+});
+
+test('semantic layout helpers agree with tokenSourcePatterns', () => {
+  assert.equal(semanticThemeFileName('light'), 'light.tokens.json');
+  assert.equal(
+    semanticThemeFile(join('tokens'), 'light'),
+    join('tokens', 'semantic', 'light.tokens.json'),
+  );
+  assert.equal(tokenSourcePatterns('tokens', 'light')[1], 'tokens/semantic/light.tokens.json');
+});
+
+test('semanticThemes lists theme names without the suffix', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'semantic-themes-'));
+  try {
+    mkdirSync(join(dir, 'semantic'), { recursive: true });
+    writeFileSync(join(dir, 'semantic', 'light.tokens.json'), '{}', 'utf8');
+    writeFileSync(join(dir, 'semantic', 'dark.tokens.json'), '{}', 'utf8');
+    writeFileSync(join(dir, 'semantic', 'notes.md'), '', 'utf8');
+    assert.deepEqual(semanticThemes(dir), ['dark', 'light']);
+    assert.deepEqual(semanticThemes(join(dir, 'missing')), []);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

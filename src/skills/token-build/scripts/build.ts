@@ -20,7 +20,7 @@ import {
   type UiProfileId,
 } from '../../../shared/profile-registry.js';
 import { loadStyleSpec } from '../../../shared/spec.js';
-import { tokenSourcePatterns } from '../../../shared/tokens.js';
+import { semanticThemeFile, tokenSourcePatterns } from '../../../shared/tokens.js';
 import type { BuildTokensOptions } from '../../../shared/types.js';
 import { buildUiProfile } from '../../../shared/ui-profiles.js';
 
@@ -62,8 +62,8 @@ export async function runBuild(argv = process.argv.slice(2)): Promise<number> {
   }
 
   // Any theme with a semantic/<theme>.tokens.json file is buildable.
-  const semanticFile = `${tokensArg.replaceAll('\\', '/')}/semantic/${theme}.tokens.json`;
-  if (!existsSync(fromCwd(semanticFile))) {
+  const semanticFile = semanticThemeFile(tokensDir, theme);
+  if (!existsSync(semanticFile)) {
     console.error(`theme not found: ${semanticFile}`);
     return 1;
   }
