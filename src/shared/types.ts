@@ -125,6 +125,16 @@ export interface StyleSpec {
 }
 export type ContrastKind = 'text' | 'border' | 'decorative';
 
+export interface RemedySuggestion {
+  /** Semantic override path to change; always starts with `semantic.`. */
+  path: string;
+  /** Proposed alias value, e.g. `{color.neutral.700}`. */
+  alias: string;
+  ratio: number;
+  apcaLc: number;
+  side: 'foreground' | 'background';
+}
+
 export interface ContrastResult {
   foreground: string;
   background: string;
@@ -133,6 +143,7 @@ export interface ContrastResult {
   /** Absolute APCA lightness contrast |Lc| (0–~108); polarity-independent floor value. */
   apcaLc: number;
   pass: boolean;
+  suggestion?: RemedySuggestion;
 }
 
 export interface AuditReport {

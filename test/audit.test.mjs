@@ -84,3 +84,70 @@ test('runAudit with --spec checks spec binding and fails on mismatch', () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('auditTokens computes remedy suggestions for failed pairs and includes them in JSON output', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'audit-remedy-'));
+  try {
+    const specPath = join(dir, 'style-spec.json');
+    const specData = JSON.parse(
+      readFileSync('src/skills/token-style/assets/style-spec.example.json', 'utf8'),
+    );
+    specData.overrides = {
+      light: {
+        'semantic.color.text.tertiary': '{color.neutral.200}',
+      },
+    };
+    writeFileSync(specPath, JSON.stringify(specData, null, 2), 'utf8');
+
+    const tokensDir = join(dir, 'tokens');
+    assert.equal(runGenerate(['--spec', specPath, '--out', tokensDir]), 0);
+
+    const result = auditTokens(tokensDir, { theme: 'light', minRatio: 4.5, minApca: 60 });
+    assert.equal(result.pass, false);
+    const failedPairs = result.themes.light.pairs.filter((p) => !p.pass);
+    assert.ok(failedPairs.length > 0);
+    const tertiaryPair = failedPairs.find((p) => p.foreground === 'semantic.color.text.tertiary');
+    assert.ok(tertiaryPair !== undefined);
+    assert.ok(tertiaryPair.suggestion !== undefined);
+    assert.equal(tertiaryPair.suggestion.path, 'semantic.color.text.tertiary');
+    assert.notEqual(tertiaryPair.suggestion.alias, '{color.neutral.200}');
+    assert.ok(tertiaryPair.suggestion.ratio >= 4.5);
+    assert.ok(tertiaryPair.suggestion.apcaLc >= 60);
+    assert.equal(tertiaryPair.suggestion.side, 'foreground');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('auditTokens falls back to background suggestion when no foreground step passes', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'audit-remedy-bg-'));
+  try {
+    const specPath = join(dir, 'style-spec.json');
+    const specData = JSON.parse(
+      readFileSync('src/skills/token-style/assets/style-spec.example.json', 'utf8'),
+    );
+    specData.overrides = {
+      light: {
+        'semantic.color.text.primary': '{color.neutral.500}',
+        'semantic.color.bg.canvas': '{color.neutral.600}',
+      },
+    };
+    writeFileSync(specPath, JSON.stringify(specData, null, 2), 'utf8');
+
+    const tokensDir = join(dir, 'tokens');
+    assert.equal(runGenerate(['--spec', specPath, '--out', tokensDir]), 0);
+
+    const result = auditTokens(tokensDir, { theme: 'light', minRatio: 4.5, minApca: 60 });
+    assert.equal(result.pass, false);
+    const primaryPair = result.themes.light.pairs.find(
+      (p) =>
+        p.foreground === 'semantic.color.text.primary' &&
+        p.background === 'semantic.color.bg.canvas',
+    );
+    assert.ok(primaryPair !== undefined);
+    assert.equal(primaryPair.pass, false);
+    assert.ok(primaryPair.suggestion !== undefined);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

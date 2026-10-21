@@ -77,6 +77,11 @@ export function runAudit(argv = process.argv.slice(2)): number {
         console.log(
           `  ${pair.pass ? 'PASS' : 'FAIL'}  ${pair.ratio.toFixed(2)}:1  Lc ${pair.apcaLc.toFixed(1)}  ${pair.foreground} on ${pair.background}${suffix}`,
         );
+        if (!pair.pass && pair.suggestion !== undefined) {
+          console.log(
+            `        remedy: ${pair.suggestion.path} → ${pair.suggestion.alias} (${pair.suggestion.ratio.toFixed(2)}:1, Lc ${pair.suggestion.apcaLc.toFixed(1)})`,
+          );
+        }
       }
       for (const item of report.unresolvedAliases) console.log(`  FAIL  unresolved alias: ${item}`);
       for (const item of report.rawValueViolations) console.log(`  FAIL  ${item}`);

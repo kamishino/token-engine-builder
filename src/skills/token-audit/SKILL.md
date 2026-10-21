@@ -22,7 +22,7 @@ Binary dual gate: every pair must clear BOTH WCAG ratio (--min-ratio, default 4.
    - Done when: the report prints per-theme PASS/FAIL lines and an exit code.
 
 2. **Remediate failures** (no human needed, max 3 loops; ladder in `references/contrast.md`):
-   - Contrast shortfall → record the step move as a spec override (`overrides.<theme>.<semantic.path>` in `style-spec.json`, e.g. `semantic.color.text.tertiary` → `{color.neutral.300}`), then re-run `token-math` — never edit a generated semantic file (regeneration would erase it and trip provenance).
+   - Contrast shortfall → audit prints a `remedy:` alias computed from the same ramp; record that alias (or a farther step) in `overrides.<theme>.<semantic.path>` in `style-spec.json` (e.g. `semantic.color.text.tertiary` → `{color.neutral.700}`), then re-run `token-math` — never edit a generated semantic file (regeneration would erase it and trip provenance).
    - Unresolved alias → fix the target path; aliases are dotted from the merged tree root (`{color.cerulean.500}`).
    - Raw value above Tier 1 → move it into `primitive/` and alias it.
    - Done when: audit exits 0, or 3 loops elapsed → escalate with the failing pairs table.

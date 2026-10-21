@@ -7,7 +7,7 @@ import {
 } from './guard.js';
 import { AUDIT_PAIRS } from './roles.js';
 import { loadTokenTree, semanticThemes, type LoadedTokenTree } from './tokens.js';
-import type { AuditReport, ContrastKind } from './types.js';
+import type { AuditReport, ContrastKind, OklchColor, RemedySuggestion } from './types.js';
 
 export interface AuditFloors {
   ratio: number;
@@ -20,6 +20,76 @@ export function floorTable(minRatio: number, minApca: number): Record<ContrastKi
     border: { ratio: 3, apca: 30 },
     decorative: { ratio: 1, apca: 0 },
   };
+}
+
+const ALIAS_VALUE = /^\{([^}]+)\}$/;
+const ROLE_ALIAS = /^\{color\.(.+)\.(\d+)\}$/;
+
+function escapeRegExp(s: string): string {
+  return s.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** Component → semantic hop(s); returns the semantic path an override can target. */
+function semanticOverridePath(tree: LoadedTokenTree, path: string): string | undefined {
+  if (path.startsWith('semantic.')) return path;
+  let current = path;
+  for (let depth = 0; depth < 16; depth++) {
+    const raw = tree.flat.get(current)?.value;
+    if (typeof raw !== 'string') return undefined;
+    const match = ALIAS_VALUE.exec(raw.trim());
+    if (match?.[1] === undefined) return undefined;
+    const target = match[1];
+    if (target.startsWith('semantic.')) return target;
+    if (target.startsWith('color.')) return undefined;
+    current = target;
+  }
+  return undefined;
+}
+
+function nearestPassingAlias(
+  tree: LoadedTokenTree,
+  semanticPath: string,
+  otherPath: string,
+  otherColor: OklchColor,
+  floors: AuditFloors,
+  kind: ContrastKind,
+  roleIsFg: boolean,
+): { alias: string; ratio: number; apcaLc: number } | undefined {
+  const currentVal = tree.flat.get(semanticPath)?.value;
+  if (typeof currentVal !== 'string') return undefined;
+  const match = ROLE_ALIAS.exec(currentVal.trim());
+  if (match?.[1] === undefined || match[2] === undefined) return undefined;
+  const family = match[1];
+  const currentStep = Number(match[2]);
+
+  const candidatePattern = new RegExp(`^color\\.${escapeRegExp(family)}\\.(\\d+)$`);
+  const candidates: Array<{ path: string; step: number }> = [];
+  for (const key of tree.flat.keys()) {
+    const m = candidatePattern.exec(key);
+    if (m?.[1] !== undefined) {
+      const step = Number(m[1]);
+      if (step !== currentStep) {
+        candidates.push({ path: key, step });
+      }
+    }
+  }
+
+  candidates.sort((a, b) => {
+    const distDiff = Math.abs(a.step - currentStep) - Math.abs(b.step - currentStep);
+    return distDiff !== 0 ? distDiff : a.step - b.step;
+  });
+
+  for (const cand of candidates) {
+    const color = tree.resolveColor(cand.path);
+    if (color === undefined) continue;
+    const res = roleIsFg
+      ? checkContrast(semanticPath, color, otherPath, otherColor, floors.ratio, floors.apca, kind)
+      : checkContrast(otherPath, otherColor, semanticPath, color, floors.ratio, floors.apca, kind);
+    if (res.pass) {
+      return { alias: `{${cand.path}}`, ratio: res.ratio, apcaLc: res.apcaLc };
+    }
+  }
+  return undefined;
 }
 
 export function evaluateTheme(
@@ -35,6 +105,59 @@ export function evaluateTheme(
     const floor = floors[kind];
     return [checkContrast(fg, fgColor, bg, bgColor, floor.ratio, floor.apca, kind)];
   });
+  for (const pair of pairs) {
+    if (pair.pass || pair.kind === 'decorative') continue;
+    const floor = floors[pair.kind];
+    const fgPath = semanticOverridePath(tree, pair.foreground);
+    const bgPath = semanticOverridePath(tree, pair.background);
+    const fgColor = tree.resolveColor(pair.foreground, []);
+    const bgColor = tree.resolveColor(pair.background, []);
+
+    let suggestion: RemedySuggestion | undefined;
+    if (fgPath !== undefined && bgColor !== undefined) {
+      const candidate = nearestPassingAlias(
+        tree,
+        fgPath,
+        pair.background,
+        bgColor,
+        floor,
+        pair.kind,
+        true,
+      );
+      if (candidate !== undefined) {
+        suggestion = {
+          path: fgPath,
+          alias: candidate.alias,
+          ratio: candidate.ratio,
+          apcaLc: candidate.apcaLc,
+          side: 'foreground',
+        };
+      }
+    }
+    if (suggestion === undefined && bgPath !== undefined && fgColor !== undefined) {
+      const candidate = nearestPassingAlias(
+        tree,
+        bgPath,
+        pair.foreground,
+        fgColor,
+        floor,
+        pair.kind,
+        false,
+      );
+      if (candidate !== undefined) {
+        suggestion = {
+          path: bgPath,
+          alias: candidate.alias,
+          ratio: candidate.ratio,
+          apcaLc: candidate.apcaLc,
+          side: 'background',
+        };
+      }
+    }
+    if (suggestion !== undefined) {
+      pair.suggestion = suggestion;
+    }
+  }
   unresolvedAliases.push(...tree.checkUnresolvedAliases());
   const uniqueUnresolved = [...new Set(unresolvedAliases)];
   return {
