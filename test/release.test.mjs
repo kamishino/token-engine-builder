@@ -1,10 +1,19 @@
 import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import {
+  buildSbom,
   crc32,
   planArtifacts,
   planRelease,
@@ -77,6 +86,10 @@ test('runPackage packages all buckets, bundle, SBOM, and checksums into isolated
     assert.ok(existsSync(join(dir, 'release', 'token-engine-governance-v2.0.0.zip')));
     assert.ok(existsSync(join(dir, 'release', 'token-engine-builder-v2.0.0.cyclonedx.json')));
     assert.ok(existsSync(join(dir, 'release', 'SHA256SUMS.txt')));
+    const planned = planRelease(dir, '2.0.0')
+      .artifacts.map((artifact) => artifact.name)
+      .sort();
+    assert.deepEqual(readdirSync(join(dir, 'release')).sort(), planned);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -137,4 +150,25 @@ test('sbomComponents extracts sorted roots and transitives from lockfile', () =>
   assert.equal(components[0].purl, 'pkg:npm/@types%2Fnode@22.0.0');
   assert.equal(components[1].name, 'colorjs.io');
   assert.equal(components[2].name, 'style-dictionary');
+});
+
+test('buildSbom builds the CycloneDX envelope from fixed inputs', () => {
+  const sbom = buildSbom({
+    name: 'test-pkg',
+    version: '2.0.0',
+    license: 'MIT',
+    components: [{ type: 'library', name: 'x', version: '1.0.0' }],
+    serialNumber: 'urn:uuid:00000000-0000-0000-0000-000000000000',
+    timestamp: '2026-01-01T00:00:00.000Z',
+  });
+  assert.equal(sbom.bomFormat, 'CycloneDX');
+  assert.equal(sbom.specVersion, '1.5');
+  assert.equal(sbom.serialNumber, 'urn:uuid:00000000-0000-0000-0000-000000000000');
+  assert.deepEqual(sbom.metadata.component, {
+    type: 'application',
+    name: 'test-pkg',
+    version: '2.0.0',
+    licenses: [{ license: { id: 'MIT' } }],
+  });
+  assert.deepEqual(sbom.components, [{ type: 'library', name: 'x', version: '1.0.0' }]);
 });

@@ -159,6 +159,27 @@ export function sbomComponents(lock, roots = SBOM_ROOTS) {
     });
 }
 
+/** Build the CycloneDX 1.5 envelope for the release. */
+export function buildSbom({ name, version, license, components, serialNumber, timestamp }) {
+  return {
+    bomFormat: 'CycloneDX',
+    specVersion: '1.5',
+    serialNumber,
+    version: 1,
+    metadata: {
+      timestamp,
+      tools: [{ vendor: 'token-engine-builder', name: 'package-release', version }],
+      component: {
+        type: 'application',
+        name,
+        version,
+        licenses: [{ license: { id: license ?? 'MIT' } }],
+      },
+    },
+    components,
+  };
+}
+
 export function planRelease(root, version, { keyPresent = false } = {}) {
   const distDir = join(root, 'dist');
   const skillsDir = join(root, 'src', 'skills');
@@ -260,112 +281,93 @@ export function runPackage(argv = process.argv.slice(2), { root = rootDir } = {}
   }
 
   const plan = planRelease(root, currentVersion, { keyPresent: Boolean(keyData) });
-  const skills = plan.skills;
   const stageDir = join(root, 'release.tmp');
   rmSync(stageDir, { recursive: true, force: true });
   mkdirSync(stageDir, { recursive: true });
 
   const artifacts = [];
-  const bundleEntries = [];
-  for (const skill of skills) {
-    const entries = entriesFor(skill, currentDistDir);
-    bundleEntries.push(...entries);
-    const out = join(stageDir, `token-engine-${skill}-v${currentVersion}.zip`);
-    writeZip(entries, out);
-    artifacts.push(out);
-    console.log(`[package] ${skill} → release/${basename(out)}`);
-  }
+  const skillEntries = new Map();
   const claudePlugin = join(root, '.claude', 'plugin.json');
-  if (existsSync(claudePlugin)) {
-    bundleEntries.push({ path: claudePlugin, arc: '.claude/plugin.json' });
-  }
-  const bundle = join(stageDir, `token-engine-builder-v${currentVersion}.zip`);
-  writeZip(bundleEntries, bundle);
-  artifacts.push(bundle);
-  console.log(`[package] bundle → release/${basename(bundle)}`);
+  const pluginEntry = existsSync(claudePlugin)
+    ? { path: claudePlugin, arc: '.claude/plugin.json' }
+    : null;
+  let sumsFile;
 
-  // L5 Skill Grouping: functional bucket bundles
-  for (const [bucketName, bucketSkills] of Object.entries(SKILL_BUCKETS)) {
-    const bucketEntries = [];
-    for (const s of bucketSkills) {
-      if (!skills.includes(s)) {
-        console.error(`[package] bucket:${bucketName} missing required skill: ${s}`);
+  for (const item of plan.artifacts) {
+    const out = join(stageDir, item.name);
+    if (item.kind === 'skill') {
+      const entries = entriesFor(item.skill, currentDistDir);
+      skillEntries.set(item.skill, entries);
+      writeZip(entries, out);
+      artifacts.push(out);
+      console.log(`[package] ${item.skill} → release/${item.name}`);
+    } else if (item.kind === 'bundle') {
+      const entries = plan.skills.flatMap((skill) => skillEntries.get(skill) ?? []);
+      if (pluginEntry !== null) entries.push(pluginEntry);
+      writeZip(entries, out);
+      artifacts.push(out);
+      console.log(`[package] bundle → release/${item.name}`);
+    } else if (item.kind === 'bucket') {
+      const bucketSkills = SKILL_BUCKETS[item.bucket];
+      const entries = [];
+      for (const skill of bucketSkills) {
+        const skillEntryList = skillEntries.get(skill);
+        if (skillEntryList === undefined) {
+          console.error(`[package] bucket:${item.bucket} missing required skill: ${skill}`);
+          return 1;
+        }
+        entries.push(...skillEntryList);
+      }
+      if (pluginEntry !== null) entries.push(pluginEntry);
+      writeZip(entries, out);
+      artifacts.push(out);
+      console.log(`[package] bucket:${item.bucket} → release/${item.name}`);
+    } else if (item.kind === 'sbom') {
+      const components = sbomComponents(lock, SBOM_ROOTS);
+      const sbom = buildSbom({
+        name: currentPkg.name,
+        version: currentPkg.version,
+        license: currentPkg.license,
+        components,
+        serialNumber: `urn:uuid:${randomUUID()}`,
+        timestamp: new Date().toISOString(),
+      });
+      writeFileSync(out, `${JSON.stringify(sbom, null, 2)}\n`, 'utf8');
+      artifacts.push(out);
+      console.log(`[package] SBOM → release/${item.name} (${components.length} components)`);
+    } else if (item.kind === 'checksums') {
+      const sums = artifacts
+        .map(
+          (path) =>
+            `${createHash('sha256').update(readFileSync(path)).digest('hex')}  ${basename(path)}`,
+        )
+        .join('\n');
+      writeFileSync(out, `${sums}\n`, 'utf8');
+      sumsFile = out;
+      artifacts.push(out);
+      console.log(
+        `[package] ${item.name} written (${artifacts.length} artifacts, v${currentVersion})`,
+      );
+    } else if (item.kind === 'signature') {
+      if (keyData === null || sumsFile === undefined) {
+        console.error('[package] signature planned without a release key or checksums');
         return 1;
       }
-      bucketEntries.push(...entriesFor(s, currentDistDir));
+      const keyId = Buffer.from(keyData.keyId, 'hex');
+      const pkcs8Prefix = Buffer.from('302e020100300506032b657004220420', 'hex');
+      const pkcs8Der = Buffer.concat([pkcs8Prefix, Buffer.from(keyData.privateKey, 'hex')]);
+      const privKeyObj = createPrivateKey({ key: pkcs8Der, format: 'der', type: 'pkcs8' });
+      const rawSig = sign(null, readFileSync(sumsFile), privKeyObj);
+      const sigBuf = Buffer.concat([Buffer.from('Ed'), keyId, rawSig]);
+      const sigContent =
+        `untrusted comment: signature from token-engine-builder secret key\n` +
+        `${sigBuf.toString('base64')}\n` +
+        `trusted comment: timestamp:${Math.floor(Date.now() / 1000)}\tfile:SHA256SUMS.txt\n` +
+        `${rawSig.toString('base64')}\n`;
+      writeFileSync(out, sigContent, 'utf8');
+      artifacts.push(out);
+      console.log(`[package] ${item.name} written (Ed25519 signature)`);
     }
-    if (existsSync(claudePlugin)) {
-      bucketEntries.push({ path: claudePlugin, arc: '.claude/plugin.json' });
-    }
-    const bucketZip = join(stageDir, `token-engine-${bucketName}-v${currentVersion}.zip`);
-    writeZip(bucketEntries, bucketZip);
-    artifacts.push(bucketZip);
-    console.log(`[package] bucket:${bucketName} → release/${basename(bucketZip)}`);
-  }
-
-  if (lock !== null) {
-    const components = sbomComponents(lock, SBOM_ROOTS);
-    const sbom = {
-      bomFormat: 'CycloneDX',
-      specVersion: '1.5',
-      serialNumber: `urn:uuid:${randomUUID()}`,
-      version: 1,
-      metadata: {
-        timestamp: new Date().toISOString(),
-        tools: [
-          {
-            vendor: 'token-engine-builder',
-            name: 'package-release',
-            version: currentVersion,
-          },
-        ],
-        component: {
-          type: 'application',
-          name: currentPkg.name,
-          version: currentPkg.version,
-          licenses: [{ license: { id: currentPkg.license ?? 'MIT' } }],
-        },
-      },
-      components,
-    };
-
-    const sbomPath = join(stageDir, `token-engine-builder-v${currentVersion}.cyclonedx.json`);
-    writeFileSync(sbomPath, `${JSON.stringify(sbom, null, 2)}\n`, 'utf8');
-    artifacts.push(sbomPath);
-    console.log(`[package] SBOM → release/${basename(sbomPath)} (${components.length} components)`);
-  }
-
-  const sums = artifacts
-    .map(
-      (path) =>
-        `${createHash('sha256').update(readFileSync(path)).digest('hex')}  ${basename(path)}`,
-    )
-    .join('\n');
-  const sumsFile = join(stageDir, 'SHA256SUMS.txt');
-  writeFileSync(sumsFile, `${sums}\n`, 'utf8');
-  console.log(
-    `[package] SHA256SUMS.txt written (${artifacts.length} artifacts, v${currentVersion})`,
-  );
-
-  if (keyData !== null) {
-    const keyId = Buffer.from(keyData.keyId, 'hex');
-    const pkcs8Prefix = Buffer.from('302e020100300506032b657004220420', 'hex');
-    const pkcs8Der = Buffer.concat([pkcs8Prefix, Buffer.from(keyData.privateKey, 'hex')]);
-    const privKeyObj = createPrivateKey({ key: pkcs8Der, format: 'der', type: 'pkcs8' });
-
-    const sumsBuf = readFileSync(sumsFile);
-    const rawSig = sign(null, sumsBuf, privKeyObj);
-
-    const sigBuf = Buffer.concat([Buffer.from('Ed'), keyId, rawSig]);
-    const sigContent =
-      `untrusted comment: signature from token-engine-builder secret key\n` +
-      `${sigBuf.toString('base64')}\n` +
-      `trusted comment: timestamp:${Math.floor(Date.now() / 1000)}\tfile:SHA256SUMS.txt\n` +
-      `${Buffer.concat([rawSig]).toString('base64')}\n`;
-
-    const sigFile = join(stageDir, 'SHA256SUMS.txt.minisig');
-    writeFileSync(sigFile, sigContent, 'utf8');
-    console.log(`[package] SHA256SUMS.txt.minisig written (Ed25519 signature)`);
   }
 
   // Atomic swap
