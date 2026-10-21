@@ -9,5 +9,7 @@ test('roleForColorName classifies both Tailwind naming schemes', () => {
   assert.equal(roleForColorName('secondary'), 'secondary');
   assert.equal(roleForColorName('accent'), 'accent');
   assert.equal(roleForColorName('accent-500'), 'accent');
+  assert.equal(roleForColorName('--color-secondary'), 'secondary');
+  assert.equal(roleForColorName('color-accent'), 'accent');
   assert.equal(roleForColorName('surface'), undefined);
 });

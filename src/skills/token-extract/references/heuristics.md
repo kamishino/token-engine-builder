@@ -4,7 +4,7 @@ Read when interpreting extract output or questioning a candidate. Implemented in
 
 ## Scan scope
 
-Files: `.css .scss .json .ts .tsx .js .jsx .html`, plus `.md` through the DESIGN.md path below. Recursive, sorted. Skipped directories: `node_modules`, `.git`, `dist`, `release`, `coverage`, `.next`. Unparseable colors are skipped silently (they are evidence of nothing).
+Files: `.css .scss .json .ts .tsx .js .jsx .html`, plus `.md` through the DESIGN.md path below. Recursive, sorted. Skipped directories: `node_modules`, `.git`, `dist`, `release`, `coverage`, `.next`. Unparseable colors are skipped silently (they are evidence of nothing). CSS custom properties named `--color-<role>` (including `:root` blocks) record matching primary, secondary, and accent roles; role names are normalized (`--color-`, `-<step>` stripped).
 
 ## DESIGN.md frontmatter (highest precedence)
 

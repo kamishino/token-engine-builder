@@ -13,6 +13,17 @@ export interface NamedColor {
   h: number;
 }
 
+export const COLOR_NAME_PREFIXES = [
+  'deep',
+  'soft',
+  'vibrant',
+  'rich',
+  'pale',
+  'bright',
+  'dark',
+  'pure',
+] as const;
+
 export const COLOR_NAMES: readonly NamedColor[] = [
   // Sector 0: Red (0° - 15°)
   { name: 'pale-rose', l: 0.85, c: 0.08, h: 5 },

@@ -8,7 +8,7 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, extname, join, relative } from 'node:path';
 import { usageText } from '../../../shared/cli-flags.js';
-import { nearestColorName } from '../../../shared/color-names.js';
+import { COLOR_NAME_PREFIXES, nearestColorName } from '../../../shared/color-names.js';
 import { buildHarmony, formatOklch, parseToOklch } from '../../../shared/colors.js';
 import { decideWrite } from '../../../shared/guard.js';
 import { fromCwd, getArg, hasFlag, isMainModule } from '../../../shared/paths.js';
@@ -52,10 +52,14 @@ export type ColorRole = 'primary' | 'secondary' | 'accent';
 
 /** Classify a Tailwind colour name (v3 config key or v4 custom-property name) into a palette role. */
 export function roleForColorName(name: string): ColorRole | undefined {
-  const n = name.toLowerCase();
-  if (n === 'primary' || n === 'brand' || n === 'primary-500') return 'primary';
-  if (n === 'secondary' || n === 'secondary-500') return 'secondary';
-  if (n === 'accent' || n === 'accent-500') return 'accent';
+  const normalized = name
+    .toLowerCase()
+    .replace(/^--/, '')
+    .replace(/^color-/, '')
+    .replace(/-\d+$/, '');
+  if (normalized === 'primary' || normalized === 'brand') return 'primary';
+  if (normalized === 'secondary') return 'secondary';
+  if (normalized === 'accent') return 'accent';
   return undefined;
 }
 
@@ -130,7 +134,7 @@ export function composeStyleSpec(evidence: ExtractionEvidence): ComposedSpec | n
     fmSecondary ?? (secondaryCand ? toAnchor(secondaryCand) : undefined);
   const resolvedAccent: OklchColor | undefined = accentCand ? toAnchor(accentCand) : undefined;
   const usedNames = new Set<string>();
-  const PREFIXES = ['deep', 'soft', 'vibrant', 'rich', 'pale', 'bright', 'dark', 'pure'] as const;
+  const PREFIXES = COLOR_NAME_PREFIXES;
   function uniqueName(color: OklchColor): string {
     const base = nearestColorName(color);
     if (!usedNames.has(base)) {
@@ -360,20 +364,16 @@ function extractTailwindConfig(text: string, relSource: string, state: ScanState
   }
 }
 
-function extractTailwindV4Theme(text: string, relSource: string, state: ScanState): void {
-  const themeMatch = /@theme\s*\{([^}]+)\}/s.exec(text);
-  if (themeMatch?.[1] !== undefined) {
-    const block = themeMatch[1];
-    for (const match of block.matchAll(/--color-([a-zA-Z0-9_-]+)\s*:\s*([^;]+);/g)) {
-      const varName = (match[1] || '').toLowerCase();
-      const val = (match[2] || '').trim();
-      try {
-        const col = parseToOklch(val);
-        recordCandidate(state, val, varName, relSource);
-        recordRoleColor(state, varName, col);
-      } catch {
-        /* skip */
-      }
+function extractCssColorVariables(text: string, relSource: string, state: ScanState): void {
+  for (const match of text.matchAll(/--color-([a-zA-Z0-9_-]+)\s*:\s*([^;]+);/g)) {
+    const varName = `--color-${match[1]}`;
+    const val = (match[2] || '').trim();
+    try {
+      const col = parseToOklch(val);
+      recordCandidate(state, val, varName, relSource);
+      recordRoleColor(state, varName, col);
+    } catch {
+      /* skip */
     }
   }
 }
@@ -392,7 +392,7 @@ export function scanTextColors(text: string, relSource: string, state: ScanState
 export function scanFile(text: string, relSource: string, state: ScanState): void {
   if (relSource.includes('tailwind.config')) extractTailwindConfig(text, relSource, state);
   if (relSource.endsWith('.css') || relSource.endsWith('.scss'))
-    extractTailwindV4Theme(text, relSource, state);
+    extractCssColorVariables(text, relSource, state);
   if (relSource.endsWith('.md')) {
     const parsed = parseDesignFrontmatter(text, relSource);
     if (parsed !== undefined && parsed.primary !== undefined) {

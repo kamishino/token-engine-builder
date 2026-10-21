@@ -12,12 +12,10 @@ test('runExtract extracts palette with primary, secondary, and accent roles from
     writeFileSync(
       cssPath,
       `
-      @theme {
+      :root {
         --color-primary: #2563eb;
         --color-secondary: #0d9488;
         --color-accent: #f59e0b;
-      }
-      :root {
         --radius: 8px;
         font-family: Inter, sans-serif;
       }

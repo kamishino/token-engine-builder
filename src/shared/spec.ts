@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { COLOR_NAMES, nearestColorName } from './color-names.js';
+import { COLOR_NAME_PREFIXES, COLOR_NAMES, nearestColorName } from './color-names.js';
 import { clampToSrgb } from './colors.js';
 import type { HarmonyMethod, RampStepCount, StyleSpec } from './types.js';
 
@@ -10,6 +10,15 @@ export interface StyleSpecValidationResult {
   warnings: string[];
 }
 const CATALOG_NAMES = new Set(COLOR_NAMES.map((entry) => entry.name));
+
+function isCatalogName(name: string): boolean {
+  if (CATALOG_NAMES.has(name)) return true;
+  const dash = name.indexOf('-');
+  if (dash === -1) return false;
+  const prefix = name.slice(0, dash);
+  const base = name.slice(dash + 1);
+  return (COLOR_NAME_PREFIXES as readonly string[]).includes(prefix) && CATALOG_NAMES.has(base);
+}
 
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const ALIAS_PATTERN = /^\{[a-z0-9.-]+\}$/;
@@ -98,7 +107,7 @@ export function validateStyleSpec(raw: unknown): StyleSpecValidationResult {
             `anchor for ${String(name)} clamped to sRGB (chroma ${anchor.c} → ${clamped.c})`,
           );
         }
-        if (typeof name === 'string' && !CATALOG_NAMES.has(name)) {
+        if (typeof name === 'string' && !isCatalogName(name)) {
           warnings.push(
             `palette "${name}" is not a vendored catalog color name (nearest: ${nearestColorName(clamped)})`,
           );

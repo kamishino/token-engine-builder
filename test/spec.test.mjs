@@ -128,7 +128,7 @@ test('validateStyleSpec warns on non-catalog palette names and passes catalog na
     name: 'test-brand',
     palette: [
       { role: 'primary', name: 'cerulean', anchor: { l: 0.6, c: 0.15, h: 250 } },
-      { role: 'secondary', name: 'amethyst', anchor: { l: 0.6, c: 0.1275, h: 285 } },
+      { role: 'secondary', name: 'deep-amethyst', anchor: { l: 0.6, c: 0.1275, h: 285 } },
       { role: 'accent', name: 'sky', anchor: { l: 0.6, c: 0.1275, h: 215 } },
     ],
     typography: { fontFamily: 'Inter, sans-serif', baseSizePx: 16, ratio: 1.25 },
