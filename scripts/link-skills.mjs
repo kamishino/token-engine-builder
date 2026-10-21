@@ -28,6 +28,52 @@ import { isSkillStale } from './build-engine.mjs';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
+/**
+ * Decide deploy actions without touching the filesystem. `existing` maps each
+ * skill to what currently sits at its destination; `pruneCandidates` are link
+ * names resolving inside this repo's dist/. Stops at the first refusal so the
+ * executor never touches a later skill (matches the single-pass deploy).
+ */
+export function planDeploy({
+  skills,
+  existing,
+  copy = false,
+  force = false,
+  prune = true,
+  pruneCandidates = [],
+}) {
+  const mode = copy ? 'copy' : 'link';
+  const actions = [];
+  for (const skill of skills) {
+    const kind = existing[skill] ?? 'absent';
+    if (kind === 'link') {
+      actions.push({ kind: 'remove-link', skill });
+      actions.push({ kind: 'place', skill, mode });
+      continue;
+    }
+    if (kind === 'absent') {
+      actions.push({ kind: 'place', skill, mode });
+      continue;
+    }
+    if (!copy) {
+      actions.push({ kind: 'skip', skill });
+      continue;
+    }
+    if (!force) {
+      actions.push({ kind: 'refuse', skill });
+      return actions;
+    }
+    actions.push({ kind: 'remove-directory', skill });
+    actions.push({ kind: 'place', skill, mode });
+  }
+  if (prune) {
+    for (const skill of pruneCandidates) {
+      if (!skills.includes(skill)) actions.push({ kind: 'prune', skill });
+    }
+  }
+  return actions;
+}
+
 export function runLink(argv = process.argv.slice(2), { root = rootDir } = {}) {
   if (hasFlag(argv, '--help')) {
     console.log('Usage: link-skills.mjs [--dir <path>] [--copy] [--force] [--no-prune] [--unlink]');
@@ -91,46 +137,57 @@ export function runLink(argv = process.argv.slice(2), { root = rootDir } = {}) {
     console.log('[deploy] all bundles up to date');
   }
 
+  const existing = {};
   for (const skill of skills) {
-    const from = join(currentDistDir, skill);
     const dest = join(targetDir, skill);
-    if (existsSync(dest) || isLink(dest)) {
-      // Never recurse into a link: unlink it. Recursive removal runs only on
-      // real directories in copy mode (rm would follow junctions into dist/).
-      if (isLink(dest)) removeLink(dest);
-      else if (!copyMode) {
-        console.error(
-          `[deploy] SKIP ${skill}: ${dest} is a real directory, not a link (remove by hand)`,
-        );
-        continue;
-      } else if (!forceCopy) {
-        console.error(
-          `[deploy] refusing to delete real directory ${dest} in --copy mode (pass --force)`,
-        );
-        return 1;
-      } else rmSync(dest, { recursive: true, force: true });
-    }
-    if (copyMode) cpSync(from, dest, { recursive: true });
-    else symlinkSync(from, dest, 'junction');
-    console.log(`[deploy] ${copyMode ? 'copied' : 'linked'} ${skill} → ${dest}`);
+    existing[skill] = isLink(dest) ? 'link' : existsSync(dest) ? 'directory' : 'absent';
   }
 
-  if (prune) {
-    for (const entry of readdirSync(targetDir, { withFileTypes: true })) {
-      // Only links resolving inside this repo's dist/ are ours; foreign links
-      // (other skill sets) and real directories are never touched.
-      const path = join(targetDir, entry.name);
-      if (skills.includes(entry.name) || !isLink(path)) continue;
+  const pruneCandidates = readdirSync(targetDir, { withFileTypes: true })
+    .map((entry) => entry.name)
+    .filter((name) => {
+      const path = join(targetDir, name);
+      if (!isLink(path)) return false;
       const target = resolve(targetDir, readlinkSync(path));
-      if (
-        target !== currentDistDir &&
-        !target.startsWith(`${currentDistDir}\\`) &&
-        !target.startsWith(`${currentDistDir}/`)
-      ) {
-        continue;
-      }
-      removeLink(path);
-      console.log(`[deploy] pruned dead link ${entry.name}`);
+      return (
+        target === currentDistDir ||
+        target.startsWith(`${currentDistDir}\\`) ||
+        target.startsWith(`${currentDistDir}/`)
+      );
+    });
+
+  for (const action of planDeploy({
+    skills,
+    existing,
+    copy: copyMode,
+    force: forceCopy,
+    prune,
+    pruneCandidates,
+  })) {
+    const dest = join(targetDir, action.skill);
+    if (action.kind === 'remove-link') {
+      removeLink(dest);
+    } else if (action.kind === 'remove-directory') {
+      rmSync(dest, { recursive: true, force: true });
+    } else if (action.kind === 'place') {
+      const from = join(currentDistDir, action.skill);
+      if (action.mode === 'copy') cpSync(from, dest, { recursive: true });
+      else symlinkSync(from, dest, 'junction');
+      console.log(
+        `[deploy] ${action.mode === 'copy' ? 'copied' : 'linked'} ${action.skill} → ${dest}`,
+      );
+    } else if (action.kind === 'skip') {
+      console.error(
+        `[deploy] SKIP ${action.skill}: ${dest} is a real directory, not a link (remove by hand)`,
+      );
+    } else if (action.kind === 'prune') {
+      removeLink(dest);
+      console.log(`[deploy] pruned dead link ${action.skill}`);
+    } else {
+      console.error(
+        `[deploy] refusing to delete real directory ${dest} in --copy mode (pass --force)`,
+      );
+      return 1;
     }
   }
   return 0;
