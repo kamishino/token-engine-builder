@@ -18,6 +18,7 @@ export interface ScriptSpec {
 
 export const SCRIPT_KEYS = [
   'ask-kami/scripts/route.mjs',
+  'improve-design-system/scripts/diagnose.mjs',
   'token-audit/scripts/audit.mjs',
   'token-build/scripts/build.mjs',
   'token-build/scripts/figma.mjs',
@@ -30,6 +31,14 @@ export type ScriptKey = (typeof SCRIPT_KEYS)[number];
 export const SCRIPTS: Record<ScriptKey, ScriptSpec> = {
   'ask-kami/scripts/route.mjs': {
     flags: [{ flag: '--root', arg: '<dir>' }, { flag: '--json' }],
+  },
+  'improve-design-system/scripts/diagnose.mjs': {
+    flags: [
+      { flag: '--root', arg: '<dir>' },
+      { flag: '--spec', arg: '<style-spec.json>' },
+      { flag: '--tokens', arg: '<dir>' },
+      { flag: '--build', arg: '<dir>' },
+    ],
   },
   'token-audit/scripts/audit.mjs': {
     flags: [

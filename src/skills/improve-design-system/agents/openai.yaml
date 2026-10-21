@@ -1,0 +1,5 @@
+interface:
+  display_name: 'Improve Design System'
+  short_description: 'Evaluate a design system, find holes, write REPORT_HTML'
+policy:
+  allow_implicit_invocation: false

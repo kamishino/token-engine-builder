@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { getArg, isMainModule } from '../src/shared/paths.ts';
 import { runRoute } from '../src/skills/ask-kami/scripts/route.ts';
+import { runDiagnose } from '../src/skills/improve-design-system/scripts/diagnose.ts';
 import { runAudit } from '../src/skills/token-audit/scripts/audit.ts';
 import { runBuild } from '../src/skills/token-build/scripts/build.ts';
 import { runFigma } from '../src/skills/token-build/scripts/figma.ts';
@@ -40,4 +41,7 @@ test('runGenerate, runAudit, runBuild, runExtract, runFigma execute through prog
 
   const routeCode = runRoute(['--help']);
   assert.equal(routeCode, 0);
+
+  const diagnoseCode = runDiagnose(['--help']);
+  assert.equal(diagnoseCode, 0);
 });
