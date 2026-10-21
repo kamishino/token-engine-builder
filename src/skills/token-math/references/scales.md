@@ -32,5 +32,5 @@ Components bind **layout roles**, never raw spacing steps. Layout tokens are gen
 
 - Modular scale: `size = base × ratioⁿ`, steps −2…+6 (`xs…5xl`). Ratio guide: 1.2 compact/corporate, 1.25 balanced default, 1.333 editorial/expressive, 1.618 hero-only.
 - Spacing primitives: 4px base unit, multipliers 0,1,2,3,4,5,6,8,10,12,16,20,24; density comfortable ×1.0 / compact ×0.875.
-- Radius: spec-driven (`sm/md/lg/full`); character presets in `token-style/references/design-mappings.md`.
+- Radius: spec-driven (`sm/md/lg/full`); character presets: sharp 2/4/8, soft 4/8/16, round 8/16/24.
 - Fluid clamps: `fluidClamp` interpolates a size between 360px and 1280px viewports; available in the engine, not emitted by default.

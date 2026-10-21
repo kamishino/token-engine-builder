@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
  *
  * Bundled scripts live at `<skill>/scripts/<name>.mjs`; `templates/` and
  * `assets/` sit beside `scripts/`. Resolving from `import.meta.url` keeps the
- * skill working after it is moved to `~/agents/skills/<skill-name>/` —
+ * skill working after it is moved to `~/.agents/skills/<skill-name>/` —
  * never resolve these from `process.cwd()`.
  */
 export function scriptDir(importMetaUrl: string): string {

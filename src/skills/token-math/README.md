@@ -5,7 +5,7 @@ Second in the pipeline: scaffolds the 3-tier DTCG token tree from `templates/` a
 ## Install
 
 ```bash
-cp -r dist/token-math ~/agents/skills/token-math
+cp -r dist/token-math ~/.agents/skills/token-math
 ```
 
 Requires Node `>=22.12`. No install step: dependencies are inlined into `scripts/generate.mjs` at build time.
@@ -13,10 +13,10 @@ Requires Node `>=22.12`. No install step: dependencies are inlined into `scripts
 ## Use
 
 ```bash
-node ~/agents/skills/token-math/scripts/generate.mjs --spec style-spec.json --out tokens
+node ~/.agents/skills/token-math/scripts/generate.mjs --spec style-spec.json --out tokens
 ```
 
-`--force` overwrites an existing `tokens/` (the agent should ask first). The primary palette anchor lands exactly on `color.<slug>.500` (e.g. `color.cerulean.500`); tiers 2–3 stay alias-only. Input contract: the `StyleSpec` JSON validated at load time; see `../token-style/assets/style-spec.example.json`. The full procedure is in [SKILL.md](SKILL.md).
+`--force` overwrites an existing `tokens/` (the agent should ask first). The primary palette anchor lands exactly on `color.<slug>.500` (e.g. `color.cerulean.500`); tiers 2–3 stay alias-only. Input contract: the `StyleSpec` JSON validated at load time; see `assets/style-spec.example.json`. The full procedure is in [SKILL.md](SKILL.md).
 
 ## Next
 
