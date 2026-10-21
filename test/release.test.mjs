@@ -71,7 +71,15 @@ test('runPackage packages all buckets, bundle, SBOM, and checksums into isolated
     mkdirSync(join(dir, '.claude'), { recursive: true });
     writeFileSync(join(dir, '.claude', 'plugin.json'), '{"name":"test"}', 'utf8');
 
-    const skills = ['token-style', 'token-extract', 'token-math', 'token-audit', 'token-build'];
+    const skills = [
+      'token-style',
+      'token-extract',
+      'token-math',
+      'token-audit',
+      'token-build',
+      'ask-kami',
+      'improve-design-system',
+    ];
     for (const s of skills) {
       const sDir = join(dir, 'dist', s);
       mkdirSync(sDir, { recursive: true });
@@ -84,6 +92,7 @@ test('runPackage packages all buckets, bundle, SBOM, and checksums into isolated
     assert.ok(existsSync(join(dir, 'release', 'token-engine-builder-v2.0.0.zip')));
     assert.ok(existsSync(join(dir, 'release', 'token-engine-creation-v2.0.0.zip')));
     assert.ok(existsSync(join(dir, 'release', 'token-engine-governance-v2.0.0.zip')));
+    assert.ok(existsSync(join(dir, 'release', 'token-engine-routing-v2.0.0.zip')));
     assert.ok(existsSync(join(dir, 'release', 'token-engine-builder-v2.0.0.cyclonedx.json')));
     assert.ok(existsSync(join(dir, 'release', 'SHA256SUMS.txt')));
     const planned = planRelease(dir, '2.0.0')
@@ -99,21 +108,31 @@ test('planRelease returns complete release plan and respects keyPresent', () => 
   const dir = mkdtempSync(join(tmpdir(), 'release-plan-test-'));
   try {
     writeFileSync(join(dir, 'package-lock.json'), '{}', 'utf8');
-    const skills = ['token-style', 'token-extract', 'token-math', 'token-audit', 'token-build'];
+    const skills = [
+      'token-style',
+      'token-extract',
+      'token-math',
+      'token-audit',
+      'token-build',
+      'ask-kami',
+      'improve-design-system',
+    ];
     for (const s of skills) {
       mkdirSync(join(dir, 'src', 'skills', s), { recursive: true });
     }
     assert.ok(SKILL_BUCKETS.creation.includes('token-style'));
     assert.ok(SKILL_BUCKETS.governance.includes('token-audit'));
+    assert.ok(SKILL_BUCKETS.routing.includes('ask-kami'));
+    assert.ok(SKILL_BUCKETS.routing.includes('improve-design-system'));
     const planWithoutKey = planRelease(dir, '1.5.0', { keyPresent: false });
-    assert.equal(planWithoutKey.skills.length, 5);
-    assert.equal(planWithoutKey.artifacts.length, 10);
+    assert.equal(planWithoutKey.skills.length, 7);
+    assert.equal(planWithoutKey.artifacts.length, 13);
     assert.ok(planWithoutKey.artifacts.some((a) => a.kind === 'sbom' && a.name.includes('1.5.0')));
     assert.ok(!planWithoutKey.artifacts.some((a) => a.kind === 'signature'));
-    assert.equal(planArtifacts(dir, '1.5.0', { keyPresent: false }).length, 10);
+    assert.equal(planArtifacts(dir, '1.5.0', { keyPresent: false }).length, 13);
 
     const planWithKey = planRelease(dir, '1.5.0', { keyPresent: true });
-    assert.equal(planWithKey.artifacts.length, 11);
+    assert.equal(planWithKey.artifacts.length, 14);
     assert.ok(
       planWithKey.artifacts.some((a) => a.kind === 'signature' && a.name.endsWith('.minisig')),
     );

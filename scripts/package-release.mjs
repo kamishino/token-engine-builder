@@ -123,6 +123,7 @@ function entriesFor(skill, dist = distDir) {
 export const SKILL_BUCKETS = {
   creation: ['token-style', 'token-extract', 'token-math'],
   governance: ['token-audit', 'token-build'],
+  routing: ['ask-kami', 'improve-design-system'],
 };
 
 export const SBOM_ROOTS = Object.freeze(['colorjs.io', 'style-dictionary']);

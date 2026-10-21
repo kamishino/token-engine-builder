@@ -6,13 +6,15 @@ Builds and packages self-contained AI agent skills for 3-tier W3C DTCG design to
 
 ## Skills
 
-| Skill                                              | What it does                                                                                                    |
-| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| [token-extract](src/skills/token-extract/SKILL.md) | Alternative entry: scans an existing project (CSS/tokens/config) → candidate `style-spec.json` with evidence    |
-| [token-style](src/skills/token-style/SKILL.md)     | Discovery scan + Socratic interview → one OKLCH anchor recorded as `style-spec.json` (Kobayashi style clusters) |
-| [token-math](src/skills/token-math/SKILL.md)       | Generates the 3-tier DTCG token tree from the spec (ramps, type, spacing, radius, shadow, z-index, animation)   |
-| [token-audit](src/skills/token-audit/SKILL.md)     | Dual WCAG + APCA gatekeeper — exit 0 ships, exit 1 blocks                                                       |
-| [token-build](src/skills/token-build/SKILL.md)     | Compiles audited tokens to CSS custom properties + Tailwind v4 `@theme` (light / dark / high-contrast)          |
+| Skill                                                              | What it does                                                                                                    |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| [ask-kami](src/skills/ask-kami/SKILL.md)                           | Entry router: detects workspace state (spec, tokens, audit, build) → proposes next skill & command              |
+| [token-extract](src/skills/token-extract/SKILL.md)                 | Alternative entry: scans an existing project (CSS/tokens/config) → candidate `style-spec.json` with evidence    |
+| [token-style](src/skills/token-style/SKILL.md)                     | Discovery scan + Socratic interview → one OKLCH anchor recorded as `style-spec.json` (Kobayashi style clusters) |
+| [token-math](src/skills/token-math/SKILL.md)                       | Generates the 3-tier DTCG token tree from the spec (ramps, type, spacing, radius, shadow, z-index, animation)   |
+| [token-audit](src/skills/token-audit/SKILL.md)                     | Dual WCAG + APCA gatekeeper — exit 0 ships, exit 1 blocks                                                       |
+| [token-build](src/skills/token-build/SKILL.md)                     | Compiles audited tokens to CSS custom properties + Tailwind v4 `@theme` (light / dark / high-contrast)          |
+| [improve-design-system](src/skills/improve-design-system/SKILL.md) | Evaluates design system health → finds holes → writes visual REPORT_HTML with resolution steps                  |
 
 ## Why this exists
 
@@ -23,10 +25,23 @@ Built with TypeScript, Vite (SSR/Node lib mode), `colorjs.io/fn` partial imports
 ## Pipeline
 
 ```text
-token-style      Socratic interview first          → style-spec.json
-token-math        generate.mjs --spec …         → tokens/ (primitive → semantic → component)
-token-audit       audit.mjs --tokens tokens         → WCAG 2.1 gate (exit 0/1)
-token-build       build.mjs --tokens tokens         → tokens.css + Tailwind v4 theme.css
+ask-kami (router)
+   │
+   ├─▶ token-extract    Alternative entry: scan existing code   → candidate style-spec.json
+   │
+   ├─▶ token-style      Socratic interview first                → style-spec.json
+   │      │
+   │      ▼
+   │   token-math       generate.mjs --spec …                   → tokens/ (primitive → semantic → component)
+   │      │
+   │      ▼
+   │   token-audit      audit.mjs --tokens tokens               → WCAG 2.1 + APCA gate (exit 0/1)
+   │      │
+   │      ▼
+   │   token-build      build.mjs --tokens tokens               → tokens.css + Tailwind v4 theme.css
+   │      │
+   │      ▼
+   └─▶ improve-design-system  evaluate system health / holes     → REPORT_HTML
 ```
 
 Raw values live only in `primitive/`; semantic (per-theme) and component tokens are `{alias}`-only. See `ARCHITECTURE.md` §3.

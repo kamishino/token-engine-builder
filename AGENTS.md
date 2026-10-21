@@ -7,7 +7,7 @@
 TypeScript + Vite (SSR/Node lib mode) builder that packages colocated AI agent skills. `src/skills/<skill>/` → `dist/<skill>/`, 1:1. Each skill is standalone after copy to `~/agents/skills/<skill>/` (node only, no install).
 
 - `src/shared/` — bundled engine: `colors.ts` (OKLCH), `scales.ts` (type/spacing), `compiler.ts` (Style Dictionary v5), `paths.ts` (portable resolution), `types.ts` (DTCG types).
-- `src/skills/` — pipeline skills in order: `token-extract` (alternative entry: existing project → candidate spec), then `token-style` (interview/read-back → `style-spec.json`), then `token-math` (`generate.mjs` → `tokens/`), then `token-audit` (`audit.mjs` → WCAG+APCA gate), finally `token-build` (`build.mjs` → CSS + Tailwind v4).
+- `src/skills/` — 7 skills across creation, governance, and routing buckets: `ask-kami` (entry router), `token-extract` (alternative entry: code → candidate spec), `token-style` (interview/read-back → `style-spec.json`), `token-math` (`generate.mjs` → `tokens/`), `token-audit` (`audit.mjs` → WCAG+APCA gate), `token-build` (`build.mjs` → CSS + Tailwind v4), and `improve-design-system` (diagnosis → `REPORT_HTML`).
 - `scripts/build-all.mjs` — one Vite pass per skill so no shared chunk leaks between `dist/<skill>/`.
 - `vite.config.ts` — entry discovery, `sync-skill-packages` plugin (`SKILL.md` + `templates/` + `assets/` mirror, `chmod 0o755`).
 

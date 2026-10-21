@@ -5,12 +5,16 @@ Deep design: module contracts, token discipline, and the three load-bearing buil
 ## 1. System overview
 
 ```
-style-spec.json ──generate.mjs──▶ tokens/ (3-tier) ──audit.mjs──▶ gate (0/1) ──build.mjs──▶ CSS + @theme + specs + visualizer + 8 profiles
-       ▲                              │                                                    │
- token-style                token-math                                            token-build
- (interview first)      (templates + math)            token-audit (WCAG 2.1 gatekeeper)    │
-                                                                                           ▼
-                                                                                   figma.mjs (DTCG ↔ Figma sync)
+ask-kami (router)
+   │
+   ├─▶ style-spec.json ──generate.mjs──▶ tokens/ (3-tier) ──audit.mjs──▶ gate (0/1) ──build.mjs──▶ CSS + @theme + specs + visualizer + 8 profiles
+   │          ▲                              │                                                    │
+   │    token-style                token-math                                            token-build
+   │    (interview first)      (templates + math)            token-audit (WCAG 2.1 gatekeeper)    │
+   │                                                                                             ▼
+   │                                                                                     figma.mjs (DTCG ↔ Figma sync)
+   │
+   └─▶ improve-design-system (read-only diagnosis ──▶ REPORT_HTML review / proposal)
 ```
 
 Skill packages are colocated (`src/skills/<skill>/`: `SKILL.md`, `scripts/*.ts`, `templates/`, `assets/`) and mirrored 1:1 into `dist/<skill>/` by the `sync-skill-packages` Vite plugin (`closeBundle`: copy `SKILL.md` + `templates/` + `assets/` + `examples/`, `chmod 0o755` on `scripts/*.mjs`). Per-skill `README.md` files stay in `src/` — `dist/` is production-readiness. A `dist/<skill>/` folder runs standalone: `node scripts/<name>.mjs` with no install. `token-extract` is an alternative entry beside the interview: it scans an existing project read-only and writes a candidate `style-spec.json` (evidence-ranked anchor), which still passes through `token-style`'s read-back before `token-math` consumes it.
@@ -38,6 +42,8 @@ External design-AI contracts (Stitch-format `DESIGN.md`, roadmap X1) are downstr
 | `profile-registry.ts` | Canonical UI-library profile identifiers and artifact destination mappings                   | `profileFileName`, `UI_PROFILE_IDS`, `PROFILE_FILE_NAMES`, `UiProfileId`                                                                                                                                                                                               |
 | `cli-flags.ts`        | Declarative CLI flag specifications and `--help` usage formatter                             | `usageText`, `SCRIPTS`, `SCRIPT_KEYS`, `FlagSpec`, `ScriptSpec`, `ScriptKey`                                                                                                                                                                                           |
 | `paths.ts`            | Portable skill paths (`import.meta.url`) vs cwd-relative user paths                          | `scriptDir`, `skillRoot`, `templatePath`, `getArg`, `hasFlag`, `fromCwd`, `isMainModule`                                                                                                                                                                               |
+| `system-state.ts`     | System inspection and path resolution for spec, tokens, audit stamp, and build artifacts     | `inspectSystem`, `resolveSystemPaths`, `SystemPaths`, `SystemState`, `SpecState`                                                                                                                                                                                       |
+| `diagnose.ts`         | Comprehensive design system diagnosis, findings classification, and next-action computation  | `diagnoseDesignSystem`, `Finding`, `NextAction`, `Diagnosis`                                                                                                                                                                                                           |
 
 ## 3. Token tiers and alias discipline
 

@@ -1,10 +1,11 @@
 {
   "name": "token-engine-builder",
   "version": "1.4.0",
-  "description": "5-skill agent pipeline for 3-tier W3C DTCG design tokens (OKLCH, WCAG+APCA, Style Dictionary v5, UI profiles)",
+  "description": "7-skill agent pipeline for 3-tier W3C DTCG design tokens (OKLCH, WCAG+APCA, Style Dictionary v5, UI profiles, routing, and review)",
   "buckets": {
     "creation": ["token-style", "token-extract", "token-math"],
-    "governance": ["token-audit", "token-build"]
+    "governance": ["token-audit", "token-build"],
+    "routing": ["ask-kami", "improve-design-system"]
   },
   "author": {
     "name": "kamishino"
@@ -44,6 +45,18 @@
       "path": "dist/token-build",
       "bucket": "governance",
       "description": "Compile DTCG token trees to CSS variables, Tailwind v4 @theme, and UI-library profiles"
+    },
+    {
+      "name": "ask-kami",
+      "path": "dist/ask-kami",
+      "bucket": "routing",
+      "description": "Entry router: detect design-system state and propose the next skill"
+    },
+    {
+      "name": "improve-design-system",
+      "path": "dist/improve-design-system",
+      "bucket": "routing",
+      "description": "Evaluate an existing design system, find holes, and write REPORT_HTML"
     }
   ]
 }
