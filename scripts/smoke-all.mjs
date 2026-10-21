@@ -213,6 +213,31 @@ const CASES = [
       }
     },
   },
+  {
+    id: 'P3',
+    title: 'packaging: static directories across all skills',
+    run: async () => {
+      const expectedDirs = {
+        'ask-kami': ['references'],
+        'improve-design-system': ['references'],
+        'token-audit': ['examples', 'references'],
+        'token-build': ['examples', 'references'],
+        'token-extract': ['examples', 'references'],
+        'token-math': ['assets', 'references', 'templates'],
+        'token-style': ['assets', 'examples', 'references'],
+      };
+
+      for (const [skill, dirs] of Object.entries(expectedDirs)) {
+        const sDir = join(skillsRoot, skill);
+        for (const dir of dirs) {
+          const target = join(sDir, dir);
+          if (!existsSync(target)) {
+            throw new Error(`expected directory missing in copied skill: ${skill}/${dir}`);
+          }
+        }
+      }
+    },
+  },
 
   // --- Pipeline Seed ---
   {
@@ -1329,14 +1354,24 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
         'state: spec=missing tokens=missing audit=missing build=missing',
         'empty state',
       );
-      expectContains(
-        res.stdout,
-        'next: token-extract — node ./scripts/extract.mjs --root . --out style-spec.json',
-        'extract command line',
-      );
+      const lines = res.stdout.split('\n');
+      const extractLine = lines.find((l) => l.startsWith('next: token-extract — node '));
+      if (!extractLine) {
+        throw new Error(`missing next: token-extract command line in output: "${res.stdout}"`);
+      }
+      const normalizedExtract = extractLine.replaceAll('\\', '/');
+      if (
+        !normalizedExtract.includes(
+          '/token-extract/scripts/extract.mjs --root . --out style-spec.json',
+        )
+      ) {
+        throw new Error(`expected absolute token-extract script path, got: "${extractLine}"`);
+      }
+      if (normalizedExtract.includes('node ./scripts/')) {
+        throw new Error(`extract command must not use cwd-relative ./scripts: "${extractLine}"`);
+      }
       expectContains(res.stdout, 'next: token-style', 'token-style next line');
       // Must not propose generate.mjs for token-style
-      const lines = res.stdout.split('\n');
       const styleLine = lines.find((l) => l.startsWith('next: token-style'));
       if (!styleLine) throw new Error('missing next: token-style line');
       if (styleLine.includes('generate.mjs') || styleLine.includes(' — ')) {
