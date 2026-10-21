@@ -42,5 +42,18 @@ test('planThemes applies durable overrides in memory', () => {
     },
   }).spec;
   const light = planThemes(spec).find((entry) => entry.theme === 'light').data;
-  assert.deepEqual(light.semantic.color.bg.canvas, { $value: '{color.neutral.100}' });
+  assert.deepEqual(light.semantic.color.bg.canvas, {
+    $value: '{color.neutral.100}',
+    $type: 'color',
+  });
+});
+
+test('planThemes throws when an override targets an unknown path', () => {
+  const spec = loadStyleSpec({
+    ...base,
+    overrides: {
+      light: { 'semantic.color.bg.canvasss': '{color.neutral.100}' },
+    },
+  }).spec;
+  assert.throws(() => planThemes(spec), /matches no generated semantic token/);
 });

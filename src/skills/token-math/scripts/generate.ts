@@ -47,8 +47,14 @@ export function runGenerate(argv = process.argv.slice(2)): number {
   for (const warning of warnings) {
     console.log(`warning: ${warning}`);
   }
+  let planned: ReturnType<typeof planTokenFiles>;
+  try {
+    planned = planTokenFiles(spec);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    return 1;
+  }
   if (dryRun) {
-    const planned = planTokenFiles(spec);
     console.log(`would generate 3-tier tokens for "${spec.name}" → ${outDir}`);
     console.log('would copy: templates/tokens/** (primitive and component templates)');
     for (const { segments, note } of planned) {
@@ -98,7 +104,7 @@ export function runGenerate(argv = process.argv.slice(2)): number {
     writeFileSync(filePath, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
   }
 
-  for (const { segments, data } of planTokenFiles(spec)) {
+  for (const { segments, data } of planned) {
     writeTokenFile(segments, data);
   }
 

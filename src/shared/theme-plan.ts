@@ -1,6 +1,7 @@
 import { buildRamp } from './colors.js';
 import { FEEDBACK_ROLES, SEMANTIC_COLOR_ROLES } from './roles.js';
 import { GENERATED_THEMES } from './spec.js';
+import { walkTokenLeaves, type JsonObject } from './tokens.js';
 import type { StyleSpec, TokenGroup } from './types.js';
 
 type ThemeName = (typeof GENERATED_THEMES)[number];
@@ -181,7 +182,7 @@ export function planThemes(spec: StyleSpec): PlannedTheme[] {
         page: { $value: '{spacing.16}', $type: 'dimension' },
       },
     };
-    applyOverrides(data, spec.overrides?.[theme]);
+    applyOverrides(data, spec.overrides?.[theme], theme);
     planned.push({ theme, data });
   }
 
@@ -196,16 +197,21 @@ export function planThemes(spec: StyleSpec): PlannedTheme[] {
 function applyOverrides(
   data: Record<string, unknown>,
   overrides: Record<string, string> | undefined,
+  theme: string,
 ): void {
   if (overrides === undefined) return;
+  const known = new Set<string>();
+  walkTokenLeaves(data as JsonObject, '.', (path) => known.add(path));
   for (const [path, alias] of Object.entries(overrides)) {
+    if (!known.has(path)) {
+      throw new Error(`theme ${theme}: override "${path}" matches no generated semantic token`);
+    }
     const segments = path.split('.');
     let node = data;
     for (const segment of segments.slice(0, -1)) {
-      const next = node[segment];
-      if (next === null || typeof next !== 'object') node[segment] = {};
       node = node[segment] as Record<string, unknown>;
     }
-    node[segments[segments.length - 1] as string] = { $value: alias };
+    const leaf = node[segments[segments.length - 1] as string] as Record<string, unknown>;
+    leaf['$value'] = alias;
   }
 }
