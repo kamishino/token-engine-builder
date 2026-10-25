@@ -54,3 +54,62 @@ test('runRoute detects generated tree and suggests next action', () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('runRoute detects shadow-dom and tailors token-build command with --selector', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'route-shadow-'));
+  try {
+    const specPath = join(dir, 'style-spec.json');
+    writeFileSync(specPath, readFileSync(exampleSpec, 'utf8'), 'utf8');
+    const tokensDir = join(dir, 'tokens');
+    runGenerate(['--spec', specPath, '--out', tokensDir]);
+    runAudit(['--tokens', tokensDir, '--spec', specPath]);
+
+    // Create a Web Component source file using :host
+    writeFileSync(join(dir, 'hud.ts'), ':host { display: block; color: #fff; }', 'utf8');
+
+    let output = '';
+    const originalLog = console.log;
+    console.log = (msg) => {
+      output += `${msg}\n`;
+    };
+    try {
+      assert.equal(runRoute(['--root', dir]), 0);
+    } finally {
+      console.log = originalLog;
+    }
+
+    assert.match(output, /context=brownfield runtime=shadow-dom/);
+    assert.match(output, /--selector ":host, :root"/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('runRoute with --scaffold creates toolchain companion files', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'route-scaffold-'));
+  try {
+    const code = runRoute([
+      '--root',
+      dir,
+      '--scaffold',
+      '--formatter',
+      'prettier',
+      '--linter',
+      'stylelint',
+      '--css',
+      'tailwind',
+    ]);
+    assert.equal(code, 0);
+
+    const prettierConfig = JSON.parse(readFileSync(join(dir, '.prettierrc.json'), 'utf8'));
+    assert.equal(prettierConfig.semi, true);
+
+    const stylelintConfig = JSON.parse(readFileSync(join(dir, '.stylelintrc.json'), 'utf8'));
+    assert.equal(stylelintConfig.rules['color-no-hex'], true);
+
+    const tailwindImport = readFileSync(join(dir, 'theme.import.css'), 'utf8');
+    assert.ok(tailwindImport.includes('@import "tailwindcss";'));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

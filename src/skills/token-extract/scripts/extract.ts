@@ -6,10 +6,18 @@
  * the candidate must pass token-style's read-back before token-math runs.
  */
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { basename, extname, join, relative } from 'node:path';
+import { basename, dirname, extname, join, relative } from 'node:path';
+import type { PreAuditBaseline, RawColorPair } from '../../../shared/audit-report.js';
 import { usageText } from '../../../shared/cli-flags.js';
 import { COLOR_NAME_PREFIXES, nearestColorName } from '../../../shared/color-names.js';
-import { buildHarmony, formatOklch, parseToOklch } from '../../../shared/colors.js';
+import {
+  buildHarmony,
+  checkContrast,
+  clampToSrgb,
+  formatOklch,
+  oklchToHex,
+  parseToOklch,
+} from '../../../shared/colors.js';
 import { decideWrite } from '../../../shared/guard.js';
 import { fromCwd, getArg, hasFlag, isMainModule } from '../../../shared/paths.js';
 import { validateStyleSpec } from '../../../shared/spec.js';
@@ -529,6 +537,130 @@ export async function scanRenderedTarget(
   }
 }
 
+export function extractColorPairs(files: Array<{ text: string; file: string }>): PreAuditBaseline {
+  const pairs: RawColorPair[] = [];
+  const standaloneFg: Array<{ selector: string; file: string; color: OklchColor; roleTag: string }> =
+    [];
+  const detectedBg: OklchColor[] = [];
+
+  const ruleRegex = /([^{}]+)\{([^{}]+)\}/g;
+  const fgColorRegex = /(?:^|[^-])color\s*:\s*([^;!]+)/i;
+  const bgColorRegex = /(?:background-color|background)\s*:\s*([^;!]+)/i;
+
+  function determineRoleTag(selector: string): string {
+    const s = selector.toLowerCase();
+    if (s.includes('button') || s.includes('btn')) return 'button';
+    if (s.includes('card')) return 'card';
+    if (s.includes('input') || s.includes('field') || s.includes('textbox')) return 'input';
+    if (s.includes('dialog') || s.includes('modal')) return 'dialog';
+    if (s.includes('badge') || s.includes('pill') || s.includes('tag')) return 'badge';
+    if (s.includes('table') || s.includes('th') || s.includes('td')) return 'table';
+    if (s.includes('alert') || s.includes('warning') || s.includes('error')) return 'alert';
+    if (s.includes('muted') || s.includes('secondary') || s.includes('subdued'))
+      return 'text.secondary';
+    return 'text.primary';
+  }
+
+  for (const { text, file } of files) {
+    for (const match of text.matchAll(ruleRegex)) {
+      const selector = match[1]?.trim() ?? '';
+      const body = match[2] ?? '';
+      const fgMatch = body.match(fgColorRegex);
+      const bgMatch = body.match(bgColorRegex);
+
+      const fgColor = fgMatch ? parseToOklch(fgMatch[1]?.trim() ?? '') : null;
+      const bgColor = bgMatch ? parseToOklch(bgMatch[1]?.trim() ?? '') : null;
+
+      if (bgColor) {
+        detectedBg.push(bgColor);
+      }
+
+      const roleTag = determineRoleTag(selector);
+
+      if (fgColor && bgColor) {
+        const fgHex = oklchToHex(clampToSrgb(fgColor));
+        const bgHex = oklchToHex(clampToSrgb(bgColor));
+        const check = checkContrast(selector, fgColor, selector, bgColor, 4.5, 60);
+        pairs.push({
+          id: `${file}::${selector}`,
+          selector,
+          file,
+          fgHex,
+          bgHex,
+          wcagRatio: check.ratio,
+          apcaLc: check.apcaLc,
+          passWcag: check.ratio >= 4.5,
+          passApca: check.apcaLc >= 60,
+          roleTag,
+        });
+      } else if (fgColor) {
+        standaloneFg.push({ selector, file, color: fgColor, roleTag });
+      }
+    }
+  }
+
+  const dominantBg: OklchColor =
+    detectedBg.length > 0 ? detectedBg[0]! : (parseToOklch('#ffffff') as OklchColor);
+
+  for (const item of standaloneFg) {
+    const fgHex = oklchToHex(clampToSrgb(item.color));
+    const bgHex = oklchToHex(clampToSrgb(dominantBg));
+    const check = checkContrast(item.selector, item.color, 'canvas', dominantBg, 4.5, 60);
+    pairs.push({
+      id: `${item.file}::${item.selector}`,
+      selector: item.selector,
+      file: item.file,
+      fgHex,
+      bgHex,
+      wcagRatio: check.ratio,
+      apcaLc: check.apcaLc,
+      passWcag: check.ratio >= 4.5,
+      passApca: check.apcaLc >= 60,
+      roleTag: item.roleTag,
+    });
+  }
+
+  const total = pairs.length;
+  const passWcag = pairs.filter((p) => p.passWcag).length;
+  const failWcag = total - passWcag;
+  const passApca = pairs.filter((p) => p.passApca).length;
+  const failApca = total - passApca;
+  const avgRatio =
+    total > 0
+      ? Number((pairs.reduce((sum, p) => sum + p.wcagRatio, 0) / total).toFixed(2))
+      : 0;
+
+  return {
+    timestamp: new Date().toISOString(),
+    pairs,
+    summary: { total, passWcag, failWcag, passApca, failApca, avgRatio },
+  };
+}
+
+export function renderPreAuditMarkdown(baseline: PreAuditBaseline): string {
+  const lines = [
+    '# Pre-Audit Baseline Report (Production Contrast Debt)',
+    '',
+    '## Executive Summary',
+    `- Evaluated Production Pairs: ${baseline.summary.total}`,
+    `- WCAG 2.1 AA (≥ 4.5:1): ${baseline.summary.passWcag} PASS, ${baseline.summary.failWcag} FAIL`,
+    `- APCA (|Lc| ≥ 60): ${baseline.summary.passApca} PASS, ${baseline.summary.failApca} FAIL`,
+    `- Average Contrast Ratio: ${baseline.summary.avgRatio}:1`,
+    '',
+    '## Evaluated Production Pairs',
+    '| Selector | File | Foreground | Background | WCAG Ratio | APCA | Status |',
+    '| :--- | :--- | :--- | :--- | :--- | :--- | :--- |',
+  ];
+  for (const p of baseline.pairs) {
+    const status = p.passWcag ? 'PASS' : '**FAIL**';
+    lines.push(
+      `| \`${p.selector}\` | \`${p.file}\` | \`${p.fgHex}\` | \`${p.bgHex}\` | ${p.wcagRatio}:1 | ${p.apcaLc} | ${status} |`,
+    );
+  }
+  lines.push('');
+  return lines.join('\n');
+}
+
 export async function runExtract(argv = process.argv.slice(2)): Promise<number> {
   if (hasFlag(argv, '--help')) {
     console.log(usageText('token-extract/scripts/extract.mjs'));
@@ -539,6 +671,8 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
   const urlArg = getArg(argv, '--url');
   const htmlArg = getArg(argv, '--html');
   const outArg = getArg(argv, '--out', 'style-spec.json');
+  const auditBaseline = hasFlag(argv, '--audit-baseline');
+  const outBaselineArg = getArg(argv, '--out-baseline');
   const force = hasFlag(argv, '--force');
   const dryRun = hasFlag(argv, '--dry-run');
   const outPath = fromCwd(outArg);
@@ -559,6 +693,7 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
     }
   }
   const state = createScanState();
+  const scannedFiles: Array<{ text: string; file: string }> = [];
 
   if (urlArg !== undefined || htmlArg !== undefined) {
     const htmlContent = htmlArg === undefined ? undefined : readFileSync(fromCwd(htmlArg), 'utf8');
@@ -584,6 +719,7 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
       } catch {
         continue;
       }
+      scannedFiles.push({ text, file: rel });
       scanFile(text, rel, state);
     }
   }
@@ -642,6 +778,29 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
     console.log(`evidence: ${entry.value} (${entry.source}${entry.name ? `, ${entry.name}` : ''})`);
   }
   console.log(`extracted candidate anchor ${formatOklch(anchor)} → ${outPath}`);
+
+  if (auditBaseline) {
+    const baseline = extractColorPairs(scannedFiles);
+    const baselineJsonPath = outBaselineArg
+      ? fromCwd(outBaselineArg)
+      : join(dirname(outPath), '.pre-audit-baseline.json');
+    const baselineMdPath = outBaselineArg
+      ? outBaselineArg.replace(/\.json$/, '.md')
+      : join(dirname(outPath), 'pre-audit-baseline.md');
+
+    if (!dryRun) {
+      writeFileSync(baselineJsonPath, `${JSON.stringify(baseline, null, 2)}\n`, 'utf8');
+      writeFileSync(baselineMdPath, renderPreAuditMarkdown(baseline), 'utf8');
+      console.log(
+        `pre-audit baseline: ${baseline.summary.total} pair(s) evaluated (${baseline.summary.passWcag} pass, ${baseline.summary.failWcag} fail) → ${basename(baselineJsonPath)}`,
+      );
+    } else {
+      console.log(
+        JSON.stringify({ baseline: baseline.summary, pairs: baseline.pairs.length }, null, 2),
+      );
+    }
+  }
+
   console.log('next: token-style read-back (confirm or veto), then token-math generate');
   return 0;
 }

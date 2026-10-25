@@ -341,17 +341,20 @@ export function diagnoseDesignSystem(root: string, paths: SystemPaths): Diagnosi
   // Determine nextActions
   const nextActions: NextAction[] = [];
   if (state.spec.status === 'missing') {
-    nextActions.push(
-      {
-        skill: 'token-extract',
-        command: 'node <token-extract-root>/scripts/extract.mjs --root . --out style-spec.json',
-        reason: 'existing project with colors or fonts in code: extract a candidate spec',
-      },
-      {
-        skill: 'token-style',
-        reason: 'greenfield project: interview for brand personality and choose palette',
-      },
-    );
+    const extractAction: NextAction = {
+      skill: 'token-extract',
+      command: 'node <token-extract-root>/scripts/extract.mjs --root . --out style-spec.json',
+      reason: 'existing project with colors or fonts in code: extract a candidate spec',
+    };
+    const styleAction: NextAction = {
+      skill: 'token-style',
+      reason: 'greenfield project: interview for brand personality and choose palette',
+    };
+    if (state.context.maturity === 'brownfield') {
+      nextActions.push(extractAction, styleAction);
+    } else {
+      nextActions.push(styleAction, extractAction);
+    }
   } else if (state.spec.status === 'invalid') {
     nextActions.push({
       skill: 'token-style',
@@ -377,10 +380,12 @@ export function diagnoseDesignSystem(root: string, paths: SystemPaths): Diagnosi
       reason: 're-generate tokens to match the updated style-spec.json',
     });
   } else if (state.build.status === 'missing' || state.build.artifacts.length < 4) {
+    const selectorFlag =
+      state.context.runtime === 'shadow-dom' ? ' --selector ":host, :root"' : '';
     nextActions.push({
       skill: 'token-build',
       command:
-        'node <token-build-root>/scripts/build.mjs --tokens tokens --out build --theme light --spec style-spec.json',
+        `node <token-build-root>/scripts/build.mjs --tokens tokens --out build --theme light --spec style-spec.json${selectorFlag}`,
       reason: 'compile audited tokens to CSS variables, Tailwind @theme, and DESIGN.md',
     });
   } else {

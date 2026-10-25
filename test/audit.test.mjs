@@ -168,3 +168,75 @@ test('auditTokens falls back to background suggestion when no foreground step pa
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('runAudit with --baseline displays before-vs-after delta scorecard', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'audit-delta-'));
+  try {
+    const tokensDir = join(dir, 'tokens');
+    runGenerate([
+      '--spec',
+      'src/skills/token-style/assets/style-spec.example.json',
+      '--out',
+      tokensDir,
+    ]);
+
+    const baselinePath = join(dir, '.pre-audit-baseline.json');
+    const mockBaseline = {
+      timestamp: new Date().toISOString(),
+      pairs: [
+        {
+          id: 'app.css::.btn-primary',
+          selector: '.btn-primary',
+          file: 'app.css',
+          fgHex: '#ffffff',
+          bgHex: '#38bdf8',
+          wcagRatio: 2.85,
+          apcaLc: 42.1,
+          passWcag: false,
+          passApca: false,
+          roleTag: 'button',
+        },
+        {
+          id: 'app.css::body',
+          selector: 'body',
+          file: 'app.css',
+          fgHex: '#dae8ea',
+          bgHex: '#10131d',
+          wcagRatio: 12.5,
+          apcaLc: 95.2,
+          passWcag: true,
+          passApca: true,
+          roleTag: 'text.primary',
+        },
+      ],
+      summary: {
+        total: 2,
+        passWcag: 1,
+        failWcag: 1,
+        passApca: 1,
+        failApca: 1,
+        avgRatio: 7.68,
+      },
+    };
+    writeFileSync(baselinePath, JSON.stringify(mockBaseline, null, 2), 'utf8');
+
+    const originalLog = console.log;
+    let output = '';
+    console.log = (...args) => {
+      output += args.join(' ') + '\n';
+    };
+    try {
+      const code = runAudit(['--tokens', tokensDir, '--baseline', baselinePath]);
+      assert.equal(code, 0);
+    } finally {
+      console.log = originalLog;
+    }
+
+    assert.ok(output.includes('DUAL-AUDIT DELTA SCORECARD'));
+    assert.ok(output.includes('.btn-primary'));
+    assert.ok(output.includes('Fixed by Token Math'));
+    assert.ok(output.includes('Maintained'));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

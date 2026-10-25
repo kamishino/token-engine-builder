@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ARTIFACT_NAMES } from './compiler.js';
 import {
@@ -29,9 +29,16 @@ export interface SpecState {
   minWcagRatio?: number;
 }
 
+export interface CodebaseContext {
+  maturity: 'greenfield' | 'brownfield';
+  runtime: 'shadow-dom' | 'dom';
+  packageManager: 'pnpm' | 'npm' | 'yarn' | 'bun';
+}
+
 export interface SystemState {
   root: string;
   paths: SystemPaths;
+  context: CodebaseContext;
   spec: SpecState;
   tokens: { status: 'missing' | 'present'; path: string; themes: string[] };
   provenance: TamperReport;
@@ -41,6 +48,74 @@ export interface SystemState {
   binding: SpecBinding | 'unverified';
 }
 
+export function detectCodebaseContext(root: string): CodebaseContext {
+  let packageManager: CodebaseContext['packageManager'] = 'npm';
+  if (existsSync(join(root, 'pnpm-lock.yaml'))) packageManager = 'pnpm';
+  else if (existsSync(join(root, 'yarn.lock'))) packageManager = 'yarn';
+  else if (existsSync(join(root, 'bun.lockb')) || existsSync(join(root, 'bun.lock'))) packageManager = 'bun';
+
+  let maturity: CodebaseContext['maturity'] = 'greenfield';
+  let runtime: CodebaseContext['runtime'] = 'dom';
+  const styleExtensions = ['.css', '.scss', '.sass', '.less'];
+
+  function scanDir(dir: string, depth = 0): void {
+    if (depth > 2 || !existsSync(dir)) return;
+    try {
+      const entries = readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.name.startsWith('.') || entry.name === 'node_modules' || entry.name === 'dist' || entry.name === 'build') {
+          continue;
+        }
+        if (entry.isDirectory()) {
+          scanDir(join(dir, entry.name), depth + 1);
+        } else if (entry.isFile()) {
+          const lower = entry.name.toLowerCase();
+          if (styleExtensions.some((ext) => lower.endsWith(ext))) {
+            maturity = 'brownfield';
+          }
+          if (lower.endsWith('.ts') || lower.endsWith('.js') || lower.endsWith('.tsx') || lower.endsWith('.jsx') || lower.endsWith('.css')) {
+            try {
+              const sample = readFileSync(join(dir, entry.name), 'utf8').slice(0, 4000);
+              if (sample.includes(':host') || sample.includes('attachShadow') || sample.includes('ShadowRoot')) {
+                runtime = 'shadow-dom';
+              }
+              if (sample.includes('oklch(') || sample.includes('#') || sample.includes('rgb(')) {
+                maturity = 'brownfield';
+              }
+            } catch {
+              // ignore unreadable
+            }
+          }
+        }
+      }
+    } catch {
+      // ignore unreadable dir
+    }
+  }
+
+  scanDir(root, 0);
+
+  const pkgPath = join(root, 'package.json');
+  if (existsSync(pkgPath)) {
+    try {
+      const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as {
+        dependencies?: Record<string, string>;
+        devDependencies?: Record<string, string>;
+      };
+      const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+      if (deps['lit'] || deps['@lit/reactive-element'] || deps['stencil']) {
+        runtime = 'shadow-dom';
+      }
+      if (deps['tailwindcss'] || deps['sass'] || deps['styled-components']) {
+        maturity = 'brownfield';
+      }
+    } catch {
+      // ignore unreadable package.json
+    }
+  }
+
+  return { maturity, runtime, packageManager };
+}
 export function resolveSystemPaths(
   root: string,
   overrides: Partial<SystemPaths> = {},
@@ -113,6 +188,7 @@ export function inspectSystem(root: string, paths: SystemPaths): SystemState {
   return {
     root,
     paths,
+    context: detectCodebaseContext(root),
     spec: specState,
     tokens: tokensState,
     provenance,

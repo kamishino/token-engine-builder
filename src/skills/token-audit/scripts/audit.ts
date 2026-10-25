@@ -2,8 +2,13 @@
  * audit — WCAG 2.1 gatekeeper over a 3-tier token tree.
  * Exit 0 = pass, 1 = contrast failure / unresolved alias / raw value above Tier 1.
  */
-import { existsSync } from 'node:fs';
-import { auditTokens } from '../../../shared/audit-report.js';
+import { existsSync, readFileSync } from 'node:fs';
+import {
+  auditTokens,
+  computeDeltaScorecard,
+  renderDeltaScorecardTable,
+  type PreAuditBaseline,
+} from '../../../shared/audit-report.js';
 import { usageText } from '../../../shared/cli-flags.js';
 import { removeAuditStamp, specInputHash, writeAuditStamp } from '../../../shared/guard.js';
 import { fromCwd, getArg, hasFlag, isMainModule } from '../../../shared/paths.js';
@@ -69,6 +74,23 @@ export function runAudit(argv = process.argv.slice(2)): number {
     ...(specHash === undefined ? {} : { specHash }),
   });
   const semanticDirectory = semanticDir(tokensDir);
+  const baselineArg = getArg(argv, '--baseline');
+  let baseline: PreAuditBaseline | undefined;
+  const candidateBaselinePath = baselineArg
+    ? fromCwd(baselineArg)
+    : fromCwd('.pre-audit-baseline.json');
+  if (existsSync(candidateBaselinePath)) {
+    try {
+      baseline = JSON.parse(readFileSync(candidateBaselinePath, 'utf8')) as PreAuditBaseline;
+    } catch {
+      // ignore unreadable baseline
+    }
+  }
+
+  const primaryReport =
+    result.themes[theme] ?? result.themes['light'] ?? Object.values(result.themes)[0];
+  const deltaScorecard =
+    baseline && primaryReport ? computeDeltaScorecard(baseline, primaryReport) : undefined;
 
   if (asJson) {
     console.log(
@@ -79,6 +101,7 @@ export function runAudit(argv = process.argv.slice(2)): number {
           minApca: result.minApca,
           provenance: result.provenance,
           ...(result.specBinding === undefined ? {} : { specBinding: result.specBinding }),
+          ...(deltaScorecard === undefined ? {} : { deltaScorecard }),
           themes: result.themes,
         },
         null,
@@ -86,6 +109,9 @@ export function runAudit(argv = process.argv.slice(2)): number {
       ),
     );
   } else {
+    if (deltaScorecard !== undefined) {
+      console.log(renderDeltaScorecardTable(deltaScorecard));
+    }
     for (const [name, report] of Object.entries(result.themes)) {
       console.log(`\n[${name}] min WCAG ratio ${minRatio}:1`);
       for (const pair of report.pairs) {

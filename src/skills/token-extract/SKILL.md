@@ -22,12 +22,14 @@ Example: if this file is at `~/.claude/skills/token-extract/SKILL.md`, then `<sk
 
    ```bash
    node <skill-root>/scripts/extract.mjs --root . --out style-spec.json
+   # Optional: generate an as-is pre-audit contrast baseline report before token generation:
+   node <skill-root>/scripts/extract.mjs --root . --out style-spec.json --audit-baseline
    # Or from a rendered URL / HTML document:
    node <skill-root>/scripts/extract.mjs --url https://example.com --out style-spec.json
    node <skill-root>/scripts/extract.mjs --html page.html --out style-spec.json
    ```
 
-   (`--force` overwrites; preview with `--dry-run`. `--url` requires Playwright with Chromium installed in the host environment; `--html` falls back to text scanning when Playwright is unavailable.) Automatically extracts theme and palette definitions from Tailwind v3 (`tailwind.config.{js,ts,cjs,mjs}`), Tailwind v4 (`@theme { --color-* }`), CSS root variables, and Stitch-format `DESIGN.md` frontmatter, preserving primary and secondary color roles into candidate `style-spec.json`. Other files fall through to heuristic pattern scanning. Scoring rules: `references/heuristics.md`.
+   (`--force` overwrites; preview with `--dry-run`. `--url` requires Playwright with Chromium installed in the host environment; `--html` falls back to text scanning when Playwright is unavailable. Pass `--audit-baseline` with optional `--out-baseline <path>` to evaluate existing production contrast pairs before generation, emitting `.pre-audit-baseline.json` and `pre-audit-baseline.md`.) Automatically extracts theme and palette definitions from Tailwind v3 (`tailwind.config.{js,ts,cjs,mjs}`), Tailwind v4 (`@theme { --color-* }`), CSS root variables, and Stitch-format `DESIGN.md` frontmatter, preserving primary and secondary color roles into candidate `style-spec.json`. Other files fall through to heuristic pattern scanning. Scoring rules: `references/heuristics.md`.
    - Done when: exit 0 and the top candidate + evidence lines are printed (exit 1 = no color signals → fall back to the `token-style` interview).
 
 2. **Read back via token-style**: present the top candidate and its evidence ("Reading this as: anchor … from `<file>`"), let the user confirm, veto to another candidate, or override. Hand the confirmed candidate to `token-style`, which owns the aesthetic cluster table and records `cluster` in the spec. Nothing scanned was modified.

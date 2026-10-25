@@ -20,9 +20,8 @@ Run commands from the user's project root. `<skill-root>` is the absolute path t
 Example: if this file is at `~/.claude/skills/ask-kami/SKILL.md`, then `<skill-root>` is `~/.claude/skills/ask-kami`.
 
 ```bash
-node <skill-root>/scripts/route.mjs [--root <dir>] [--json]
+node <skill-root>/scripts/route.mjs [--root <dir>] [--scaffold] [--formatter prettier|biome|none] [--linter stylelint|eslint|none] [--css native|tailwind] [--json]
 ```
-
 ## Steps
 
 1. **Detect state**: run the router script:
@@ -31,9 +30,8 @@ node <skill-root>/scripts/route.mjs [--root <dir>] [--json]
    node <skill-root>/scripts/route.mjs --root .
    ```
 
-   (Pass `--json` when structured machine output is required.)
-   - Done when: the command exits 0 and prints a `state:` status line plus a `next:` recommendation line (or `next: none`).
-
+   (Pass `--json` when structured machine output is required. Pass `--scaffold` to initialize toolchain companion configs like Prettier, Biome, Stylelint, or Tailwind without forced dependency installation.)
+   - Done when: the command exits 0 and prints a `state:` status line (including `context=`, `runtime=`, and `pkg=`) plus `next:` recommendation lines.
 2. **Propose next action**: read the `next:` and `why:` recommendations from the output:
    - When `style-spec.json` is missing, the router proposes both `token-extract` (for existing projects with CSS/code colors) and `token-style` (for greenfield projects). Ask the user which path fits their project.
    - For all other states, present the single recommended skill, exact copy-pasteable command when the skill ships a script (`token-style` has none), and reason.

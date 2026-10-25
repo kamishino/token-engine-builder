@@ -75,3 +75,55 @@ test('runExtract emits harmony analogous when secondary and accent are synthesiz
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('runExtract with --audit-baseline generates pre-audit JSON and Markdown report', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'extract-baseline-'));
+  try {
+    const cssPath = join(dir, 'app.css');
+    writeFileSync(
+      cssPath,
+      `
+      body {
+        background-color: #10131d;
+        color: #dae8ea;
+      }
+      .btn-primary {
+        background-color: #38bdf8;
+        color: #ffffff;
+      }
+      .subdued {
+        color: #5b858e;
+      }
+    `,
+      'utf8',
+    );
+
+    const outSpecPath = join(dir, 'style-spec.json');
+    const exitCode = await runExtract([
+      '--root',
+      dir,
+      '--out',
+      outSpecPath,
+      '--audit-baseline',
+      '--force',
+    ]);
+
+    assert.equal(exitCode, 0);
+
+    const baselineJsonPath = join(dir, '.pre-audit-baseline.json');
+    const baselineMdPath = join(dir, 'pre-audit-baseline.md');
+
+    assert.ok(readFileSync(baselineJsonPath, 'utf8'));
+    assert.ok(readFileSync(baselineMdPath, 'utf8'));
+
+    const baseline = JSON.parse(readFileSync(baselineJsonPath, 'utf8'));
+    assert.ok(baseline.pairs.length >= 2);
+    assert.ok(baseline.summary.total >= 2);
+
+    const md = readFileSync(baselineMdPath, 'utf8');
+    assert.ok(md.includes('# Pre-Audit Baseline Report'));
+    assert.ok(md.includes('| Selector | File | Foreground |'));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

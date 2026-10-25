@@ -23,11 +23,11 @@ test('usageText renders required, optional, and boolean flags', () => {
   );
   assert.equal(
     usageText('token-extract/scripts/extract.mjs'),
-    'Usage: extract.mjs [--root <dir>] [--url <url>] [--html <file.html>] [--out <style-spec.json>] [--force] [--dry-run]',
+    'Usage: extract.mjs [--root <dir>] [--url <url>] [--html <file.html>] [--out <style-spec.json>] [--audit-baseline] [--out-baseline <path>] [--force] [--dry-run]',
   );
   assert.equal(
     usageText('token-audit/scripts/audit.mjs'),
-    'Usage: audit.mjs --tokens <dir> [--theme light|dark|both] [--min-ratio 4.5] [--min-apca 60] [--spec <style-spec.json>] [--json]',
+    'Usage: audit.mjs --tokens <dir> [--theme light|dark|both] [--min-ratio 4.5] [--min-apca 60] [--spec <style-spec.json>] [--baseline <pre-audit-baseline.json>] [--json]',
   );
   assert.ok(usageText('token-build/scripts/figma.mjs').includes('--from-figma'));
 });

@@ -234,3 +234,113 @@ export function auditTokens(
     themes: Object.fromEntries(reports),
   };
 }
+
+export interface RawColorPair {
+  id: string;
+  selector: string;
+  file: string;
+  fgHex: string;
+  bgHex: string;
+  wcagRatio: number;
+  apcaLc: number;
+  passWcag: boolean;
+  passApca: boolean;
+  roleTag: string;
+}
+
+export interface PreAuditBaseline {
+  timestamp: string;
+  pairs: RawColorPair[];
+  summary: {
+    total: number;
+    passWcag: number;
+    failWcag: number;
+    passApca: number;
+    failApca: number;
+    avgRatio: number;
+  };
+}
+
+export interface DeltaScorecardRow {
+  roleOrSelector: string;
+  baselineRatio: number;
+  baselinePass: boolean;
+  tokensRatio: number;
+  tokensPass: boolean;
+  deltaRatio: number;
+  status: 'Fixed by Token Math' | 'Maintained' | 'Action Required';
+}
+
+export interface DeltaScorecard {
+  rows: DeltaScorecardRow[];
+  fixedCount: number;
+  totalCompared: number;
+}
+
+export function computeDeltaScorecard(
+  baseline: PreAuditBaseline,
+  report: AuditReport,
+): DeltaScorecard {
+  const rows: DeltaScorecardRow[] = [];
+  let fixedCount = 0;
+
+  for (const bp of baseline.pairs) {
+    const match = report.pairs.find((p) => {
+      const fg = p.foreground.toLowerCase();
+      if (bp.roleTag === 'button') return fg.includes('button');
+      if (bp.roleTag === 'card') return fg.includes('card');
+      if (bp.roleTag === 'input') return fg.includes('input');
+      if (bp.roleTag === 'dialog') return fg.includes('dialog');
+      if (bp.roleTag === 'table') return fg.includes('table');
+      if (bp.roleTag === 'alert') return fg.includes('alert');
+      if (bp.roleTag === 'text.secondary') return fg.includes('text.secondary');
+      return fg.includes('text.primary');
+    });
+
+    if (match) {
+      const deltaRatio = Number((match.ratio - bp.wcagRatio).toFixed(2));
+      const status: DeltaScorecardRow['status'] =
+        !bp.passWcag && match.pass
+          ? 'Fixed by Token Math'
+          : match.pass
+            ? 'Maintained'
+            : 'Action Required';
+      if (status === 'Fixed by Token Math') fixedCount++;
+      rows.push({
+        roleOrSelector: bp.selector || bp.roleTag,
+        baselineRatio: bp.wcagRatio,
+        baselinePass: bp.passWcag,
+        tokensRatio: match.ratio,
+        tokensPass: match.pass,
+        deltaRatio,
+        status,
+      });
+    }
+  }
+
+  return { rows, fixedCount, totalCompared: rows.length };
+}
+
+export function renderDeltaScorecardTable(scorecard: DeltaScorecard): string {
+  const lines: string[] = [
+    '',
+    '================================================================================',
+    '                    DUAL-AUDIT DELTA SCORECARD (Before vs After)                ',
+    '================================================================================',
+    '  Role / Selector         Pre-Audit        Post-Audit       Status',
+    '--------------------------------------------------------------------------------',
+  ];
+  for (const r of scorecard.rows) {
+    const pre = `${r.baselineRatio.toFixed(2)}:1 (${r.baselinePass ? 'PASS' : 'FAIL'})`.padEnd(16);
+    const post = `${r.tokensRatio.toFixed(2)}:1 (${r.tokensPass ? 'PASS' : 'FAIL'})`.padEnd(16);
+    const delta = r.deltaRatio >= 0 ? `+${r.deltaRatio.toFixed(2)}` : `${r.deltaRatio.toFixed(2)}`;
+    const sel = r.roleOrSelector.slice(0, 22).padEnd(24);
+    lines.push(`  ${sel} ${pre} ${post} ${r.status} (${delta})`);
+  }
+  lines.push('================================================================================');
+  lines.push(
+    `  Summary: ${scorecard.fixedCount} of ${scorecard.totalCompared} production contrast flaw(s) fixed by token math.`,
+  );
+  lines.push('');
+  return lines.join('\n');
+}

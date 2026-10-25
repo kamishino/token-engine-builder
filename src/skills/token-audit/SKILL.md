@@ -22,9 +22,11 @@ Example: if this file is at `~/.claude/skills/token-audit/SKILL.md`, then `<skil
 
    ```bash
    node <skill-root>/scripts/audit.mjs --tokens tokens --min-ratio 4.5
+   # Optional: Before-vs-After delta scorecard against pre-audit baseline:
+   node <skill-root>/scripts/audit.mjs --tokens tokens --baseline .pre-audit-baseline.json
    ```
 
-   Checks: every fg/bg role pair (body text, secondary text, action, button, card, input), every alias resolves, zero raw values above Tier 1. Role floors and marginal-pass reading: `references/contrast.md`. Pass `--theme <name>` to check a single theme instead of all discovered themes. Pass `--json` for machine-readable JSON output. Pass `--spec <style-spec.json>` to take the text floor from the spec's recorded `targets.minWcagRatio` when `--min-ratio` is not given explicitly.
+   Checks: every fg/bg role pair (body text, secondary text, action, button, card, input), every alias resolves, zero raw values above Tier 1. Role floors and marginal-pass reading: `references/contrast.md`. Pass `--theme <name>` to check a single theme instead of all discovered themes. Pass `--json` for machine-readable JSON output. Pass `--spec <style-spec.json>` to take the text floor from the spec's recorded `targets.minWcagRatio` when `--min-ratio` is not given explicitly. Pass `--baseline <path>` to output a Before-vs-After comparison table against a pre-audit baseline.
    - Done when: the report prints per-theme PASS/FAIL lines and an exit code.
 
 2. **Remediate failures** (no human needed, max 3 loops; ladder in `references/contrast.md`):
