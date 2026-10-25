@@ -7,10 +7,10 @@
 TypeScript + Vite (SSR/Node lib mode) builder that packages colocated AI agent skills. `src/skills/<skill>/` → `dist/<skill>/`, 1:1. Each skill is standalone after copy into an agent's skills directory (for example `~/.agents/skills/<skill>/`; node only, no install).
 
 - `src/shared/` — bundled engine: `colors.ts` (OKLCH), `scales.ts` (type/spacing), `compiler.ts` (Style Dictionary v5), `paths.ts` (portable resolution), `types.ts` (DTCG types).
-- `src/skills/` — 7 skills across creation, governance, and routing buckets: `ask-kami` (entry router), `token-extract` (alternative entry: code → candidate spec), `token-style` (interview/read-back → `style-spec.json`), `token-math` (`generate.mjs` → `tokens/`), `token-audit` (`audit.mjs` → WCAG+APCA gate), `token-build` (`build.mjs` → CSS + Tailwind v4), and `improve-design-system` (diagnosis → `REPORT_HTML`).
-- `scripts/build-all.mjs` — one Vite pass per skill so no shared chunk leaks between `dist/<skill>/`.
-- `vite.config.ts` — entry discovery, `sync-skill-packages` plugin (`SKILL.md` + `templates/` + `assets/` + `examples/` + `references/` + `agents/` mirror, `chmod 0o755`).
-
+- `src/cli/` — unified deterministic CLI (`bin/token-engine` → `dist/cli/token-engine.mjs`): single-pass `sync`, `init`, `audit`, `build`, `extract`, `scaffold`.
+- `src/skills/` — flagship cognitive skill `design-tokens` (Matt Pocock model: discovery, Socratic palette, single-pass sync, framework wiring) + 7 legacy micro-skills kept as deprecated compatibility bridges.
+- `scripts/build-all.mjs` — one Vite pass per skill/CLI so no shared chunk leaks into `dist/`.
+- `vite.config.ts` — entry discovery, `sync-skill-packages` plugin (`SKILL.md` + `templates/` + `assets/` + `examples/` + `references/` mirror, `chmod 0o755`).
 ## WHY — intent
 
 Tiers: raw values only in `primitive/`; `semantic/` (per-theme, same paths) and `component/` are `{alias}`-only. `audit.mjs` enforces it — exit 0 ships, exit 1 stops.
@@ -20,8 +20,9 @@ Tiers: raw values only in `primitive/`; `semantic/` (per-theme, same paths) and 
 ```bash
 npm install        # all deps are devDependencies — Vite inlines them
 npm run check      # typecheck + lint + lint:skills + test + build + lint:css
-npm run build      # → dist/<skill>/ via scripts/build-all.mjs (names as args build one skill)
+npm run build      # → dist/<skill>/ + dist/cli/ via scripts/build-all.mjs
 npm run deploy     # link dist/* into ~/.agents/skills (default; --dir <path> for others; rebuilds stale, prunes dead)
+npx token-engine   # unified CLI runner: sync, init, audit, build, extract, scaffold
 ```
 
 Node `>=22.12`. Pure contracts verified via `npm test` (`node:test` unit tests in `test/`); portable smoke (`lint:css`) proves `dist/*` generation and gold parity.

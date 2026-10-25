@@ -15,22 +15,15 @@ token-engine-builder is an agent-skill pipeline that turns a recorded brand pale
 - No reference doc without its engine.
 - Clean cutovers over compatibility shims.
 
-## Now — v1.5 Active Cycle
+## Now — Active Cycle
 
-With core foundation, export profiles, ingestion bridges, and component catalogs complete through v1.4.0, the pipeline focuses on developer experience, visual auditing, and cross-platform design token synchronization:
+With the unified `token-engine` CLI, cognitive `design-tokens` skill, Dual-Audit pipeline, and workspace packaging completed in v1.5.0, the pipeline focuses on visual inspection and emerging standards alignment:
 
 ### E1. Visual Contrast Heatmap in Visualizer Surface
 
 - **Why**: `visualizer.html` displays color chips and live component specimens, but human designers inspecting a token system need an at-a-glance APCA / WCAG 2.1 contrast matrix heatmap showing exact pass/fail margins across all background-foreground combinations.
 - **Scope**: Extend `visualizerHtmlFormat` in `src/shared/compiler.ts` with a dynamic contrast matrix grid charting all 42 audited pairs, color-coded by APCA $|L_c|$ and WCAG ratio thresholds under the active theme.
 - **Exit criteria**: `build/visualizer.html` includes an interactive contrast heatmap matrix table; verified in gold samples and visualizer test.
-
-### E2. Design Token Package Publishing CLI (`token-build --publish-pack`)
-
-- **Why**: Currently, consumer projects copy generated CSS or JSON manually; a standard npm/tarball packager allows design systems teams to bundle generated tokens, Tailwind `@theme`, and TypeScript definitions directly into a private or public npm-ready package.
-- **Scope**: Add `--pack` flag to `build.ts` emitting a self-contained `build/package/` containing `package.json`, `index.css`, `index.d.ts`, and `tokens.json`.
-- **Exit criteria**: `build.mjs --pack` creates an installable npm package folder with validated exports.
-
 ## Next — v2.0 Architecture Horizon
 
 ### E3. W3C DTCG Format 2025/2026 Spec Alignment
@@ -53,12 +46,12 @@ With core foundation, export profiles, ingestion bridges, and component catalogs
 - Deps evidence check quarterly: typescript-eslint peer range (L3), the `npm audit` critical-level exception for the stylelint/braces chain, engine floors.
 - A changeset with every user-visible change; research notes in `docs/research/` for external-taxonomy questions; ADRs for foundation decisions (next number: 0005).
 
-## Shipped History (v0.3.0 – v1.4.0)
+## Shipped History (v0.3.0 – v1.5.0)
 
 | Version     | Scope                            | Key Capabilities Shipped                                                                                                              |
 | ----------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| **v1.5.0**  | Unified Architecture & DX (E2)   | Unified `token-engine` CLI (`sync`, `init`, `audit`, `build`, `extract`, `scaffold`), flagship cognitive `design-tokens` skill, Dual-Audit baseline & delta scorecard, multi-theme batch build (`--theme all`), Shadow DOM `:host` scoping, and workspace packaging (`--package`). |
 | **v1.4.0**  | CSS Ingestion Refinement (C4)    | Structured theme extraction from Tailwind v3 configs, Tailwind v4 `@theme`, and CSS root custom properties into `style-spec.json`.    |
-| **v1.3.0**  | Figma DTCG Sync Bridge (C3)      | Bidirectional sync CLI (`scripts/figma.mjs`) for exporting and importing W3C DTCG tokens to/from Figma Variables REST API format.     |
 | **v1.2.0**  | Custom Theme Authoring (C2)      | Dynamic custom named themes declared in `style-spec.json` with base mode polarity, surface steps, and action step overrides.          |
 | **v1.1.0**  | Extended Component Catalog (C1)  | 6 new DTCG component templates (badge, alert, dialog, avatar, tooltip, table) for 9 total components, with 42 audit contrast pairs.   |
 | **v1.0.0**  | Production Release (N5)          | Comprehensive verification across all 8 UI profiles, 5 skills, 2 buckets, CycloneDX SBOM, Minisign signature, and CI green.           |

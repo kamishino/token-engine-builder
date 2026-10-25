@@ -4,25 +4,35 @@ Deep design: module contracts, token discipline, and the three load-bearing buil
 
 ## 1. System overview
 
+The architecture decouples **cognitive agent reasoning** from **deterministic mathematics**:
+
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│                   FLAGSHIP AGENT SKILL: "design-tokens"                │
+│                     (Cognitive Scaffolding & Reasoning)                │
+│                                                                        │
+│  1. Discovery:  Inspect repo context (Shadow DOM vs DOM, Tailwind v4)  │
+│  2. Strategy:   Mine color debt, conduct Socratic brand interview      │
+│  3. Execution:  Invoke single deterministic engine (token-engine sync) │
+│  4. Wiring:     Refactor raw #hex into var(--color-*), wire :host CSS  │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ runs 1 command
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                 UNIFIED DETERMINISTIC CLI: "token-engine"              │
+│                       (src/cli/index.ts → dist/cli/)                   │
+│                                                                        │
+│  token-engine sync                                                     │
+│    ├─▶ extract (raw CSS/code → candidate anchor + baseline scorecard)  │
+│    ├─▶ math    (11-step OKLCH ramps, modular type, 4px rhythm)         │
+│    ├─▶ audit   (dual-gate WCAG 2.1 & APCA contrast floors + delta)     │
+│    └─▶ build   (tokens.css, theme.css, tokens.js, tokens.d.ts)         │
+└────────────────────────────────────────────────────────────────────────┘
 ```
-ask-kami (router)
-   │
-   ├─▶ style-spec.json ──generate.mjs──▶ tokens/ (3-tier) ──audit.mjs──▶ gate (0/1) ──build.mjs──▶ CSS + @theme + specs + visualizer + 8 profiles
-   │          ▲                              │                                                    │
-   │    token-style                token-math                                            token-build
-   │    (interview first)      (templates + math)            token-audit (WCAG 2.1 gatekeeper)    │
-   │                                                                                             ▼
-   │                                                                                     figma.mjs (DTCG ↔ Figma sync)
-   │
-   └─▶ improve-design-system (read-only diagnosis ──▶ REPORT_HTML review / proposal)
-```
 
-Skill packages are colocated (`src/skills/<skill>/`: `SKILL.md`, `scripts/*.ts`, `templates/`, `assets/`) and mirrored 1:1 into `dist/<skill>/` by the `sync-skill-packages` Vite plugin (`closeBundle`: copy `SKILL.md` + `templates/` + `assets/` + `examples/`, `chmod 0o755` on `scripts/*.mjs`). Per-skill `README.md` files stay in `src/` — `dist/` is production-readiness. A `dist/<skill>/` folder runs standalone: `node scripts/<name>.mjs` with no install. `token-extract` is an alternative entry beside the interview: it scans an existing project read-only and writes a candidate `style-spec.json` (evidence-ranked anchor), which still passes through `token-style`'s read-back before `token-math` consumes it.
+Skill packages are colocated under `src/skills/<skill>/` (`SKILL.md`, `templates/`, `assets/`, `scripts/`) and mirrored 1:1 into `dist/<skill>/` by the `sync-skill-packages` Vite plugin. The standalone CLI entry point (`src/cli/index.ts`) bundles into `dist/cli/token-engine.mjs` and is registered as `"bin": { "token-engine": "dist/cli/token-engine.mjs" }`.
 
-Install-agnostic paths: each `SKILL.md` refers to its own folder as `<skill-root>` and to a handoff target as `<target-skill-root>`. The agent resolves these from the loaded `SKILL.md`; `route.mjs` and `generate.mjs` resolve co-located sibling skills to absolute paths from `import.meta.url` and leave the placeholder when a target is not installed. Bundled scripts still resolve `templates/` and `assets/` from `import.meta.url`; user inputs stay cwd-relative.
-
-External design-AI contracts (Stitch-format `DESIGN.md`, roadmap X1) are downstream views of this system: generated from tokens + spec, never consumed as input. The token tree and the audit gate are the only sources of truth a generated document may render; position and evidence in `docs/research/design-md-vs-design-system.md`.
-
+The legacy 7 micro-skills (`ask-kami`, `token-extract`, `token-style`, `token-math`, `token-audit`, `token-build`, `improve-design-system`) remain available as deprecated compatibility bridges, routing agents to the unified `design-tokens` skill and `token-engine` CLI.
 ## 2. Module contracts (`src/shared/`)
 
 | Module                | Owns                                                                                         | Key exports                                                                                                                                                                                                                                                            |
@@ -37,15 +47,16 @@ External design-AI contracts (Stitch-format `DESIGN.md`, roadmap X1) are downstr
 | `spec.ts`             | StyleSpec contract parser, validator, and default normalizer                                 | `loadStyleSpec`, `validateStyleSpec`, `normalizeStyleSpec`, `GENERATED_THEMES`                                                                                                                                                                                         |
 | `token-plan.ts`       | Tier-1 primitive and semantic file planning from StyleSpec                                   | `planTokenFiles`, `PlannedTokenFile`                                                                                                                                                                                                                                   |
 | `theme-plan.ts`       | Semantic theme generation, role targeting tables, fail-closed durable overrides              | `planThemes`, `PlannedTheme`                                                                                                                                                                                                                                           |
-| `audit-report.ts`     | Token contrast audit runner, per-theme evaluation, remedy suggestion generation              | `auditTokens`, `evaluateTheme`, `floorTable`, `AuditFloors`, `AuditResult`                                                                                                                                                                                             |
-| `compiler.ts`         | SD v5 programmatic builder: custom transforms, formats, and self-verification checks         | `buildTokens`, `ResolvedDictionary`, `loadThemeTokens`, `guideFromSpec`, `verifyGeneratedFiles`, `ARTIFACT_NAMES`, `artifactNames`                                                                                                                                     |
+| `audit-report.ts`     | Token contrast audit runner, per-theme evaluation, remedy suggestion generation, and delta scorecards | `auditTokens`, `evaluateTheme`, `computeDeltaScorecard`, `renderDeltaScorecardTable`, `floorTable`, `AuditFloors`, `AuditResult`, `PreAuditBaseline`                                                              |
+| `compiler.ts`         | SD v5 programmatic builder: custom transforms, multi-theme consolidated CSS, typed TS/JS dictionaries | `buildTokens`, `buildMultiThemeTokens`, `themeSelector`, `ResolvedDictionary`, `loadThemeTokens`, `guideFromSpec`, `verifyGeneratedFiles`, `ARTIFACT_NAMES`, `artifactNames`                                    |
 | `visualizer.ts`       | Single-file interactive visualizer HTML inspection surface                                   | `renderVisualizerHtml`, `buildVisualizerModel`, `VisualizerModel`                                                                                                                                                                                                      |
 | `ui-profiles.ts`      | UI-library profile builder (shadcn, bootstrap, primevue, antd, mui, chakra, radix, fluent)   | `buildUiProfile`, `profileFileName`, `UI_PROFILE_IDS`, `UiProfileId`                                                                                                                                                                                                   |
 | `profile-registry.ts` | Canonical UI-library profile identifiers and artifact destination mappings                   | `profileFileName`, `UI_PROFILE_IDS`, `PROFILE_FILE_NAMES`, `UiProfileId`                                                                                                                                                                                               |
 | `cli-flags.ts`        | Declarative CLI flag specifications and `--help` usage formatter                             | `usageText`, `SCRIPTS`, `SCRIPT_KEYS`, `FlagSpec`, `ScriptSpec`, `ScriptKey`                                                                                                                                                                                           |
-| `paths.ts`            | Portable skill paths (`import.meta.url`) vs cwd-relative user paths                          | `scriptDir`, `skillRoot`, `templatePath`, `getArg`, `hasFlag`, `fromCwd`, `isMainModule`                                                                                                                                                                               |
-| `system-state.ts`     | System inspection and path resolution for spec, tokens, audit stamp, and build artifacts     | `inspectSystem`, `resolveSystemPaths`, `SystemPaths`, `SystemState`, `SpecState`                                                                                                                                                                                       |
-| `diagnose.ts`         | Comprehensive design system diagnosis, findings classification, and next-action computation  | `diagnoseDesignSystem`, `Finding`, `NextAction`, `Diagnosis`                                                                                                                                                                                                           |
+| `paths.ts`            | Portable skill paths (`import.meta.url`) vs cwd-relative user paths, fallback template resolution | `scriptDir`, `skillRoot`, `templatePath`, `getArg`, `hasFlag`, `fromCwd`, `isMainModule`, `resolveSkillPathPlaceholders`                                                                                                                                        |
+| `system-state.ts`     | System inspection and path resolution for spec, tokens, audit stamp, and codebase context    | `inspectSystem`, `detectCodebaseContext`, `resolveSystemPaths`, `SystemPaths`, `SystemState`, `CodebaseContext`, `SpecState`                                                                                                                                           |
+| `diagnose.ts`         | Comprehensive design system diagnosis, findings classification, and context-tailored actions  | `diagnoseDesignSystem`, `Finding`, `NextAction`, `Diagnosis`                                                                                                                                                                                                           |
+| `cli/index.ts`        | Unified `token-engine` CLI entry point: single-pass sync, init, audit, build, and scaffold   | `runCli`, `runSync`, `usage`                                                                                                                                                                                                                                           |
 
 ## 3. Token tiers and alias discipline
 
@@ -60,10 +71,12 @@ External design-AI contracts (Stitch-format `DESIGN.md`, roadmap X1) are downstr
 2. **SSR/Node build on Vite 8 / Rolldown** (`node` export condition scoped via `ssr.resolve` + `environments.ssr.resolve`, `ssr: { target: 'node', noExternal: true }`, all Node builtins external, Oxc minify, `#!/usr/bin/env node` banner). Default client conditions resolve SD's `./fs` export to the browser memfs shim — outputs go to memory and zero files land on disk. Two Rolldown-specific guards: `treeshake.moduleSideEffects` is a predicate that keeps side effects only for SD's `fs-node.js` (its top-level `setFs()` call swaps memfs → node:fs; a blanket `false` drops it and silently restores memfs), and `prettier` is external (SD lazy-imports it only inside JS/TS output formats this engine never emits; Rolldown's inlining otherwise embeds ~450 kB of dead parser). Rolldown also retains colorjs.io's full color-space registry (+~65 kB per skill vs Vite 7) — accepted, documented here.
 3. **In-process token merge, inline `tokens`** (`loadTokenSources`/`expandSource` in `tokens.ts`). SD's bundled glob loader (`@bundled-es-modules/glob`) does not survive re-bundling into a standalone `.mjs`; build globs are cwd-relative with forward slashes, expanded here instead. `build.mjs` fails closed when an expected output file is missing.
 4. **Anti-Tampering Guard** (`src/shared/guard.ts`). Generated outputs carry provenance manifests (`.token-engine-tokens-manifest.json` in token trees, `.token-engine-css-manifest.json` in CSS out dirs) with per-file SHA-256 hashes and the input hash. `generate`/`build` refuse to overwrite changed or missing manifest files unless `--force` (extra user files never block); `audit` verifies the tokens manifest when present; output dirs equal to/ancestral to cwd or the home dir are refused. Full findings: `docs/security/architecture-audit.md`.
+5. **Unified zero-dependency CLI bundling** (`src/cli/index.ts` → `dist/cli/token-engine.mjs`). A dedicated Vite SSR pass inlines all shared modules, Style Dictionary v5, and color science into a single executable binary (`chmod 0o755`). Packaged as `"bin": { "token-engine": "dist/cli/token-engine.mjs" }`, it enables zero-dependency execution (`npx token-engine sync`) in consumer repositories with no local npm packages required. Bundled templates are synced into `dist/cli/templates` for runtime independence.
 
 ## 5. Verified behavior (tests and smoke)
 
 Dual-layer verification:
 
-1. **Automated unit test suite** (`npm test`, `test/**/*.test.mjs` via Node.js built-in `node:test` runner with zero external dependencies). Covers pure engine contracts: OKLCH gamut clamping and ramp anchor landing at step 500 (`test/colors.test.mjs`), modular type scale and rhythm grid baseline snapping (`test/scales.test.mjs`), token tree deep-merge, tier flattening, and alias cycle detection (`test/tokens.test.mjs`), StyleSpec validation, normalization, and catalog-name warnings (`test/spec.test.mjs`), tamper detection, spec binding, and audit stamp lifecycle (`test/guard.test.mjs`), audit contrast pairs and remedy step suggestions (`test/audit.test.mjs`), override path fail-closed validation (`test/theme-plan.test.mjs`), and UI profile mappings (`test/ui-profiles.test.mjs`).
+1. **Automated unit test suite** (`npm test`, `test/**/*.test.mjs` via Node.js built-in `node:test` runner with zero external dependencies). Covers pure engine contracts: OKLCH gamut clamping and ramp anchor landing at step 500 (`test/colors.test.mjs`), modular type scale and rhythm grid baseline snapping (`test/scales.test.mjs`), token tree deep-merge, tier flattening, and alias cycle detection (`test/tokens.test.mjs`), StyleSpec validation, normalization, and catalog-name warnings (`test/spec.test.mjs`), tamper detection, spec binding, and audit stamp lifecycle (`test/guard.test.mjs`), audit contrast pairs and remedy step suggestions (`test/audit.test.mjs`), override path fail-closed validation (`test/theme-plan.test.mjs`), UI profile mappings (`test/ui-profiles.test.mjs`), and CLI command routing (`test/cli.test.mjs`).
 2. **Portable smoke and gold-standard regression** (`npm run lint:css` via `scripts/sample-css.mjs`). Portable proof: `dist/*` run across generate, audit, and 10 build profiles (including CSS variable syntax, Tailwind v4 `@theme`, and UI profiles). Sample emitted CSS passes stylelint and 12-file gold-diff.
+3. **End-to-end cognitive skill smoke test** (`scripts/smoke-design-tokens.mjs`). Simulates an autonomous agent executing the 4-phase `design-tokens` skill contract inside an isolated brownfield monorepo with Web Component Shadow DOM (`:host`) and low-contrast production buttons. Verifies all 18 assertions across context discovery, pre-audit baseline generation, single-pass sync, and artifact emission in < 600ms.
