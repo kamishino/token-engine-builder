@@ -3,12 +3,12 @@ name: design-tokens
 description: "Design, audit, and refactor W3C design tokens. Use when creating palettes, fixing contrast, migrating to OKLCH, setting up dark mode, refactoring raw hexes, or piercing Shadow DOM Web Components."
 license: MIT
 compatibility: ">=node-22.12"
-allowed-tools: "Bash(node:*) Read Write Edit Glob Grep"
+allowed-tools: "Read Write Edit Glob Grep"
 ---
 
 # Design Tokens
 
-Engineer, verify, and integrate W3C DTCG design tokens across any modern frontend repository.
+Transform fragmented, hardcoded styling into an accessible, multi-theme W3C design token architecture behind a clean `@tokens` seam.
 
 ## Architecture: Seams and Decoupling
 
@@ -29,39 +29,31 @@ Consult sibling references on demand:
 ## Process
 
 ### 1. Silent Context Triage
-Inspect repository structure before creating files:
-- **Codebase Maturity**: Check for existing stylesheets (`.css`, `.scss`, styled-components). In brownfield projects, mine legacy colors as evidence (`npx token-engine extract --audit-baseline`) before proposing new palettes. In greenfield projects, proceed to Socratic discovery.
+Inspect repository structure before creating or editing files:
+- **Codebase Maturity**: Check for existing stylesheets (`.css`, `.scss`, styled-components). In brownfield projects, read existing colors to identify baseline contrast debt. In greenfield projects, ask the user for their brand anchor and visual mood.
 - **Runtime Scoping**: Identify Shadow DOM Web Components (target `:host, :root`), Tailwind v4 (target `@theme`), or standard DOM (target `:root`).
-- **Monorepo Layout**: Inspect lockfiles and workspace packages (`apps/*`, `packages/*`) to establish target output paths.
+- **Monorepo Layout**: Inspect workspace packages (`apps/*`, `packages/*`) to establish target package paths.
 
 ### 2. Socratic Aesthetic Synthesis
 Translate brand intent into harmonious OKLCH anchors:
-- **Greenfield**: Frame choices around Kobayashi mood clusters (Modern Minimalist, Cool Tech / Cyberpunk, Warm Editorial).
-- **Brownfield**: Consolidate mined colors into unified functional roles via semantic intent clustering (collapsing drifting hues into purposeful ramps). Propose the consolidated palette for human approval before generation.
+- **Greenfield**: Guide palette selection with mood metaphors and aesthetic clusters.
+- **Brownfield**: Consolidate mined colors into unified functional roles via semantic intent clustering (collapsing drifting hues into purposeful ramps). Propose the consolidated palette for human approval before creating tokens.
 
-### 3. Token Generation
-Execute generation using the appropriate path:
-- **CLI Accelerator**: When `token-engine` is present, run single-pass synchronization:
-  ```bash
-  # Multi-theme compilation (light, dark, high-contrast)
-  npx token-engine sync --spec tokens.config.json --tokens tokens --out build --theme all
-
-  # For Web Components / Shadow DOM:
-  npx token-engine sync --spec tokens.config.json --tokens tokens --out build --theme all --selector ":host, :root"
-
-  # For Monorepo Workspace Package (@tokens):
-  npx token-engine sync --spec tokens.config.json --tokens tokens --out packages/tokens --theme all --package @tokens --force
-  ```
-
+### 3. Architect Tokens
+Construct the 3-tier DTCG token hierarchy:
+- **Contract**: Formulate brand decisions in `tokens.config.json` (3 OKLCH brand anchors, neutral hue, typography modular scale). See [`references/dtcg-tiers.md`](references/dtcg-tiers.md).
+- **Primitives**: Define 11-step OKLCH color scales and spatial dimensions. See [`references/token-math.md`](references/token-math.md).
+- **Semantics**: Map functional roles (`text.primary`, `bg.canvas`, `action.primary`) to primitives, defining symmetrical dark mode polarity inversion.
+- **Components**: Map component slots (`button`, `card`, `input`) to semantic tokens.
 
 ### 4. Codebase Modernization
 Wire tokens into host components:
 - Pierce Shadow DOM boundaries by injecting compiled CSS inline into `:host` scopes.
-- Establish framework aliasing (`@tokens` mapped in `vite.config.ts` or `tsconfig.json`).
+- Establish framework aliasing (`@tokens` mapped in bundler and TypeScript configs).
 - Replace hardcoded color literals with semantic custom properties (`background: var(--color-bg-canvas)`).
 
 ### 5. Visual Specimen Proof
-Generate a self-contained HTML specimen in the OS temp directory (`<tmpdir>/design-token-specimen-<timestamp>.html`) based on [`references/specimen-template.html`](references/specimen-template.html). Open the file for the user (`start <path>` on Windows, `open <path>` on macOS, `xdg-open <path>` on Linux) to provide immediate visual confirmation of themes and contrast floors.
+Generate a self-contained HTML specimen in the OS temp directory (`<tmpdir>/design-token-specimen-<timestamp>.html`) based on [`references/specimen-template.html`](references/specimen-template.html). Open the file for the user to provide immediate visual confirmation of themes and contrast floors.
 
 ---
 
