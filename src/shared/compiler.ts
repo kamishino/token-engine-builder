@@ -10,7 +10,7 @@
  * `tokens`: SD's own glob loader (@bundled-es-modules/glob) does not survive
  * being re-bundled into a standalone .mjs, and this keeps builds portable.
  */
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import StyleDictionary from 'style-dictionary';
 import { fileHeader, formattedVariables, usesReferences } from 'style-dictionary/utils';
 import { clampToSrgb, dtcgToOklch, formatOklch, oklchToHex, parseToOklch } from './colors.js';
@@ -422,6 +422,19 @@ async function visualizerHtmlFormat(args: TokenFormatArgs): Promise<string> {
   return renderVisualizerHtml(buildVisualizerModel(args.dictionary, args.options ?? {}));
 }
 
+function toIdentifier(name: string): string {
+  const cleaned = name.replace(/[^a-zA-Z0-9]+(.)/g, (_, chr) => chr.toUpperCase());
+  const camel = cleaned.charAt(0).toLowerCase() + cleaned.slice(1);
+  return /^[0-9]/.test(camel) ? `_${camel}` : camel;
+}
+function extractAllTokens(dictionary: unknown): SdToken[] {
+  if (dictionary && typeof dictionary === 'object' && 'allTokens' in dictionary) {
+    const list = dictionary.allTokens;
+    if (Array.isArray(list)) return list as SdToken[];
+  }
+  return [];
+}
+
 async function cssVariablesFormat(args: TokenFormatArgs): Promise<string> {
   const header = await fileHeader({ file: args.file as never, options: args.options as never });
   const variables = formattedVariables({
@@ -430,7 +443,79 @@ async function cssVariablesFormat(args: TokenFormatArgs): Promise<string> {
     outputReferences: args.options?.outputReferences ?? false,
     usesDtcg: true,
   });
-  return `${header}:root {\n${variables}\n}\n`;
+  const selector = (args.options?.selector as string | undefined) ?? ':root';
+  return `${header}${selector} {\n${variables}\n}\n`;
+}
+
+async function javascriptEsmFormat(args: TokenFormatArgs): Promise<string> {
+  const header = await fileHeader({ file: args.file as never, options: args.options as never });
+  const allTokens = extractAllTokens(args.dictionary);
+  const entries: Array<{ id: string; value: string }> = [];
+  const seen = new Set<string>();
+  for (const token of allTokens) {
+    const id = toIdentifier(token.name);
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const value = String(token.value ?? token.$value ?? '');
+    entries.push({ id, value });
+  }
+
+  const lines = [header];
+  for (const entry of entries) {
+    lines.push(`export const ${entry.id} = ${JSON.stringify(entry.value)};`);
+  }
+  lines.push('');
+  lines.push('export const tokens = {');
+  for (const entry of entries) {
+    lines.push(`  ${entry.id},`);
+  }
+  lines.push('};');
+  lines.push('export default tokens;');
+
+  const themes = args.options?.themes as Record<string, Record<string, string>> | undefined;
+  if (themes && Object.keys(themes).length > 0) {
+    lines.push('');
+    lines.push(`export const themes = ${JSON.stringify(themes, null, 2)};`);
+  }
+  lines.push('');
+  return lines.join('\n');
+}
+
+async function typescriptDeclarationsFormat(args: TokenFormatArgs): Promise<string> {
+  const header = await fileHeader({ file: args.file as never, options: args.options as never });
+  const allTokens = extractAllTokens(args.dictionary);
+  const entries: Array<{ id: string }> = [];
+  const seen = new Set<string>();
+  for (const token of allTokens) {
+    const id = toIdentifier(token.name);
+    if (seen.has(id)) continue;
+    seen.add(id);
+    entries.push({ id });
+  }
+
+  const lines = [header];
+  for (const entry of entries) {
+    lines.push(`export declare const ${entry.id}: string;`);
+  }
+  lines.push('');
+  lines.push('export declare const tokens: {');
+  for (const entry of entries) {
+    lines.push(`  ${entry.id}: string;`);
+  }
+  lines.push('};');
+  lines.push('export default tokens;');
+
+  const themes = args.options?.themes as Record<string, Record<string, string>> | undefined;
+  if (themes && Object.keys(themes).length > 0) {
+    lines.push('');
+    lines.push('export declare const themes: {');
+    for (const themeKey of Object.keys(themes)) {
+      lines.push(`  ${toIdentifier(themeKey)}: Record<string, string>;`);
+    }
+    lines.push('};');
+  }
+  lines.push('');
+  return lines.join('\n');
 }
 
 /**
@@ -461,6 +546,8 @@ function engineHooks() {
     formats: {
       // SD types its own format signature; FORMATS is checked at the TokenFormat boundary.
       'token-engine/css-variables': cssVariablesFormat as never,
+      'token-engine/javascript-esm': javascriptEsmFormat as never,
+      'token-engine/typescript-declarations': typescriptDeclarationsFormat as never,
       'tailwind/v4-theme': tailwindV4ThemeFormat as never,
       'token-engine/component-specs': componentSpecsFormat as never,
       'design-md/stitch': designMdFormat as never,
@@ -470,32 +557,59 @@ function engineHooks() {
 }
 
 export type ArtifactName =
-  'tokens.css' | 'theme.css' | 'components.md' | 'DESIGN.md' | 'visualizer.html';
+  | 'tokens.css'
+  | 'tokens.js'
+  | 'tokens.d.ts'
+  | 'theme.css'
+  | 'components.md'
+  | 'DESIGN.md'
+  | 'visualizer.html';
 
 export interface ArtifactSpec {
   name: ArtifactName;
   format: string;
+  category?: 'css' | 'ts';
   /** Only emitted when `BuildTokensOptions.visualizer` is true. */
   optional?: true;
   options?: (options: BuildTokensOptions) => Record<string, unknown>;
 }
 
 export const ARTIFACTS: readonly ArtifactSpec[] = [
-  { name: 'tokens.css', format: 'token-engine/css-variables' },
-  { name: 'theme.css', format: 'tailwind/v4-theme' },
+  {
+    name: 'tokens.css',
+    format: 'token-engine/css-variables',
+    category: 'css',
+    options: (options) => ({ selector: options.selector ?? ':root' }),
+  },
+  {
+    name: 'tokens.js',
+    format: 'token-engine/javascript-esm',
+    category: 'ts',
+    options: (options) => ({ themes: options.themeDictionaries }),
+  },
+  {
+    name: 'tokens.d.ts',
+    format: 'token-engine/typescript-declarations',
+    category: 'ts',
+    options: (options) => ({ themes: options.themeDictionaries }),
+  },
+  { name: 'theme.css', format: 'tailwind/v4-theme', category: 'css' },
   {
     name: 'components.md',
     format: 'token-engine/component-specs',
+    category: 'css',
     options: (options) => ({ label: options.label ?? 'tokens' }),
   },
   {
     name: 'DESIGN.md',
     format: 'design-md/stitch',
+    category: 'css',
     options: (options) => ({ label: options.label ?? 'tokens', guide: options.guide }),
   },
   {
     name: 'visualizer.html',
     format: 'token-engine/visualizer',
+    category: 'css',
     optional: true,
     options: (options) => ({ label: options.label ?? 'tokens', guide: options.guide }),
   },
@@ -505,13 +619,21 @@ export const ARTIFACTS: readonly ArtifactSpec[] = [
 export const ARTIFACT_NAMES: readonly ArtifactName[] = ARTIFACTS.map((artifact) => artifact.name);
 
 /** Emitted outputs for this build, in manifest order. */
-export function artifactNames(options: { visualizer?: boolean } = {}): ArtifactName[] {
-  return ARTIFACTS.filter(
-    (artifact) => artifact.optional !== true || options.visualizer === true,
-  ).map((artifact) => artifact.name);
+export function artifactNames(
+  options: { visualizer?: boolean; format?: 'all' | 'css' | 'ts' } = {},
+): ArtifactName[] {
+  const targetCategory = options.format && options.format !== 'all' ? options.format : undefined;
+  return ARTIFACTS.filter((artifact) => {
+    if (artifact.optional === true && options.visualizer !== true) return false;
+    if (targetCategory !== undefined && artifact.category !== targetCategory) return false;
+    return true;
+  }).map((artifact) => artifact.name);
 }
 
-export function artifactPaths(outDir: string, options: { visualizer?: boolean } = {}): string[] {
+export function artifactPaths(
+  outDir: string,
+  options: { visualizer?: boolean; format?: 'all' | 'css' | 'ts' } = {},
+): string[] {
   const buildPath = outDir.endsWith('/') ? outDir : `${outDir}/`;
   return artifactNames(options).map((name) => `${buildPath}${name}`);
 }
@@ -586,7 +708,13 @@ export async function buildTokens(options: BuildTokensOptions): Promise<Compiled
   const buildPath = options.outDir.endsWith('/') ? options.outDir : `${options.outDir}/`;
   const sd = createEngine(
     loadTokenSources(options.source),
-    ARTIFACTS.filter((artifact) => artifact.optional !== true || options.visualizer === true).map(
+    ARTIFACTS.filter((artifact) => {
+      if (artifact.optional === true && options.visualizer !== true) return false;
+      if (options.format && options.format !== 'all' && artifact.category !== options.format) {
+        return false;
+      }
+      return true;
+    }).map(
       (artifact) => ({
         destination: artifact.name,
         format: artifact.format,
@@ -600,6 +728,125 @@ export async function buildTokens(options: BuildTokensOptions): Promise<Compiled
     artifactNames(options).map((name) => [name, `${buildPath}${name}`]),
   );
   return { artifacts };
+}
+
+export function themeSelector(themeName: string, baseSelector: string): string {
+  const parts = baseSelector.split(',').map((p) => p.trim());
+  const scopedParts = parts.map((part) => {
+    if (part === ':root') return `[data-theme="${themeName}"]`;
+    if (part === ':host') return `:host([data-theme="${themeName}"])`;
+    if (part.startsWith(':host(')) return `:host([data-theme="${themeName}"])`;
+    return `[data-theme="${themeName}"] ${part}, ${part}[data-theme="${themeName}"]`;
+  });
+  return scopedParts.join(', ');
+}
+
+export interface BuildMultiThemeOptions {
+  tokensDir: string;
+  themes: string[];
+  defaultTheme?: string;
+  outDir: string;
+  prefix?: string;
+  selector?: string;
+  format?: 'all' | 'css' | 'ts';
+  guide?: BuildTokensOptions['guide'];
+  visualizer?: boolean;
+}
+
+export async function buildMultiThemeTokens(
+  options: BuildMultiThemeOptions,
+): Promise<CompiledOutputs> {
+  const defaultTheme =
+    options.defaultTheme ??
+    (options.themes.includes('light') ? 'light' : (options.themes[0] ?? 'light'));
+  const buildPath = options.outDir.endsWith('/') ? options.outDir : `${options.outDir}/`;
+  const themeDictionaries: Record<string, Record<string, string>> = {};
+  const themeRawTokens: Record<string, SdToken[]> = {};
+  const perThemeArtifacts: Record<string, string> = {};
+
+  for (const t of options.themes) {
+    const sourcePatterns = tokenSourcePatterns(options.tokensDir, t);
+    const merged = loadTokenSources(sourcePatterns);
+    const perThemeFiles: EngineFile[] = [
+      {
+        destination: `tokens.${t}.css`,
+        format: 'token-engine/css-variables',
+        options: { selector: options.selector ?? ':root' },
+      },
+      {
+        destination: `theme.${t}.css`,
+        format: 'tailwind/v4-theme',
+      },
+    ];
+    const themeEngine = createEngine(merged, perThemeFiles, {
+      buildPath,
+      ...(options.prefix === undefined ? {} : { prefix: options.prefix }),
+    });
+    await themeEngine.buildAllPlatforms();
+    perThemeArtifacts[`tokens.${t}.css`] = `${buildPath}tokens.${t}.css`;
+    perThemeArtifacts[`theme.${t}.css`] = `${buildPath}theme.${t}.css`;
+
+    const dict = await themeEngine.getPlatformTokens('css');
+    const rawTokens = extractAllTokens(dict);
+    themeRawTokens[t] = rawTokens;
+    const dictMap: Record<string, string> = {};
+    for (const tok of rawTokens) {
+      dictMap[toIdentifier(tok.name)] = String(tok.value ?? tok.$value ?? '');
+    }
+    themeDictionaries[t] = dictMap;
+  }
+
+  const defaultSource = tokenSourcePatterns(options.tokensDir, defaultTheme);
+  const defaultOutputs = await buildTokens({
+    source: defaultSource,
+    outDir: options.outDir,
+    label: defaultTheme,
+    themeDictionaries,
+    ...(options.prefix === undefined ? {} : { prefix: options.prefix }),
+    ...(options.selector === undefined ? {} : { selector: options.selector }),
+    ...(options.format === undefined ? {} : { format: options.format }),
+    ...(options.guide === undefined ? {} : { guide: options.guide }),
+    ...(options.visualizer === undefined ? {} : { visualizer: options.visualizer }),
+  });
+
+  const tokensCssPath = `${buildPath}tokens.css`;
+  if (existsSync(tokensCssPath)) {
+    let tokensCss = readFileSync(tokensCssPath, 'utf8');
+    const baseSelector = options.selector ?? ':root';
+    const defaultTokens = themeDictionaries[defaultTheme] ?? {};
+
+    for (const t of options.themes) {
+      if (t === defaultTheme) continue;
+      const thisThemeTokens = themeDictionaries[t] ?? {};
+      const changedTokens: Array<{ name: string; value: string }> = [];
+      for (const tok of themeRawTokens[t] ?? []) {
+        const id = toIdentifier(tok.name);
+        if (thisThemeTokens[id] !== defaultTokens[id]) {
+          const varName = options.prefix ? `--${options.prefix}-${tok.name}` : `--${tok.name}`;
+          changedTokens.push({ name: varName, value: String(tok.value ?? tok.$value ?? '') });
+        }
+      }
+      if (changedTokens.length === 0) continue;
+
+      const varLines = changedTokens.map((c) => `  ${c.name}: ${c.value};`).join('\n');
+      const scopedSel = themeSelector(t, baseSelector);
+
+      if (t === 'dark') {
+        tokensCss += `\n/* Dark theme automatic media query override */\n@media (prefers-color-scheme: dark) {\n  ${baseSelector} {\n${varLines}\n  }\n}\n`;
+        tokensCss += `\n/* Dark theme data-theme override */\n${scopedSel} {\n${varLines}\n}\n`;
+      } else {
+        tokensCss += `\n/* [data-theme="${t}"] override */\n${scopedSel} {\n${varLines}\n}\n`;
+      }
+    }
+    writeFileSync(tokensCssPath, tokensCss, 'utf8');
+  }
+
+  return {
+    artifacts: {
+      ...defaultOutputs.artifacts,
+      ...perThemeArtifacts,
+    },
+  };
 }
 
 /** Load one theme's resolved tokens (UI profiles): raw tokens + path → value map. */

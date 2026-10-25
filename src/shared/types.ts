@@ -159,9 +159,14 @@ export interface BuildTokensOptions {
   /** Output directory; trailing slash added. */
   outDir: string;
   prefix?: string;
+  /** Custom CSS selector for variable scoping (defaults to :root). */
+  selector?: string;
+  /** Artifact format subset: 'all' (default), 'css' (CSS/docs), or 'ts' (JS/DTS). */
+  format?: 'all' | 'css' | 'ts';
+  /** Resolved theme dictionaries to include in JS/DTS output when multi-theme. */
+  themeDictionaries?: Record<string, Record<string, string>>;
   /** Theme label written into the generated component specifications. */
   label?: string;
-  /** Guide data for the DESIGN.md output (name/prose/brand hexes from the style-spec). */
   guide?: {
     name: string;
     overview?: string;

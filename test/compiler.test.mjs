@@ -4,9 +4,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import {
+  buildMultiThemeTokens,
   buildTokens,
   loadThemeTokens,
   ResolvedDictionary,
+  themeSelector,
   verifyGeneratedFiles,
 } from '../src/shared/compiler.ts';
 import { runGenerate } from '../src/skills/token-math/scripts/generate.ts';
@@ -40,11 +42,20 @@ test('buildTokens compiles DTCG tokens to CSS, Tailwind @theme, docs, and visual
     });
 
     assert.ok(emitted.artifacts['tokens.css']?.endsWith('tokens.css'));
+    assert.ok(emitted.artifacts['tokens.js']?.endsWith('tokens.js'));
+    assert.ok(emitted.artifacts['tokens.d.ts']?.endsWith('tokens.d.ts'));
     assert.ok(emitted.artifacts['theme.css']?.endsWith('theme.css'));
     assert.ok(emitted.artifacts['components.md']?.endsWith('components.md'));
     assert.ok(emitted.artifacts['DESIGN.md']?.endsWith('DESIGN.md'));
     assert.ok(emitted.artifacts['visualizer.html']?.endsWith('visualizer.html'));
 
+    const tokensJs = readFileSync(join(outDir, 'tokens.js'), 'utf8');
+    assert.ok(tokensJs.includes('export const'));
+    assert.ok(tokensJs.includes('export default tokens;'));
+
+    const tokensDts = readFileSync(join(outDir, 'tokens.d.ts'), 'utf8');
+    assert.ok(tokensDts.includes('export declare const'));
+    assert.ok(tokensDts.includes('export default tokens;'));
     const tokensCss = readFileSync(join(outDir, 'tokens.css'), 'utf8');
     assert.ok(tokensCss.includes(':root {'));
     assert.ok(tokensCss.includes('--color-'));
@@ -62,6 +73,85 @@ test('buildTokens compiles DTCG tokens to CSS, Tailwind @theme, docs, and visual
     const visualizerHtml = readFileSync(join(outDir, 'visualizer.html'), 'utf8');
     assert.ok(visualizerHtml.includes('<!DOCTYPE html>'));
     assert.ok(visualizerHtml.includes('Compiler Test Brand'));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('buildTokens supports custom CSS selector scoping', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'compiler-selector-'));
+  try {
+    const tokensDir = join(dir, 'tokens');
+    const outDir = join(dir, 'out');
+    runGenerate([
+      '--spec',
+      'src/skills/token-style/assets/style-spec.example.json',
+      '--out',
+      tokensDir,
+    ]);
+
+    const source = [
+      `${tokensDir.replaceAll('\\', '/')}/primitive/**/*.tokens.json`,
+      `${tokensDir.replaceAll('\\', '/')}/semantic/light.tokens.json`,
+      `${tokensDir.replaceAll('\\', '/')}/component/**/*.tokens.json`,
+    ];
+
+    await buildTokens({
+      source,
+      outDir,
+      selector: ':host, :root',
+    });
+
+    const tokensCss = readFileSync(join(outDir, 'tokens.css'), 'utf8');
+    assert.ok(tokensCss.includes(':host, :root {'));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('themeSelector generates proper scoped overrides for standard, host, and class selectors', () => {
+  assert.equal(themeSelector('dark', ':root'), '[data-theme="dark"]');
+  assert.equal(themeSelector('dark', ':host'), ':host([data-theme="dark"])');
+  assert.equal(themeSelector('dark', ':host, :root'), ':host([data-theme="dark"]), [data-theme="dark"]');
+  assert.equal(themeSelector('dark', '.bento-hud'), '[data-theme="dark"] .bento-hud, .bento-hud[data-theme="dark"]');
+});
+
+test('buildMultiThemeTokens emits consolidated CSS and per-theme files', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'compiler-multi-theme-'));
+  try {
+    const tokensDir = join(dir, 'tokens');
+    const outDir = join(dir, 'out');
+    runGenerate([
+      '--spec',
+      'src/skills/token-style/assets/style-spec.example.json',
+      '--out',
+      tokensDir,
+    ]);
+
+    const emitted = await buildMultiThemeTokens({
+      tokensDir,
+      themes: ['light', 'dark', 'high-contrast'],
+      outDir,
+      selector: ':host, :root',
+    });
+
+    assert.ok(emitted.artifacts['tokens.css']);
+    assert.ok(emitted.artifacts['tokens.dark.css']);
+    assert.ok(emitted.artifacts['tokens.light.css']);
+    assert.ok(emitted.artifacts['tokens.high-contrast.css']);
+    assert.ok(emitted.artifacts['tokens.js']);
+    assert.ok(emitted.artifacts['tokens.d.ts']);
+
+    const tokensCss = readFileSync(join(outDir, 'tokens.css'), 'utf8');
+    assert.ok(tokensCss.includes(':host, :root {'));
+    assert.ok(tokensCss.includes('@media (prefers-color-scheme: dark) {'));
+    assert.ok(tokensCss.includes(':host([data-theme="dark"]), [data-theme="dark"] {'));
+    assert.ok(tokensCss.includes(':host([data-theme="high-contrast"]), [data-theme="high-contrast"] {'));
+
+    const tokensJs = readFileSync(join(outDir, 'tokens.js'), 'utf8');
+    assert.ok(tokensJs.includes('export const themes ='));
+    assert.ok(tokensJs.includes('"dark":'));
+    assert.ok(tokensJs.includes('"highContrast":') || tokensJs.includes('"high-contrast":'));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

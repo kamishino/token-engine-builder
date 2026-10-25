@@ -3,16 +3,34 @@ import test from 'node:test';
 import { ARTIFACT_NAMES, artifactNames, artifactPaths, ARTIFACTS } from '../src/shared/compiler.ts';
 
 test('artifact manifest is the single source for emitted and guarded names', () => {
-  assert.deepEqual(artifactNames({}), ['tokens.css', 'theme.css', 'components.md', 'DESIGN.md']);
+  assert.deepEqual(artifactNames({}), [
+    'tokens.css',
+    'tokens.js',
+    'tokens.d.ts',
+    'theme.css',
+    'components.md',
+    'DESIGN.md',
+  ]);
   assert.deepEqual(artifactNames({ visualizer: true }), [
     'tokens.css',
+    'tokens.js',
+    'tokens.d.ts',
     'theme.css',
     'components.md',
     'DESIGN.md',
     'visualizer.html',
   ]);
+  assert.deepEqual(artifactNames({ format: 'css' }), [
+    'tokens.css',
+    'theme.css',
+    'components.md',
+    'DESIGN.md',
+  ]);
+  assert.deepEqual(artifactNames({ format: 'ts' }), ['tokens.js', 'tokens.d.ts']);
   assert.deepEqual(ARTIFACT_NAMES, [
     'tokens.css',
+    'tokens.js',
+    'tokens.d.ts',
     'theme.css',
     'components.md',
     'DESIGN.md',
