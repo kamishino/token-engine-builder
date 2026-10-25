@@ -37,6 +37,11 @@ export function syncSkillPackages(skillsDir, distDir) {
       if (file.endsWith('.mjs')) chmodSync(join(outScripts, file), 0o755);
     }
   }
+  const mathTemplates = join(skillsDir, 'token-math', 'templates');
+  if (existsSync(mathTemplates)) {
+    cpSync(mathTemplates, join(distDir, 'cli', 'templates'), { recursive: true });
+    cpSync(mathTemplates, join(distDir, 'templates'), { recursive: true });
+  }
 }
 
 /** Auto-discover `src/skills/<skill>/scripts/*.ts` → `dist/<skill>/scripts/<name>.mjs` mapping. */

@@ -5,6 +5,9 @@
   "type": "module",
   "description": "Builds self-contained AI agent skills for 3-tier W3C DTCG design tokens (OKLCH, WCAG + APCA, Style Dictionary v5).",
   "license": "MIT",
+  "bin": {
+    "token-engine": "dist/cli/token-engine.mjs"
+  },
   "engines": {
     "node": ">=22.12"
   },

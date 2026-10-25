@@ -568,9 +568,22 @@ export function extractColorPairs(files: Array<{ text: string; file: string }>):
       const fgMatch = body.match(fgColorRegex);
       const bgMatch = body.match(bgColorRegex);
 
-      const fgColor = fgMatch ? parseToOklch(fgMatch[1]?.trim() ?? '') : null;
-      const bgColor = bgMatch ? parseToOklch(bgMatch[1]?.trim() ?? '') : null;
-
+      let fgColor: OklchColor | null = null;
+      let bgColor: OklchColor | null = null;
+      if (fgMatch?.[1]) {
+        try {
+          fgColor = parseToOklch(fgMatch[1].trim());
+        } catch {
+          // unparseable color string
+        }
+      }
+      if (bgMatch?.[1]) {
+        try {
+          bgColor = parseToOklch(bgMatch[1].trim());
+        } catch {
+          // unparseable color string
+        }
+      }
       if (bgColor) {
         detectedBg.push(bgColor);
       }

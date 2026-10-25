@@ -8,7 +8,7 @@
  * skills build (dist/ is wiped only for full builds, filtered builds append).
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, rmSync } from 'node:fs';
+import { chmodSync, existsSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isMainModule } from '../src/shared/paths.ts';
@@ -75,6 +75,24 @@ export function runBuildAll(argv = process.argv.slice(2), { root = rootDir, runV
       },
     });
   });
+
+  const shouldBuildCli =
+    only.length === 0 || only.includes('token-engine') || only.includes('cli');
+  if (shouldBuildCli) {
+    console.log(`\n[build] cli/token-engine`);
+    runner({
+      skill: 'cli',
+      script: 'token-engine',
+      env: {
+        SKILL_ENTRY: 'cli/token-engine',
+        SKILL_EMPTY: '0',
+      },
+    });
+    const cliOutput = join(distDir, 'cli', 'token-engine.mjs');
+    if (existsSync(cliOutput)) {
+      chmodSync(cliOutput, 0o755);
+    }
+  }
 
   // Statics are copied on every pass; call directly so a static-only build syncs too.
   syncSkillPackages(skillsDir, distDir);

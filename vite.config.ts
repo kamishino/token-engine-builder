@@ -29,7 +29,11 @@ function syncSkillPackagesPlugin(): Plugin {
 // must run standalone after being copied to ~/.agents/skills/.
 // A bare `vite build` (all entries, shared chunk) still works for quick checks.
 const onlySkill = process.env['SKILL_ENTRY'];
-const allEntries = discoverSkillEntries(skillsDir);
+const cliEntry = resolve(rootDir, 'src/cli/index.ts');
+const allEntries: Record<string, string> = {
+  ...discoverSkillEntries(skillsDir),
+  'cli/token-engine': cliEntry,
+};
 const entries =
   onlySkill === undefined
     ? allEntries

@@ -20,7 +20,16 @@ export function skillRoot(importMetaUrl: string): string {
 }
 
 export function templatePath(importMetaUrl: string, ...segments: string[]): string {
-  return resolve(skillRoot(importMetaUrl), 'templates', ...segments);
+  const root = skillRoot(importMetaUrl);
+  const direct = resolve(root, 'templates', ...segments);
+  if (existsSync(direct)) return direct;
+  const fromMath = resolve(root, 'token-math', 'templates', ...segments);
+  if (existsSync(fromMath)) return fromMath;
+  const fromSiblingMath = resolve(root, '..', 'token-math', 'templates', ...segments);
+  if (existsSync(fromSiblingMath)) return fromSiblingMath;
+  const fromSrc = resolve(root, 'src', 'skills', 'token-math', 'templates', ...segments);
+  if (existsSync(fromSrc)) return fromSrc;
+  return direct;
 }
 
 /** The installed folder of a sibling skill (`<skills-dir>/<skillName>`). */
@@ -117,15 +126,16 @@ export function fromCwd(path: string): string {
 /** True when the module is invoked directly from the CLI rather than imported. */
 export function isMainModule(importMetaUrl: string, ...extraSuffixes: string[]): boolean {
   if (process.argv[1] === undefined) return false;
+  if (extraSuffixes.length > 0) {
+    const entry = process.argv[1].replace(/\\/g, '/');
+    return extraSuffixes.some((suffix) => entry.endsWith(suffix));
+  }
   try {
     const entry = resolve(process.argv[1]);
     const target = resolve(fileURLToPath(importMetaUrl));
     if (entry === target) return true;
   } catch {
     // ignore unparseable or relative file URL
-  }
-  for (const suffix of extraSuffixes) {
-    if (process.argv[1].endsWith(suffix)) return true;
   }
   return false;
 }
