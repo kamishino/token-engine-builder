@@ -59,7 +59,7 @@ export function detectCodebaseContext(root: string): CodebaseContext {
   const styleExtensions = ['.css', '.scss', '.sass', '.less'];
 
   function scanDir(dir: string, depth = 0): void {
-    if (depth > 2 || !existsSync(dir)) return;
+    if (depth > 4 || !existsSync(dir)) return;
     try {
       const entries = readdirSync(dir, { withFileTypes: true });
       for (const entry of entries) {
