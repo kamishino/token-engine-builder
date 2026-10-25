@@ -42,6 +42,13 @@ export function syncSkillPackages(skillsDir, distDir) {
     cpSync(mathTemplates, join(distDir, 'cli', 'templates'), { recursive: true });
     cpSync(mathTemplates, join(distDir, 'templates'), { recursive: true });
   }
+  const cliOutput = join(distDir, 'cli', 'token-engine.mjs');
+  if (existsSync(cliOutput)) {
+    const dtScripts = join(distDir, 'design-tokens', 'scripts');
+    mkdirSync(dtScripts, { recursive: true });
+    cpSync(cliOutput, join(dtScripts, 'token-engine.mjs'));
+    chmodSync(join(dtScripts, 'token-engine.mjs'), 0o755);
+  }
 }
 
 /** Auto-discover `src/skills/<skill>/scripts/*.ts` → `dist/<skill>/scripts/<name>.mjs` mapping. */

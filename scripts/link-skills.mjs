@@ -93,9 +93,11 @@ export function runLink(argv = process.argv.slice(2), { root = rootDir } = {}) {
     console.error('[deploy] WARNING: target is inside the OS temp dir');
   }
 
-  const skills = readdirSync(currentSkillsDir, { withFileTypes: true })
+  const only = argv.filter((arg) => !arg.startsWith('-'));
+  const allSkills = readdirSync(currentSkillsDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name);
+  const skills = only.length > 0 ? allSkills.filter((s) => only.includes(s)) : allSkills;
   const isStale = (skill) => isSkillStale(skill, { root });
 
   function isLink(path) {
