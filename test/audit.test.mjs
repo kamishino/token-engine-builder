@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import console from 'node:console';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -17,6 +18,22 @@ test('runAudit fails closed on empty tokens directory and writes no stamp', () =
     assert.equal(existsSync(join(tokensDir, '.token-engine-audit.json')), false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('runAudit emits structured diagnostics when tokens directory is missing', () => {
+  const originalError = console.error;
+  const messages = [];
+  console.error = (...args) => messages.push(args.join(' '));
+  try {
+    const code = runAudit(['--tokens', '/nonexistent-tokens-dir-test']);
+    assert.equal(code, 1);
+    const output = messages.join('\n');
+    assert.match(output, /state: missing-tokens/);
+    assert.match(output, /next: token-extract/);
+    assert.match(output, /why: token-audit requires/);
+  } finally {
+    console.error = originalError;
   }
 });
 
