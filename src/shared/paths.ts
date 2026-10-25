@@ -28,16 +28,69 @@ export function siblingSkillRoot(importMetaUrl: string, skillName: string): stri
   return resolve(skillRoot(importMetaUrl), '..', skillName);
 }
 
+/** True if the directory belongs to a development/builder worktree. */
+export function isDevelopmentPath(pathStr: string): boolean {
+  const normalized = pathStr.replace(/\\/g, '/');
+  if (
+    normalized.includes('/token-engine-builder/dist') ||
+    normalized.includes('/token-engine-builder/src')
+  ) {
+    return true;
+  }
+  if (/\/(dist|src\/skills)\/[a-z0-9-]+$/i.test(normalized)) {
+    try {
+      const grandParent = resolve(pathStr, normalized.includes('/dist/') ? '../..' : '../../..');
+      const pkgPath = resolve(grandParent, 'package.json');
+      if (existsSync(pkgPath)) return true;
+    } catch {
+      // ignore
+    }
+  }
+  return false;
+}
+
+function invocationSkillRoot(): string | undefined {
+  if (!process.argv[1]) return undefined;
+  try {
+    const scriptPath = resolve(process.argv[1]);
+    const parent = dirname(scriptPath);
+    if (parent.endsWith('scripts') || parent.endsWith('scripts/') || parent.endsWith('scripts\\')) {
+      return resolve(parent, '..');
+    }
+  } catch {
+    // ignore
+  }
+  return undefined;
+}
+
 /**
  * Replace `<skill-root>` with this skill's root and `<name-root>` with a
- * co-located sibling skill's root. Missing targets stay as written so the
- * agent or human can resolve them.
+ * co-located sibling skill's root. Missing targets and development repo paths
+ * stay as written so the agent or human can resolve them portably.
  */
 export function resolveSkillPathPlaceholders(command: string, importMetaUrl: string): string {
+  const invRoot = invocationSkillRoot();
   return command.replace(/<([a-z0-9-]+)-root>/g, (match, skillName: string) => {
-    if (skillName === 'skill') return skillRoot(importMetaUrl);
+    if (skillName === 'skill') {
+      if (invRoot && !isDevelopmentPath(invRoot)) return invRoot;
+      const root = skillRoot(importMetaUrl);
+      return isDevelopmentPath(root) ? match : root;
+    }
+    if (invRoot) {
+      const invSibling = resolve(invRoot, '..', skillName);
+      if (existsSync(invSibling) && !isDevelopmentPath(invSibling)) {
+        return invSibling;
+      }
+    }
     const dir = siblingSkillRoot(importMetaUrl, skillName);
-    return existsSync(dir) ? dir : match;
+    if (existsSync(dir) && !isDevelopmentPath(dir)) {
+      return dir;
+    }
+    if (process.env.AGENT_SKILLS_DIR) {
+      const envDir = resolve(process.env.AGENT_SKILLS_DIR, skillName);
+      if (existsSync(envDir)) return envDir;
+    }
+    return match;
   });
 }
 
