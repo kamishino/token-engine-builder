@@ -6,30 +6,112 @@ Deep design: module contracts, token discipline, and the three load-bearing buil
 
 The architecture decouples **cognitive agent reasoning** from **deterministic mathematics**:
 
-```text
-┌────────────────────────────────────────────────────────────────────────┐
-│                   FLAGSHIP AGENT SKILL: "design-tokens"                │
-│                     (Cognitive Scaffolding & Reasoning)                │
-│                                                                        │
-│  1. Discovery:  Inspect repo context (Shadow DOM vs DOM, Tailwind v4)  │
-│  2. Strategy:   Mine color debt, conduct Socratic brand interview      │
-│  3. Execution:  Invoke single deterministic engine (token-engine sync) │
-│  4. Wiring:     Refactor raw #hex into var(--color-*), wire :host CSS  │
-└───────────────────────────────────┬────────────────────────────────────┘
-                                    │ runs 1 command
-                                    ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                 UNIFIED DETERMINISTIC CLI: "token-engine"              │
-│                       (src/cli/index.ts → dist/cli/)                   │
-│                                                                        │
-│  token-engine sync                                                     │
-│    ├─▶ extract (raw CSS/code → candidate anchor + baseline scorecard)  │
-│    ├─▶ math    (11-step OKLCH ramps, modular type, 4px rhythm)         │
-│    ├─▶ audit   (dual-gate WCAG 2.1 & APCA contrast floors + delta)     │
-│    └─▶ build   (tokens.css, theme.css, tokens.js, tokens.d.ts)         │
-└────────────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph CognitiveLayer ["🧠 Cognitive Agent Layer (design-tokens skill)"]
+        direction TB
+        Agent[👤 Autonomous AI Agent]
+        Discovery[🔍 Context Discovery<br/>Maturity, Shadow DOM, Package Manager]
+        PaletteDesign[🎨 Socratic Palette Design<br/>Brand Anchors, Kobayashi Clusters]
+        Refactor[✂️ Codebase Refactoring<br/>#hex → var(--color-*), :host Piercing]
+        
+        Agent --> Discovery
+        Discovery --> PaletteDesign
+        PaletteDesign --> Refactor
+    end
+
+    subgraph CLIEngine ["⚙️ Deterministic CLI Engine (token-engine)"]
+        direction TB
+        CLI[🚀 token-engine CLI<br/>src/cli/index.ts → dist/cli/]
+        SyncCmd[⚡ token-engine sync<br/>Single-Pass Execution]
+        SubCmds[🛠️ Subcommands<br/>init | audit | build | extract | scaffold]
+        
+        CLI --> SyncCmd
+        CLI --> SubCmds
+    end
+
+    subgraph Pipeline ["🔄 Core Processing Pipeline"]
+        direction TB
+        Extract[📝 token-extract<br/>CSS/TS Mining + Baseline Scan]
+        Math[📐 token-math<br/>11-Step OKLCH Ramps + 4px Rhythm]
+        Audit[🔐 token-audit<br/>WCAG 2.1 AA + APCA Dual Gate]
+        Build[📦 token-build<br/>Style Dictionary v5 Programmatic Compiler]
+        
+        Extract -->|style-spec.json| Math
+        Math -->|tokens/ 3-tier tree| Audit
+        Audit -->|passing stamp| Build
+    end
+
+    subgraph Artifacts ["💾 Emitted Artifacts & Targets"]
+        direction TB
+        TokensJSON[(💾 tokens/<br/>primitive, semantic, component)]
+        TokensCSS[🌐 tokens.css<br/>:host & :root Custom Properties]
+        TokensJS[📜 tokens.js + tokens.d.ts<br/>Typed ESM Dictionary & Themes Map]
+        ThemeCSS[🎨 theme.css<br/>Tailwind v4 @theme Block]
+        PackageJSON[📦 package.json<br/>@tokens Workspace Package]
+    end
+
+    subgraph Consumers ["🎯 Production Consumer Environments"]
+        WebComp[🧩 Web Components<br/>Shadow DOM :host Scoping]
+        CanvasApp[🎮 WebGL / Canvas Runtimes<br/>Typed JS Token Constants]
+        TailwindApp[⚡ Tailwind v4 Frontends<br/>Utility Classes & Theme Variables]
+    end
+
+    CognitiveLayer -->|runs 1 command: npx token-engine sync| CLI
+    SyncCmd --> Pipeline
+    Build --> Artifacts
+    
+    TokensCSS --> WebComp
+    TokensJS --> CanvasApp
+    ThemeCSS --> TailwindApp
+
+    classDef cognitive fill:#FFE66D,stroke:#F08C00,stroke-width:2px,color:#000
+    classDef engine fill:#4ECDC4,stroke:#0B7285,stroke-width:2px,color:#000
+    classDef pipeline fill:#A8DADC,stroke:#1864AB,stroke-width:2px,color:#000
+    classDef artifacts fill:#95E1D3,stroke:#087F5B,stroke-width:2px,color:#000
+    classDef consumers fill:#D4A5A5,stroke:#7D4E57,stroke-width:2px,color:#000
+
+    class Agent,Discovery,PaletteDesign,Refactor cognitive
+    class CLI,SyncCmd,SubCmds engine
+    class Extract,Math,Audit,Build pipeline
+    class TokensJSON,TokensCSS,TokensJS,ThemeCSS,PackageJSON artifacts
+    class WebComp,CanvasApp,TailwindApp consumers
 ```
 
+### Dual-Audit Pipeline Lifecycle
+
+```mermaid
+flowchart TD
+    Start([🚀 Repository Styling / User Request]) --> Discover[🔍 Stage 0: Context Discovery<br/>Detect: Brownfield vs Greenfield, Shadow DOM, Package Manager]
+    
+    Discover --> Choice{Codebase has styling?}
+    Choice -->|Brownfield: CSS/TS found| PreAudit[📝 Stage 1: As-Is Contrast Baseline Scan<br/>Pair raw CSS colors & evaluate WCAG + APCA]
+    Choice -->|Greenfield: No styles| Interview[🎨 Stage 1: Socratic Brand Interview<br/>Establish anchor colors in style-spec.json]
+    
+    PreAudit -->|Emits style-spec.json & .pre-audit-baseline.json| MathGen[📐 Stage 2: Deterministic Token Math<br/>Calculate 11-step OKLCH ramps & 4px scales]
+    Interview -->|Emits style-spec.json| MathGen
+    
+    MathGen -->|Emits 3-tier tokens/ tree| AuditGate{🔐 Stage 3: Dual-Gate Contrast Audit<br/>WCAG ≥ 4.5:1 & APCA |Lc| ≥ 60}
+    
+    AuditGate -->|❌ FAIL| Remedy[🛠️ Compute Remedy Suggestion<br/>Suggest ramp step override in style-spec.json]
+    Remedy --> MathGen
+    
+    AuditGate -->|✅ PASS| Stamp[📜 Write Cryptographic Stamp<br/>.token-engine-audit.json + Delta Scorecard Table]
+    
+    Stamp --> Build[📦 Stage 4: Zero-Dep Compilation<br/>Compile tokens.css, tokens.js, tokens.d.ts, theme.css]
+    Build --> Package[🎁 Stage 5: Workspace Packaging<br/>Scaffold @tokens package.json with ./css & . exports]
+    Package --> Complete([✅ Production Ready Design System])
+
+    classDef stage fill:#90EE90,stroke:#2b8a3e,stroke-width:2px,color:#000
+    classDef decision fill:#FFD700,stroke:#d9480f,stroke-width:2px,color:#000
+    classDef failure fill:#FFB6C1,stroke:#c92a2a,stroke-width:2px,color:#000
+    classDef artifact fill:#87CEEB,stroke:#1864ab,stroke-width:2px,color:#000
+
+    class Discover,PreAudit,Interview,MathGen,Build,Package stage
+    class Choice,AuditGate decision
+    class Remedy failure
+    class Stamp,Complete artifact
+```
 Skill packages are colocated under `src/skills/<skill>/` (`SKILL.md`, `templates/`, `assets/`, `scripts/`) and mirrored 1:1 into `dist/<skill>/` by the `sync-skill-packages` Vite plugin. The standalone CLI entry point (`src/cli/index.ts`) bundles into `dist/cli/token-engine.mjs` and is registered as `"bin": { "token-engine": "dist/cli/token-engine.mjs" }`.
 
 The legacy 7 micro-skills (`ask-kami`, `token-extract`, `token-style`, `token-math`, `token-audit`, `token-build`, `improve-design-system`) remain available as deprecated compatibility bridges, routing agents to the unified `design-tokens` skill and `token-engine` CLI.
@@ -60,11 +142,61 @@ The legacy 7 micro-skills (`ask-kami`, `token-extract`, `token-style`, `token-ma
 
 ## 3. Token tiers and alias discipline
 
+```mermaid
+graph LR
+    subgraph Tier1 ["Tier 1: primitive/ (Raw Values Only)"]
+        direction TB
+        Ramps["🎨 OKLCH Ramps<br/>color.cerulean.50..950<br/>color.neutral.50..950"]
+        Dims["📏 Spatial Primitives<br/>spacing.4: 1rem<br/>radius.md: 8px"]
+        Type["🔤 Typography Primitives<br/>font-size.base: 1rem<br/>font-family.sans: Inter"]
+    end
+
+    subgraph Tier2 ["Tier 2: semantic/ (Aliases Only per Theme)"]
+        direction TB
+        SemText["📝 Text Roles<br/>text.primary → {color.neutral.950}<br/>text.muted → {color.neutral.600}"]
+        SemBg["🖼️ Surface Roles<br/>bg.canvas → {color.neutral.50}<br/>bg.surface → {color.neutral.100}"]
+        SemAction["⚡ Action Roles<br/>action.primary → {color.cerulean.500}<br/>action.hover → {color.cerulean.600}"]
+    end
+
+    subgraph Tier3 ["Tier 3: component/ (Component Aliases)"]
+        direction TB
+        Btn["🔘 Button Bindings<br/>button.bg → {semantic.color.action.primary}<br/>button.text → {semantic.color.action.primary-text}<br/>button.radius → {primitive.radius.md}"]
+        Card["🃏 Card Bindings<br/>card.bg → {semantic.color.bg.surface}<br/>card.border → {semantic.color.border.default}"]
+        Input["⌨️ Input Bindings<br/>input.bg → {semantic.color.bg.canvas}<br/>input.focus → {semantic.color.border.focus}"]
+    end
+
+    subgraph Gate ["🔐 token-audit Gatekeeper"]
+        Enforce["Rules Enforced:<br/>1. Zero raw hex/px in Tier 2 & 3<br/>2. All aliases resolve (cycle depth ≤ 16)<br/>3. 42 role pairs pass WCAG ≥ 4.5:1 & APCA ≥ 60"]
+    end
+
+    Ramps --> SemText
+    Ramps --> SemBg
+    Ramps --> SemAction
+    Dims --> Btn
+    Dims --> Card
+    Dims --> Input
+    SemAction --> Btn
+    SemBg --> Card
+    SemBg --> Input
+
+    Tier2 -.-> Enforce
+    Tier3 -.-> Enforce
+
+    classDef tier1 fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#000
+    classDef tier2 fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#000
+    classDef tier3 fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#000
+    classDef gate fill:#FCE4EC,stroke:#C2185B,stroke-width:2px,color:#000
+
+    class Ramps,Dims,Type tier1
+    class SemText,SemBg,SemAction tier2
+    class Btn,Card,Input tier3
+    class Enforce gate
+```
+
 - `primitive/` — only raw values: OKLCH color ramps (`{colorSpace:'oklch', components:[l,c,h]}` + hex fallback), px dimensions, font stacks/weights.
 - `semantic/` — one file per theme (`light`/`dark`), identical paths, `{alias}` values only.
 - `component/` — button/card/input, `{alias}` values only (color → semantic roles; spacing/radius → primitives).
 - `audit.mjs` checks the canonical audit contrast pairs matrix (text on surfaces, action, feedback, borders, components), every alias in the merged tree resolves (cycle depth ≤16), and zero raw values/hex above Tier 1. `--min-ratio` default 4.5; negative probe `--min-ratio 21` exits 1.
-
 ## 4. Build pipeline — four decisions that each fixed a real failure
 
 1. **One Vite pass per skill** (`scripts/build-all.mjs`, `scripts/build-engine.mjs`, `SKILL_ENTRY`, Rolldown `codeSplitting: false`). A single multi-entry build emits shared `dist/_chunks/`, so a copied skill folder breaks. Per-skill passes inline shared code into each `.mjs`: generate 128 kB, audit 117 kB, build 1.17 MB (Style Dictionary inlined). Entry discovery, filtering, and `.buildstamp` verification are consolidated in `scripts/build-engine.mjs`. `build-all.mjs` accepts skill names for filtered rebuilds (dist/ wipes only on full builds); each pass stamps `dist/<skill>/.buildstamp` (JSON `{builtAt, bundleHash}`), and `scripts/link-skills.mjs` (`npm run deploy`) rebuilds skills whose sources are newer than their stamp or whose bundle bytes no longer match `bundleHash`, then junction-links `dist/*` into the agent's skills directory (for example `~/.agents/skills`; override with `--dir`) (pruning dead links, never touching foreign entries).
