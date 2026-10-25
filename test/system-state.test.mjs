@@ -45,3 +45,21 @@ test('inspectSystem reflects generated token tree and detects tampered provenanc
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('resolveSystemPaths resolves tokens.config.json with fallback to style-spec.json', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'system-spec-paths-'));
+  try {
+    // Neither exists: defaults to tokens.config.json
+    assert.equal(resolveSystemPaths(dir).spec, join(dir, 'tokens.config.json'));
+
+    // Only style-spec.json exists: falls back to style-spec.json
+    writeFileSync(join(dir, 'style-spec.json'), '{}', 'utf8');
+    assert.equal(resolveSystemPaths(dir).spec, join(dir, 'style-spec.json'));
+
+    // tokens.config.json created: prefers tokens.config.json
+    writeFileSync(join(dir, 'tokens.config.json'), '{}', 'utf8');
+    assert.equal(resolveSystemPaths(dir).spec, join(dir, 'tokens.config.json'));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

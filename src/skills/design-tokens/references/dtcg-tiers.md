@@ -60,9 +60,9 @@ The design system decouples styling into three strictly separated tiers:
 
 ---
 
-## 2. Canonical `style-spec.json` Contract
+## 2. Canonical `tokens.config.json` Contract
 
-The minimal, portable style contract used to generate 3-tier token structures:
+The minimal, portable style contract used to generate 3-tier token structures (also accepts `style-spec.json` for backwards compatibility):
 
 ```json
 {

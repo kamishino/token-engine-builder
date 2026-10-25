@@ -10,6 +10,7 @@
  *   scaffold  Generate starter toolchain configs (Prettier, Stylelint, Tailwind)
  */
 import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { fromCwd, getArg, hasFlag, isMainModule } from '../shared/paths.js';
 import { detectCodebaseContext } from '../shared/system-state.js';
 import { runRoute } from '../skills/ask-kami/scripts/route.js';
@@ -17,6 +18,13 @@ import { runAudit } from '../skills/token-audit/scripts/audit.js';
 import { runBuild } from '../skills/token-build/scripts/build.js';
 import { runExtract } from '../skills/token-extract/scripts/extract.js';
 import { runGenerate } from '../skills/token-math/scripts/generate.js';
+function resolveSpecArg(argv: string[], root: string): string {
+  const explicit = getArg(argv, '--spec');
+  if (explicit) return explicit;
+  if (existsSync(join(root, 'tokens.config.json'))) return 'tokens.config.json';
+  if (existsSync(join(root, 'style-spec.json'))) return 'style-spec.json';
+  return 'tokens.config.json';
+}
 
 export function usage(): string {
   return `Usage: token-engine <command> [options]
@@ -25,17 +33,16 @@ Deterministic design token pipeline for W3C DTCG, OKLCH scales, and Style Dictio
 
 Commands:
   sync        Run complete pipeline in one pass (extract → math → audit → build)
-  init        Detect codebase context and initialize style-spec.json
+  init        Detect codebase context and initialize tokens.config.json
   audit       Verify WCAG 2.1 and APCA contrast floors and check audit stamps
   build       Compile tokens to CSS, Tailwind @theme, and typed TS/JS dictionaries
   extract     Extract color and typography signals from existing CSS/code
   scaffold    Generate companion configs for Prettier, Biome, Stylelint, or Tailwind
 
 Options:
-  --spec <path>         Path to style-spec.json (default: style-spec.json)
+  --spec <path>         Path to tokens.config.json (default: tokens.config.json or style-spec.json)
   --tokens <dir>        Tokens directory (default: tokens)
   --out <dir>           Build output directory (default: build)
-  --theme <all|name>    Theme to build, or 'all' for batch multi-theme (default: light)
   --selector <sel>      Custom CSS scope selector (e.g. ":host, :root", default: :root)
   --package [name]      Scaffold a monorepo workspace package.json
   --baseline <file>     Pre-audit baseline JSON for Before-vs-After scorecard
@@ -47,7 +54,8 @@ Options:
 }
 
 export async function runSync(argv: string[]): Promise<number> {
-  const specArg = getArg(argv, '--spec', 'style-spec.json');
+  const root = process.cwd();
+  const specArg = resolveSpecArg(argv, root);
   const tokensArg = getArg(argv, '--tokens', 'tokens');
   const outArg = getArg(argv, '--out', 'build');
   const themeArg = getArg(argv, '--theme', 'light');
@@ -57,17 +65,15 @@ export async function runSync(argv: string[]): Promise<number> {
   const baselineArg = getArg(argv, '--baseline');
   const force = hasFlag(argv, '--force');
   const dryRun = hasFlag(argv, '--dry-run');
-
-  const root = process.cwd();
   const specPath = fromCwd(specArg);
   const context = detectCodebaseContext(root);
 
   console.log(`[token-engine sync] context: ${context.maturity}, runtime: ${context.runtime}, pkg: ${context.packageManager}`);
 
-  // Step 1: Ensure style-spec.json exists
+  // Step 1: Ensure spec exists
   if (!existsSync(specPath)) {
     if (context.maturity === 'brownfield') {
-      console.log(`[token-engine sync] style-spec.json missing; auto-extracting from codebase styling...`);
+      console.log(`[token-engine sync] ${specArg} missing; auto-extracting from codebase styling...`);
       const extractFlags = ['--root', root, '--out', specArg, '--audit-baseline'];
       if (force) extractFlags.push('--force');
       if (dryRun) extractFlags.push('--dry-run');
@@ -153,8 +159,9 @@ export async function runCli(argv = process.argv.slice(2)): Promise<number> {
       const context = detectCodebaseContext(root);
       console.log(`codebase context: maturity=${context.maturity} runtime=${context.runtime} pkg=${context.packageManager}`);
       if (context.maturity === 'brownfield') {
-        console.log('existing styling detected; extracting candidate style-spec.json...');
-        return runExtract(rest);
+        const outArg = resolveSpecArg(rest, root);
+        console.log(`existing styling detected; extracting candidate ${outArg}...`);
+        return runExtract(['--out', outArg, ...rest]);
       }
       return runRoute(rest);
     }

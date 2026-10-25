@@ -44,15 +44,15 @@ Execute generation using the appropriate path:
 - **CLI Accelerator**: When `token-engine` is present, run single-pass synchronization:
   ```bash
   # Multi-theme compilation (light, dark, high-contrast)
-  npx token-engine sync --spec style-spec.json --tokens tokens --out build --theme all
+  npx token-engine sync --spec tokens.config.json --tokens tokens --out build --theme all
 
   # For Web Components / Shadow DOM:
-  npx token-engine sync --spec style-spec.json --tokens tokens --out build --theme all --selector ":host, :root"
+  npx token-engine sync --spec tokens.config.json --tokens tokens --out build --theme all --selector ":host, :root"
 
   # For Monorepo Workspace Package (@tokens):
-  npx token-engine sync --spec style-spec.json --tokens tokens --out packages/tokens --theme all --package @tokens --force
+  npx token-engine sync --spec tokens.config.json --tokens tokens --out packages/tokens --theme all --package @tokens --force
   ```
-- **Scriptless Generation**: When running without external binaries, author DTCG JSON files directly following [`references/token-math.md`](references/token-math.md) and [`references/dtcg-tiers.md`](references/dtcg-tiers.md).
+
 
 ### 4. Codebase Modernization
 Wire tokens into host components:

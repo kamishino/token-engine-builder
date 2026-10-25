@@ -158,3 +158,16 @@ For an autonomous AI agent, `style-spec.json` provides maximum **cognitive lever
 - **Small Context Surface**: The agent reads and edits 20 lines of JSON instead of parsing 20 files and 2,000 lines of token syntax.
 - **Clear Seam of Responsibility**: The agent owns the creative parameters in `style-spec.json`; the deterministic CLI (`token-engine`) owns the arithmetic and compilation.
 - **Fail-Safe Iteration**: Changing brand aesthetics or fixing accessibility debt is a single-field edit in one file.
+
+---
+
+## 7. Ecosystem Evolution: From `style-spec.json` to `tokens.config.json`
+
+In frontend engineering, conventions matter for cognitive friction. The original name `style-spec.json` suffered from subtle ambiguities:
+1. **Semantic Drift**: "Style" often connotes visual CSS rules or inline styles rather than a design token engine contract.
+2. **Ecosystem Misalignment**: Frontend developers expect tooling configurations to follow the `*.config.*` pattern (`tailwind.config.js`, `vite.config.ts`, `prettier.config.json`).
+
+### The Canonical Convention: `tokens.config.json`
+The system designates `tokens.config.json` as the primary configuration file:
+- **Immediate Recognition**: Any engineer or AI agent seeing `tokens.config.json` in a repository immediately recognizes it as the source of truth for the token build system.
+- **Transparent Backwards Compatibility**: The path resolution engine (`resolveSystemPaths`) automatically checks for `tokens.config.json` first, then falls back to `style-spec.json` if present. Legacy codebases and existing CI workflows operate without disruption.

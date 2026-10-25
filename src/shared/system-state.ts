@@ -120,8 +120,12 @@ export function resolveSystemPaths(
   root: string,
   overrides: Partial<SystemPaths> = {},
 ): SystemPaths {
+  let defaultSpec = join(root, 'tokens.config.json');
+  if (!existsSync(defaultSpec) && existsSync(join(root, 'style-spec.json'))) {
+    defaultSpec = join(root, 'style-spec.json');
+  }
   return {
-    spec: overrides.spec ?? join(root, 'style-spec.json'),
+    spec: overrides.spec ?? defaultSpec,
     tokens: overrides.tokens ?? join(root, 'tokens'),
     build: overrides.build ?? join(root, 'build'),
   };
