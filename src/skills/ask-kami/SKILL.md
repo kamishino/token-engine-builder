@@ -5,6 +5,7 @@ license: MIT
 compatibility: Node.js >=22.12
 allowed-tools: 'Bash Read'
 disable-model-invocation: true
+deprecated: "Prefer the unified 'design-tokens' skill or 'token-engine init' command."
 ---
 
 # Ask Kami — Design System Router

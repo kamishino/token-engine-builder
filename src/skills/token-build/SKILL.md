@@ -4,6 +4,7 @@ description: 'Final stage of the pipeline: compile audited 3-tier tokens to CSS 
 license: MIT
 compatibility: Node.js >=22.12
 allowed-tools: 'Bash Read Write'
+deprecated: "Prefer the unified 'design-tokens' skill or 'token-engine sync' command."
 ---
 
 # Token Build — Tokens → CSS + Tailwind v4

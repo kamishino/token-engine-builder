@@ -4,6 +4,7 @@ description: 'Second in the pipeline: generate the 3-tier DTCG token tree from s
 license: MIT
 compatibility: Node.js >=22.12
 allowed-tools: 'Bash Read Write'
+deprecated: "Prefer the unified 'design-tokens' skill or 'token-engine sync' command."
 ---
 
 # Token Math — `style-spec.json` → 3-Tier Tokens

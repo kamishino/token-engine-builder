@@ -4,6 +4,7 @@ description: 'Third in the pipeline: audit a 3-tier token tree as a WCAG + APCA 
 license: MIT
 compatibility: Node.js >=22.12
 allowed-tools: 'Bash Read'
+deprecated: "Prefer the unified 'design-tokens' skill or 'token-engine sync' command."
 ---
 
 # Token Audit — WCAG + APCA Gatekeeper

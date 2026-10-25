@@ -4,6 +4,7 @@ description: 'First in the pipeline: interview for brand aesthetic, then record 
 license: MIT
 compatibility: Node.js >=22.12
 allowed-tools: 'Read Write'
+deprecated: "Prefer the unified 'design-tokens' skill or 'token-engine init' command."
 ---
 
 # Token Style — Socratic Interview → `style-spec.json`

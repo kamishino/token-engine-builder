@@ -4,6 +4,7 @@ description: 'Alternative entry to the pipeline: extract a candidate style-spec.
 license: MIT
 compatibility: Node.js >=22.12
 allowed-tools: 'Bash Read Write'
+deprecated: "Prefer the unified 'design-tokens' skill or 'token-engine sync' command."
 ---
 
 # Token Extract — Existing Project → Candidate `style-spec.json`
