@@ -9,6 +9,7 @@ Builds and packages self-contained AI agent skills and a unified CLI for 3-tier 
 | Skill                                                              | Type               | What it does                                                                                                    |
 | ------------------------------------------------------------------ | ------------------ | --------------------------------------------------------------------------------------------------------------- |
 | [design-tokens](src/skills/design-tokens/SKILL.md)                 | **Flagship Skill** | Cognitive design token architecture: discovery, OKLCH scales, dual-gate audit, and framework integration       |
+| [setup-pre-tokens](src/skills/setup-pre-tokens/SKILL.md)         | Setup Skill        | Scriptless, hand-invoked step 0: installs/configures formatter, Stylelint, Style Dictionary, Sass 7-1 + BEM and 3-tier token seeds before design-tokens |
 | [ask-kami](src/skills/ask-kami/SKILL.md)                           | Deprecated Bridge  | Entry router: detects workspace state (spec, tokens, audit, build) → proposes next skill & command              |
 | [token-extract](src/skills/token-extract/SKILL.md)                 | Deprecated Bridge  | Alternative entry: scans an existing project (CSS/tokens/config) → candidate `style-spec.json` with evidence    |
 | [token-style](src/skills/token-style/SKILL.md)                     | Deprecated Bridge  | Discovery scan + Socratic interview → one OKLCH anchor recorded as `style-spec.json` (Kobayashi style clusters) |
@@ -35,7 +36,7 @@ Built with TypeScript, Vite (SSR/Node lib mode), `colorjs.io/fn` partial imports
 
 ## Pipeline
 
-The suite decouples cognitive agent reasoning from deterministic mathematics:
+The suite decouples cognitive agent reasoning from deterministic mathematics. Projects without an existing token/styling toolchain can run `setup-pre-tokens` as an optional step 0 to install and configure prerequisites:
 
 ```text
 ┌────────────────────────────────────────────────────────┐
@@ -73,6 +74,14 @@ npm run deploy     # link dist/* into ~/.agents/skills (default; pass -- --dir <
 ```
 
 ## Use
+
+### 0. Project Prerequisites Setup (Optional)
+
+For greenfield or brownfield projects lacking styling tooling or token compilation, invoke `setup-pre-tokens` to install pinned dependencies, configure Sass 7-1 + BEM, and scaffold 3-tier seed tokens:
+
+```bash
+/setup-pre-tokens
+```
 
 ### 1. Single-Pass Execution (Recommended)
 

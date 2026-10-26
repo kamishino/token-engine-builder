@@ -1,0 +1,33 @@
+{
+  "$description": "Tier 1 — primitive typography scale (seed placeholder to be replaced by design-tokens).",
+  "font-family": {
+    "$type": "fontFamily",
+    "sans": { "$value": "Inter, system-ui, sans-serif", "$type": "fontFamily" }
+  },
+  "font-size": {
+    "$type": "dimension",
+    "xs": { "$value": { "value": 10.24, "unit": "px" }, "$type": "dimension" },
+    "sm": { "$value": { "value": 12.8, "unit": "px" }, "$type": "dimension" },
+    "base": { "$value": { "value": 16, "unit": "px" }, "$type": "dimension" },
+    "md": { "$value": { "value": 20, "unit": "px" }, "$type": "dimension" },
+    "lg": { "$value": { "value": 25, "unit": "px" }, "$type": "dimension" },
+    "xl": { "$value": { "value": 31.25, "unit": "px" }, "$type": "dimension" },
+    "2xl": { "$value": { "value": 39.06, "unit": "px" }, "$type": "dimension" }
+  },
+  "font-weight": {
+    "$type": "fontWeight",
+    "regular": { "$value": 400, "$type": "fontWeight" },
+    "medium": { "$value": 500, "$type": "fontWeight" },
+    "semibold": { "$value": 600, "$type": "fontWeight" },
+    "bold": { "$value": 700, "$type": "fontWeight" }
+  },
+  "line-height": {
+    "$type": "number",
+    "base": { "$value": 1.5, "$type": "number" }
+  },
+  "rhythm": {
+    "$type": "dimension",
+    "1": { "$value": { "value": 24, "unit": "px" }, "$type": "dimension" },
+    "2": { "$value": { "value": 48, "unit": "px" }, "$type": "dimension" }
+  }
+}

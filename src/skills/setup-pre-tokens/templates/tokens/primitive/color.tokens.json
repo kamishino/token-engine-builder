@@ -1,0 +1,34 @@
+{
+  "$description": "Tier 1 — primitive color ramps (seed placeholder to be replaced by design-tokens).",
+  "color": {
+    "$type": "color",
+    "white": { "$value": "oklch(100% 0 0deg)", "$type": "color" },
+    "black": { "$value": "oklch(0% 0 0deg)", "$type": "color" },
+    "primary": {
+      "50": { "$value": "oklch(98% 0.0098 250deg)", "$type": "color" },
+      "100": { "$value": "oklch(96% 0.0197 250deg)", "$type": "color" },
+      "200": { "$value": "oklch(88% 0.06 250deg)", "$type": "color" },
+      "300": { "$value": "oklch(78% 0.0921 250deg)", "$type": "color" },
+      "400": { "$value": "oklch(69% 0.1211 250deg)", "$type": "color" },
+      "500": { "$value": "oklch(60% 0.15 250deg)", "$type": "color" },
+      "600": { "$value": "oklch(52% 0.1243 250deg)", "$type": "color" },
+      "700": { "$value": "oklch(44% 0.0986 250deg)", "$type": "color" },
+      "800": { "$value": "oklch(36% 0.0729 250deg)", "$type": "color" },
+      "900": { "$value": "oklch(28% 0.0471 250deg)", "$type": "color" },
+      "950": { "$value": "oklch(20% 0.0214 250deg)", "$type": "color" }
+    },
+    "neutral": {
+      "50": { "$value": "oklch(98% 0.0012 250deg)", "$type": "color" },
+      "100": { "$value": "oklch(96% 0.0027 250deg)", "$type": "color" },
+      "200": { "$value": "oklch(88% 0.0048 250deg)", "$type": "color" },
+      "300": { "$value": "oklch(78% 0.0074 250deg)", "$type": "color" },
+      "400": { "$value": "oklch(69% 0.0097 250deg)", "$type": "color" },
+      "500": { "$value": "oklch(60% 0.012 250deg)", "$type": "color" },
+      "600": { "$value": "oklch(52% 0.0107 250deg)", "$type": "color" },
+      "700": { "$value": "oklch(44% 0.0079 250deg)", "$type": "color" },
+      "800": { "$value": "oklch(36% 0.0058 250deg)", "$type": "color" },
+      "900": { "$value": "oklch(28% 0.0038 250deg)", "$type": "color" },
+      "950": { "$value": "oklch(20% 0.0017 250deg)", "$type": "color" }
+    }
+  }
+}

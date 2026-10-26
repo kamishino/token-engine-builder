@@ -1,0 +1,7 @@
+@use '../abstracts' as *;
+
+body {
+  background-color: $semantic-color-bg-canvas;
+  color: $semantic-color-text-primary;
+  font-family: Inter, system-ui, sans-serif;
+}

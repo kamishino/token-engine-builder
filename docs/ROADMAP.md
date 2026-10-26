@@ -40,6 +40,8 @@ With the unified `token-engine` CLI, cognitive `design-tokens` skill, Dual-Audit
 | ID  | Item                   | Trigger that promotes it                                                                                                                                                                                          |
 | --- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | L3  | TypeScript 7 Migration | `typescript-eslint` peer range admits TypeScript ≥7 (re-verified live 2026-10-20: `typescript-eslint@8.72.0` hard-crashes with "typescript-eslint does not support TS 7.0", peer `<6.1.0` remains strict blocker) |
+| L4  | `setup-pre-commit` skill (scriptless port) | `setup-pre-tokens` has run successfully in a real project and the owner wants hook automation |
+| L5  | `design-tokens` branches: CSS-architecture review, token audit, brownfield migration | a session needs one of these as a standalone, repeatable pass rather than inside a `design-tokens` run |
 
 ## Maintenance cadence
 

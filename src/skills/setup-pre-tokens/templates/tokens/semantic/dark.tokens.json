@@ -1,0 +1,53 @@
+{
+  "$description": "Tier 2 — semantic roles, DARK theme (seed placeholder to be replaced by design-tokens).",
+  "semantic": {
+    "color": {
+      "$type": "color",
+      "bg": {
+        "canvas": { "$value": "{color.neutral.950}", "$type": "color" },
+        "surface": { "$value": "{color.neutral.900}", "$type": "color" },
+        "subtle": { "$value": "{color.neutral.800}", "$type": "color" },
+        "raised": { "$value": "{color.neutral.950}", "$type": "color" }
+      },
+      "text": {
+        "primary": { "$value": "{color.neutral.50}", "$type": "color" },
+        "secondary": { "$value": "{color.neutral.300}", "$type": "color" },
+        "tertiary": { "$value": "{color.neutral.400}", "$type": "color" },
+        "disabled": { "$value": "{color.neutral.600}", "$type": "color" },
+        "inverse": { "$value": "{color.neutral.900}", "$type": "color" },
+        "link": { "$value": "{color.primary.300}", "$type": "color" }
+      },
+      "action": {
+        "primary": { "$value": "{color.primary.400}", "$type": "color" },
+        "primary-hover": { "$value": "{color.primary.300}", "$type": "color" },
+        "primary-text": { "$value": "{color.black}", "$type": "color" }
+      },
+      "border": {
+        "subtle": { "$value": "{color.neutral.800}", "$type": "color" },
+        "default": { "$value": "{color.neutral.700}", "$type": "color" },
+        "strong": { "$value": "{color.neutral.500}", "$type": "color" },
+        "focus": { "$value": "{color.primary.400}", "$type": "color" }
+      }
+    }
+  },
+  "layout": {
+    "$type": "dimension",
+    "inset": {
+      "none": { "$value": "{spacing.0}", "$type": "dimension" },
+      "xs": { "$value": "{spacing.1}", "$type": "dimension" },
+      "sm": { "$value": "{spacing.2}", "$type": "dimension" },
+      "base": { "$value": "{spacing.3}", "$type": "dimension" },
+      "md": { "$value": "{spacing.4}", "$type": "dimension" },
+      "lg": { "$value": "{spacing.6}", "$type": "dimension" },
+      "xl": { "$value": "{spacing.8}", "$type": "dimension" }
+    },
+    "gap": {
+      "tight": { "$value": "{spacing.2}", "$type": "dimension" },
+      "related": { "$value": "{spacing.3}", "$type": "dimension" },
+      "default": { "$value": "{spacing.4}", "$type": "dimension" },
+      "loose": { "$value": "{spacing.6}", "$type": "dimension" }
+    },
+    "section": { "$value": "{rhythm.2}", "$type": "dimension" },
+    "page": { "$value": "{spacing.16}", "$type": "dimension" }
+  }
+}
