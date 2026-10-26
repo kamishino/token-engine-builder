@@ -5,6 +5,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import {
+  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -197,10 +198,132 @@ try {
   assert(pkgJson.name === '@tokens', 'package.json has name @tokens');
   assert(pkgJson.exports['./css'] === './tokens.css', 'package.json maps ./css export');
 
+  // Phase 5: setup-pre-tokens Seam & Standalone Engine Lane Verification
+  console.log('\n[Phase 5] setup-pre-tokens Seam & Standalone Engine Lane');
+  const setupTempDir = mkdtempSync(join(tmpdir(), 'smoke-setup-seam-'));
+  const standaloneSkillDir = mkdtempSync(join(tmpdir(), 'smoke-dt-standalone-'));
+  try {
+    // 1. Copy dist/design-tokens to standalone dir (no sibling skills)
+    const distDt = join(root, 'dist', 'design-tokens');
+    cpSync(distDt, standaloneSkillDir, { recursive: true });
+    const standaloneCli = join(standaloneSkillDir, 'scripts', 'token-engine.mjs');
+    assert(existsSync(standaloneCli), 'standalone skill contains scripts/token-engine.mjs');
+    assert(existsSync(join(standaloneSkillDir, 'templates', 'tokens')), 'standalone skill contains templates/tokens');
+
+    // 2. Scaffold setup-pre-tokens seeded project
+    const templatesDir = join(root, 'src', 'skills', 'setup-pre-tokens', 'templates');
+    writeFileSync(
+      join(setupTempDir, 'package.json'),
+      JSON.stringify(
+        {
+          name: 'setup-seeded-consumer',
+          private: true,
+          type: 'module',
+          scripts: {
+            'tokens:build':
+              'style-dictionary build --config sd.config.mjs && style-dictionary build --config sd.dark.config.mjs',
+            'lint:styles': 'stylelint "src/styles/**/*.scss"',
+          },
+        },
+        null,
+        2,
+      ),
+      'utf8',
+    );
+    writeFileSync(
+      join(setupTempDir, '.prettierrc.json'),
+      readFileSync(join(templatesDir, 'configs/.prettierrc.json'), 'utf8'),
+    );
+    writeFileSync(
+      join(setupTempDir, '.prettierignore'),
+      readFileSync(join(templatesDir, 'configs/.prettierignore'), 'utf8').replaceAll('__STYLES_ROOT__', 'src/styles'),
+    );
+    writeFileSync(
+      join(setupTempDir, 'stylelint.config.mjs'),
+      readFileSync(join(templatesDir, 'configs/stylelint.config.mjs'), 'utf8').replaceAll('__STYLES_ROOT__', 'src/styles'),
+    );
+    writeFileSync(
+      join(setupTempDir, 'sd.config.mjs'),
+      readFileSync(join(templatesDir, 'configs/sd.config.mjs'), 'utf8').replaceAll('__STYLES_ROOT__', 'src/styles'),
+    );
+    writeFileSync(
+      join(setupTempDir, 'sd.dark.config.mjs'),
+      readFileSync(join(templatesDir, 'configs/sd.dark.config.mjs'), 'utf8'),
+    );
+
+    cpSync(join(templatesDir, 'tokens'), join(setupTempDir, 'tokens'), { recursive: true });
+    cpSync(join(templatesDir, 'styles'), join(setupTempDir, 'src/styles'), { recursive: true });
+    writeFileSync(
+      join(setupTempDir, 'src/styles/README.md'),
+      readFileSync(join(templatesDir, 'target-README.md'), 'utf8'),
+    );
+
+    // 3. Cognitive-lane spot check before sync: edit light semantic alias and compile with target SD bin
+    const sdBin = join(root, 'node_modules', 'style-dictionary', 'bin', 'style-dictionary.js');
+    const lightPath = join(setupTempDir, 'tokens', 'semantic', 'light.tokens.json');
+    const lightJson = JSON.parse(readFileSync(lightPath, 'utf8'));
+    lightJson.semantic.color.action.primary.$value = '{color.primary.700}';
+    writeFileSync(lightPath, JSON.stringify(lightJson, null, 2), 'utf8');
+
+    execFileSync(process.execPath, [sdBin, 'build', '--config', 'sd.config.mjs'], { cwd: setupTempDir, stdio: 'pipe' });
+    execFileSync(process.execPath, [sdBin, 'build', '--config', 'sd.dark.config.mjs'], { cwd: setupTempDir, stdio: 'pipe' });
+    const initialBuiltCss = readFileSync(join(setupTempDir, 'build/tokens.css'), 'utf8');
+    assert(
+      initialBuiltCss.includes('--semantic-color-action-primary: var(--color-primary-700);'),
+      'cognitive fallback: hand-edit semantic alias builds cleanly via target SD',
+    );
+
+    // 4. Formulate tokens.config.json and run standalone token-engine sync
+    const validSpec = {
+      name: 'brand-tokens',
+      palette: [
+        { role: 'primary', name: 'cerulean', anchor: { l: 0.6, c: 0.15, h: 250 } },
+        { role: 'secondary', name: 'amethyst', anchor: { l: 0.6, c: 0.12, h: 285 } },
+        { role: 'accent', name: 'sky', anchor: { l: 0.6, c: 0.1, h: 215 } },
+      ],
+      typography: {
+        baseSizePx: 16,
+        ratio: 1.25,
+        fontFamily: 'Inter, system-ui, sans-serif',
+      },
+    };
+    writeFileSync(join(setupTempDir, 'tokens.config.json'), JSON.stringify(validSpec, null, 2), 'utf8');
+
+    const syncSeamOut = execFileSync(
+      process.execPath,
+      [standaloneCli, 'sync', '--spec', 'tokens.config.json', '--force', '--out', 'build/engine', '--theme', 'all'],
+      { cwd: setupTempDir, encoding: 'utf8' },
+    );
+    assert(syncSeamOut.includes('pipeline complete'), 'standalone sync completes cleanly on setup-seeded project');
+    assert(existsSync(join(setupTempDir, 'tokens/.token-engine-audit.json')), 'sync writes audit stamp');
+    assert(existsSync(join(setupTempDir, 'build/engine/tokens.css')), 'sync parks engine outputs under build/engine');
+    assert(
+      existsSync(join(setupTempDir, 'tokens/semantic/high-contrast.tokens.json')),
+      'sync generates high-contrast theme via bundled templates',
+    );
+
+    // 5. Run target Style Dictionary build on generated DTCG object tokens
+    execFileSync(process.execPath, [sdBin, 'build', '--config', 'sd.config.mjs'], { cwd: setupTempDir, stdio: 'pipe' });
+    execFileSync(process.execPath, [sdBin, 'build', '--config', 'sd.dark.config.mjs'], { cwd: setupTempDir, stdio: 'pipe' });
+
+    const postSyncCss = readFileSync(join(setupTempDir, 'build/tokens.css'), 'utf8');
+    assert(/oklch\(\d+(\.\d+)?%/.test(postSyncCss), 'target SD transforms DTCG color objects to oklch(...) strings');
+    assert(!postSyncCss.includes('[object Object]'), 'target SD output contains zero [object Object] artifacts');
+
+    const postSyncVars = readFileSync(join(setupTempDir, 'src/styles/abstracts/_variables.scss'), 'utf8');
+    assert(
+      postSyncVars.includes('$semantic-color-feedback-success-bg:'),
+      '_variables.scss regenerated with generated feedback tokens',
+    );
+  } finally {
+    rmSync(setupTempDir, { recursive: true, force: true });
+    rmSync(standaloneSkillDir, { recursive: true, force: true });
+  }
+
   const elapsed = Date.now() - startTime;
   console.log(`\n================================================================`);
   if (failures === 0) {
-    console.log(`[smoke] SUCCESS: All 18 checks passed in ${elapsed}ms!`);
+    console.log(`[smoke] SUCCESS: All 26 checks passed in ${elapsed}ms!`);
   } else {
     console.error(`[smoke] FAILED: ${failures} check(s) failed`);
     process.exit(1);

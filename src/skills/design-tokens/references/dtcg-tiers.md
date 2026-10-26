@@ -23,22 +23,28 @@ The design system decouples styling into three strictly separated tiers:
   ```json
   {
     "color": {
-      "blue": {
-        "600": { "$value": "oklch(0.55 0.18 250)", "$type": "color" }
+      "primary": {
+        "600": {
+          "$value": { "colorSpace": "oklch", "components": [0.55, 0.18, 250] },
+          "$type": "color"
+        }
       }
     }
   }
   ```
+  *(Note: CSS string values like `"oklch(55% 0.18 250deg)"` are loader-compatible; DTCG objects are generator canon).*
 
 ### Tier 2: Semantic Tokens (`tokens/semantic/`)
-- **Rule**: Maps functional intent to primitive tokens via `{alias}` references. Defined per theme (`light.json`, `dark.json`, `high-contrast.json`) with identical path schemas.
+- **Rule**: Maps functional intent to primitive tokens via `{alias}` references. Defined per theme (`light.tokens.json`, `dark.tokens.json`, `high-contrast.tokens.json`) with identical path schemas.
 - **Prohibition**: Zero raw color literals allowed.
 - **Example**:
   ```json
   {
-    "color": {
-      "action": {
-        "primary": { "$value": "{color.blue.600}", "$type": "color" }
+    "semantic": {
+      "color": {
+        "action": {
+          "primary": { "$value": "{color.primary.800}", "$type": "color" }
+        }
       }
     }
   }
@@ -46,18 +52,17 @@ The design system decouples styling into three strictly separated tiers:
 
 ### Tier 3: Component Tokens (`tokens/component/`)
 - **Rule**: Maps individual component slots to semantic tokens via `{alias}` references.
-- **Prohibition**: Zero direct references to primitive tokens allowed.
+- **Prohibition**: Zero direct references to primitive colors allowed (spacing and radius may alias primitives by convention).
 - **Example**:
   ```json
   {
-    "button": {
-      "primary": {
-        "background": { "$value": "{color.action.primary}", "$type": "color" }
+    "component": {
+      "button": {
+        "bg": { "$value": "{semantic.color.action.primary}", "$type": "color" }
       }
     }
   }
   ```
-
 ---
 
 ## 2. Canonical `tokens.config.json` Contract
@@ -66,17 +71,18 @@ The minimal, portable style contract used to generate 3-tier token structures (a
 
 ```json
 {
-  "name": "Design System",
+  "name": "brand-tokens",
   "palette": [
-    { "role": "primary", "anchor": "oklch(60% 0.15 250deg)" },
-    { "role": "secondary", "anchor": "oklch(65% 0.12 180deg)" },
-    { "role": "accent", "anchor": "oklch(75% 0.16 70deg)" }
+    { "role": "primary", "name": "cerulean", "anchor": { "l": 0.6, "c": 0.15, "h": 250 } },
+    { "role": "secondary", "name": "amethyst", "anchor": { "l": 0.6, "c": 0.12, "h": 285 } },
+    { "role": "accent", "name": "sky", "anchor": { "l": 0.6, "c": 0.1, "h": 215 } }
   ],
-  "neutral": { "hue": 250 },
   "typography": {
-    "baseSize": 16,
+    "baseSizePx": 16,
     "ratio": 1.25,
-    "fontFamily": "Inter, sans-serif"
+    "fontFamily": "Inter, system-ui, sans-serif"
   }
 }
 ```
+
+*(Optional contract fields: `neutralHue`, `neutralChroma`, `density`, `rampSteps`, `harmony`, `themes`, `overrides` — see `src/shared/spec.ts` for full schema definition).*

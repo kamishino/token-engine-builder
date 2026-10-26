@@ -41,6 +41,7 @@ export function syncSkillPackages(skillsDir, distDir) {
   if (existsSync(mathTemplates)) {
     cpSync(mathTemplates, join(distDir, 'cli', 'templates'), { recursive: true });
     cpSync(mathTemplates, join(distDir, 'templates'), { recursive: true });
+    cpSync(mathTemplates, join(distDir, 'design-tokens', 'templates'), { recursive: true });
   }
   const cliOutput = join(distDir, 'cli', 'token-engine.mjs');
   if (existsSync(cliOutput)) {
