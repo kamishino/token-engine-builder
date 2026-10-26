@@ -116,3 +116,100 @@ test('runSync executes complete pipeline end-to-end in a single pass', async () 
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('runCli routes --help to specific subcommands correctly', async () => {
+  for (const cmd of ['init', 'audit', 'build', 'extract', 'scaffold']) {
+    const originalLog = console.log;
+    let output = '';
+    console.log = (...args) => {
+      output += args.join(' ') + '\n';
+    };
+    try {
+      const code = await runCli([cmd, '--help']);
+      assert.equal(code, 0);
+      assert.ok(output.includes('Usage:'));
+    } finally {
+      console.log = originalLog;
+    }
+  }
+});
+
+test('runSync refuses overwrite without --force on existing targets, and succeeds with --force', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'cli-refusal-'));
+  try {
+    const specPath = join(dir, 'style-spec.json');
+    writeFileSync(specPath, readFileSync(exampleSpec, 'utf8'), 'utf8');
+    const tokensDir = join(dir, 'tokens');
+    const outDir = join(dir, 'build');
+
+    // Run 1: initial generation
+    const code1 = await runSync([
+      '--spec',
+      specPath,
+      '--tokens',
+      tokensDir,
+      '--out',
+      outDir,
+    ]);
+    assert.equal(code1, 0);
+
+    // Run 2: without --force refuses existing targets
+    const code2 = await runSync([
+      '--spec',
+      specPath,
+      '--tokens',
+      tokensDir,
+      '--out',
+      outDir,
+    ]);
+    assert.equal(code2, 3);
+
+    // Run 3: with --force overwrites successfully
+    const code3 = await runSync([
+      '--spec',
+      specPath,
+      '--tokens',
+      tokensDir,
+      '--out',
+      outDir,
+      '--force',
+    ]);
+    assert.equal(code3, 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('runSync --json outputs parseable JSON report', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'cli-json-'));
+  const originalLog = console.log;
+  let output = '';
+  console.log = (...args) => {
+    output += args.join(' ') + '\n';
+  };
+  try {
+    const specPath = join(dir, 'style-spec.json');
+    writeFileSync(specPath, readFileSync(exampleSpec, 'utf8'), 'utf8');
+    const tokensDir = join(dir, 'tokens');
+    const outDir = join(dir, 'build');
+
+    const code = await runSync([
+      '--spec',
+      specPath,
+      '--tokens',
+      tokensDir,
+      '--out',
+      outDir,
+      '--json',
+    ]);
+    assert.equal(code, 0);
+    const parsed = JSON.parse(output.trim());
+    assert.equal(parsed.status, 'success');
+    assert.equal(parsed.spec, specPath);
+    assert.equal(parsed.tokensDir, tokensDir);
+    assert.equal(parsed.outDir, outDir);
+  } finally {
+    console.log = originalLog;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

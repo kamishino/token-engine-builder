@@ -178,7 +178,10 @@ export function flattenTokens(
  * Load a full 3-tier token tree (primitive, semantic, component), merge,
  * flatten with tier tags, and provide alias and color resolution.
  */
-export function loadTokenTree(tokensDir: string, options?: { theme?: string }): LoadedTokenTree {
+export function loadTokenTree(
+  tokensDir: string,
+  options?: { theme?: string | undefined; cache?: Map<string, unknown> | undefined },
+): LoadedTokenTree {
   const files: Array<{ path: string; tier: string }> = [];
 
   for (const path of findTokenFiles(join(tokensDir, TOKEN_TIER_DIRS.primitive))) {
@@ -205,7 +208,13 @@ export function loadTokenTree(tokensDir: string, options?: { theme?: string }): 
   const flat = new Map<string, FlattenedToken>();
   const merged: JsonObject = {};
   for (const file of files) {
-    const json = JSON.parse(readFileSync(file.path, 'utf8')) as JsonObject;
+    let json: JsonObject;
+    if (options?.cache?.has(file.path)) {
+      json = options.cache.get(file.path) as JsonObject;
+    } else {
+      json = JSON.parse(readFileSync(file.path, 'utf8')) as JsonObject;
+      if (options?.cache) options.cache.set(file.path, json);
+    }
     deepMerge(merged, json);
     flattenTokens(json, '', file.tier, flat);
   }

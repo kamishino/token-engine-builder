@@ -13,6 +13,7 @@ import {
   assertSafeOutDir,
   checkTokensProvenance,
   decideWrite,
+  reportWriteRefusal,
   sha256Hex,
   writeTokensProvenance,
 } from '../../../shared/guard.js';
@@ -393,14 +394,7 @@ export function runFigma(argv = process.argv.slice(2)): number {
     const tamper = existsSync(outTokensDir) ? checkTokensProvenance(outTokensDir) : null;
     const decision = decideWrite({ paths: [target], tamper, force });
     if (decision.kind === 'refuse') {
-      if (decision.reason === 'tampered') {
-        console.error(`refusing to overwrite hand-edited tokens in ${outTokensDir}:`);
-        for (const path of decision.changed) console.error(`  changed: ${path}`);
-        for (const path of decision.missing) console.error(`  missing: ${path}`);
-        console.error('pass --force to overwrite deliberately');
-      } else {
-        console.error(`output exists: ${target} (pass --force to overwrite)`);
-      }
+      console.error(reportWriteRefusal(decision, outTokensDir, 'tokens'));
       return 1;
     }
     if (decision.replaces && force && tamper?.status !== 'absent') {

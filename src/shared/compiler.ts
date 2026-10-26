@@ -620,7 +620,7 @@ export const ARTIFACT_NAMES: readonly ArtifactName[] = ARTIFACTS.map((artifact) 
 
 /** Emitted outputs for this build, in manifest order. */
 export function artifactNames(
-  options: { visualizer?: boolean; format?: 'all' | 'css' | 'ts' } = {},
+  options: { visualizer?: boolean | undefined; format?: 'all' | 'css' | 'ts' | undefined } = {},
 ): ArtifactName[] {
   const targetCategory = options.format && options.format !== 'all' ? options.format : undefined;
   return ARTIFACTS.filter((artifact) => {
@@ -632,7 +632,7 @@ export function artifactNames(
 
 export function artifactPaths(
   outDir: string,
-  options: { visualizer?: boolean; format?: 'all' | 'css' | 'ts' } = {},
+  options: { visualizer?: boolean | undefined; format?: 'all' | 'css' | 'ts' | undefined } = {},
 ): string[] {
   const buildPath = outDir.endsWith('/') ? outDir : `${outDir}/`;
   return artifactNames(options).map((name) => `${buildPath}${name}`);
@@ -652,11 +652,12 @@ interface EngineFile {
 function createEngine(
   tokens: JsonObject,
   files: EngineFile[],
-  options: { buildPath?: string; prefix?: string } = {},
+  options: { buildPath?: string; prefix?: string; silent?: boolean | undefined } = {},
 ): StyleDictionary {
   return new StyleDictionary({
     tokens: tokens as never,
     hooks: engineHooks(),
+    ...(options.silent ? { log: { verbosity: 'silent' } } : {}),
     platforms: {
       css: {
         transformGroup: 'token-engine/css',
@@ -721,7 +722,7 @@ export async function buildTokens(options: BuildTokensOptions): Promise<Compiled
         ...(artifact.options === undefined ? {} : { options: artifact.options(options) }),
       }),
     ),
-    { buildPath, ...(options.prefix === undefined ? {} : { prefix: options.prefix }) },
+    { buildPath, ...(options.prefix === undefined ? {} : { prefix: options.prefix }), silent: options.silent },
   );
   await sd.buildAllPlatforms();
   const artifacts = Object.fromEntries(
@@ -744,13 +745,14 @@ export function themeSelector(themeName: string, baseSelector: string): string {
 export interface BuildMultiThemeOptions {
   tokensDir: string;
   themes: string[];
-  defaultTheme?: string;
+  defaultTheme?: string | undefined;
   outDir: string;
-  prefix?: string;
-  selector?: string;
-  format?: 'all' | 'css' | 'ts';
-  guide?: BuildTokensOptions['guide'];
-  visualizer?: boolean;
+  prefix?: string | undefined;
+  selector?: string | undefined;
+  format?: 'all' | 'css' | 'ts' | undefined;
+  guide?: BuildTokensOptions['guide'] | undefined;
+  visualizer?: boolean | undefined;
+  silent?: boolean | undefined;
 }
 
 export async function buildMultiThemeTokens(
@@ -781,6 +783,7 @@ export async function buildMultiThemeTokens(
     const themeEngine = createEngine(merged, perThemeFiles, {
       buildPath,
       ...(options.prefix === undefined ? {} : { prefix: options.prefix }),
+      silent: options.silent,
     });
     await themeEngine.buildAllPlatforms();
     perThemeArtifacts[`tokens.${t}.css`] = `${buildPath}tokens.${t}.css`;

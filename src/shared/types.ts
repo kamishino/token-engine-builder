@@ -158,25 +158,32 @@ export interface BuildTokensOptions {
   source: string[];
   /** Output directory; trailing slash added. */
   outDir: string;
-  prefix?: string;
+  prefix?: string | undefined;
   /** Custom CSS selector for variable scoping (defaults to :root). */
-  selector?: string;
+  selector?: string | undefined;
   /** Artifact format subset: 'all' (default), 'css' (CSS/docs), or 'ts' (JS/DTS). */
-  format?: 'all' | 'css' | 'ts';
+  format?: 'all' | 'css' | 'ts' | undefined;
   /** Resolved theme dictionaries to include in JS/DTS output when multi-theme. */
-  themeDictionaries?: Record<string, Record<string, string>>;
+  themeDictionaries?: Record<string, Record<string, string>> | undefined;
   /** Theme label written into the generated component specifications. */
-  label?: string;
-  guide?: {
-    name: string;
-    overview?: string;
-    dos?: string[];
-    donts?: string[];
-    primaryHex?: string;
-    secondaryHex?: string;
-    scale?: number;
-    density?: string;
-  };
+  label?: string | undefined;
+  guide?:
+    | {
+        name: string;
+        overview?: string | undefined;
+        dos?: string[] | undefined;
+        donts?: string[] | undefined;
+        primaryHex?: string | undefined;
+        secondaryHex?: string | undefined;
+        scale?: number | undefined;
+        density?: string | undefined;
+      }
+    | undefined;
   /** Whether to emit visualizer.html for interactive visual inspection. */
-  visualizer?: boolean;
+  /** Suppress Style Dictionary stdout logging. */
+  silent?: boolean | undefined;
+  visualizer?: boolean | undefined;
 }
+
+/** Common logging sink callback for CLI and core execution. */
+export type Logger = (msg: string) => void;

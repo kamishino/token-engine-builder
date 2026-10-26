@@ -175,18 +175,32 @@ export function checkAuditStamp(
   return computeTreeHash(tokensDir) === stamp.treeHash ? 'pass' : 'stale';
 }
 
-/** Record a passing audit stamp with the current tree hash. */
+/** Check if the audit stamp exists and matches a known precomputed tree hash (without re-walking disk). */
+export function auditStampMatches(tokensDir: string, knownTreeHash: string): boolean {
+  const stampPath = join(tokensDir, AUDIT_STAMP_NAME);
+  if (!existsSync(stampPath)) return false;
+  try {
+    const stamp = JSON.parse(readFileSync(stampPath, 'utf8')) as { pass?: unknown; treeHash?: unknown };
+    return stamp.pass === true && stamp.treeHash === knownTreeHash;
+  } catch {
+    return false;
+  }
+}
+
+/** Record a passing audit stamp with the current tree hash (or precomputed hash). Returns the tree hash. */
 export function writeAuditStamp(
   tokensDir: string,
   data: { minRatio: number; minApca: number },
-): void {
-  const treeHash = computeTreeHash(tokensDir);
+  knownTreeHash?: string,
+): string {
+  const treeHash = knownTreeHash ?? computeTreeHash(tokensDir);
   const stampPath = join(tokensDir, AUDIT_STAMP_NAME);
   writeFileSync(
     stampPath,
     `${JSON.stringify({ version: 1, pass: true, at: Date.now(), treeHash, ...data }, null, 2)}\n`,
     'utf8',
   );
+  return treeHash;
 }
 
 /** Remove the audit stamp when an audit fails. */
@@ -293,4 +307,23 @@ export function decideWrite(intent: WriteIntent): WriteDecision {
     return { kind: 'refuse', replaces: true, reason: 'exists', changed: [], missing: [] };
   }
   return { kind: 'write', replaces: true, dirty };
+}
+
+/** Format a user-facing refusal error string from a WriteDecision. */
+export function reportWriteRefusal(
+  decision: Extract<WriteDecision, { kind: 'refuse' }>,
+  targetLabel: string,
+  contentType = 'tokens',
+): string {
+  if (decision.reason === 'tampered') {
+    const lines = [`refusing to overwrite hand-edited ${contentType} in ${targetLabel}:`];
+    for (const path of decision.changed) lines.push(`  changed: ${path}`);
+    for (const path of decision.missing) lines.push(`  missing: ${path}`);
+    lines.push('pass --force to overwrite deliberately');
+    return lines.join('\n');
+  }
+  if (contentType === 'CSS') {
+    return `outputs exist in ${targetLabel} (pass --force to overwrite)`;
+  }
+  return `output exists: ${targetLabel} (pass --force to overwrite)`;
 }

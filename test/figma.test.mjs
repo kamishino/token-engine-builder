@@ -201,6 +201,9 @@ test('runFigma from-figma import writes provenance and enforces --force on exist
 
     assert.equal(runFigma(['--from-figma', figmaJsonPath, '--out', outTokensDir]), 1);
 
+    writeFileSync(join(outTokensDir, 'primitive', 'figma-imported.tokens.json'), 'tampered', 'utf8');
+    assert.equal(runFigma(['--from-figma', figmaJsonPath, '--out', outTokensDir]), 1);
+
     assert.equal(runFigma(['--from-figma', figmaJsonPath, '--out', outTokensDir, '--force']), 0);
   } finally {
     rmSync(dir, { recursive: true, force: true });

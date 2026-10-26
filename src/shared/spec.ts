@@ -327,3 +327,15 @@ export function loadStyleSpec(pathOrJson: string | Record<string, unknown>): {
     warnings: result.warnings,
   };
 }
+
+/** Safe StyleSpec loader returning a discriminated result instead of throwing. */
+export function loadSpecOrError(pathOrJson: string | Record<string, unknown>):
+  | { ok: true; spec: StyleSpec; warnings: string[] }
+  | { ok: false; error: string } {
+  try {
+    const loaded = loadStyleSpec(pathOrJson);
+    return { ok: true, spec: loaded.spec, warnings: loaded.warnings };
+  } catch (error) {
+    return { ok: false, error: (error as Error).message };
+  }
+}

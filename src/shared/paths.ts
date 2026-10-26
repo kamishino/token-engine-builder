@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -23,6 +23,8 @@ export function templatePath(importMetaUrl: string, ...segments: string[]): stri
   const root = skillRoot(importMetaUrl);
   const direct = resolve(root, 'templates', ...segments);
   if (existsSync(direct)) return direct;
+  const fromSkills = resolve(root, 'skills', 'token-math', 'templates', ...segments);
+  if (existsSync(fromSkills)) return fromSkills;
   const fromMath = resolve(root, 'token-math', 'templates', ...segments);
   if (existsSync(fromMath)) return fromMath;
   const fromSiblingMath = resolve(root, '..', 'token-math', 'templates', ...segments);
@@ -50,7 +52,10 @@ export function isDevelopmentPath(pathStr: string): boolean {
     try {
       const grandParent = resolve(pathStr, normalized.includes('/dist/') ? '../..' : '../../..');
       const pkgPath = resolve(grandParent, 'package.json');
-      if (existsSync(pkgPath)) return true;
+      if (existsSync(pkgPath)) {
+        const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as { name?: string };
+        if (pkg.name === 'token-engine-builder') return true;
+      }
     } catch {
       // ignore
     }

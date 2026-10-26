@@ -14,7 +14,7 @@ export interface AuditFloors {
   apca: number;
 }
 
-export function floorTable(minRatio: number, minApca: number): Record<ContrastKind, AuditFloors> {
+function floorTable(minRatio: number, minApca: number): Record<ContrastKind, AuditFloors> {
   return {
     text: { ratio: minRatio, apca: minApca },
     border: { ratio: 3, apca: 30 },
@@ -183,10 +183,11 @@ export interface AuditResult {
 export function auditTokens(
   tokensDir: string,
   options: {
-    theme?: string;
-    minRatio?: number;
-    minApca?: number;
+    theme?: string | undefined;
+    minRatio?: number | undefined;
+    minApca?: number | undefined;
     specHash?: string | undefined;
+    cache?: Map<string, unknown> | undefined;
   } = {},
 ): AuditResult {
   const minRatio = options.minRatio ?? 4.5;
@@ -194,13 +195,15 @@ export function auditTokens(
   const floors = floorTable(minRatio, minApca);
   const discovered = semanticThemes(tokensDir);
   const themes =
-    options.theme === undefined || options.theme === 'both' ? discovered : [options.theme];
+    options.theme === undefined || options.theme === 'both' || options.theme === 'all'
+      ? discovered
+      : [options.theme];
   const reports = new Map<string, AuditReport>();
 
   for (const themeName of themes) {
     let tree: LoadedTokenTree;
     try {
-      tree = loadTokenTree(tokensDir, { theme: themeName });
+      tree = loadTokenTree(tokensDir, { theme: themeName, cache: options.cache });
     } catch (error) {
       reports.set(themeName, {
         pairs: [],
