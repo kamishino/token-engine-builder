@@ -52,7 +52,7 @@ Stylelint enforces BEM selectors and prohibits raw color literals (`color-no-hex
 
 ## 3. Generated Files — Do Not Edit Directly
 
-The following artifacts are regenerated automatically by `npm run tokens:build`:
+The following artifacts are regenerated automatically by the `tokens:build` script:
 
 - `build/tokens.css`: CSS custom properties under `:root`.
 - `build/tokens.dark.css`: CSS custom properties under `[data-theme="dark"]`.
@@ -63,6 +63,7 @@ Always edit source token definitions in `tokens/**`, then rebuild.
 ---
 
 ## 4. Scripts & Commands
+*(npm shown; substitute `pnpm` / `yarn` / `bun`)*
 
 - **Build tokens**: `npm run tokens:build` (compiles CSS custom properties and SCSS aliases)
 - **Lint styles**: `npm run lint:styles` (validates Sass and enforces token discipline)
@@ -72,12 +73,18 @@ Always edit source token definitions in `tokens/**`, then rebuild.
 
 ## 5. Runtime Theming & App Entry
 
-Import generated stylesheets in your root application entry (e.g. `main.tsx` or `index.html`):
+Import generated stylesheets in your root application entry (e.g. `main.tsx` or `index.html`), adjusting relative paths to your entry file's location.
 
+Root-relative import order:
+1. `build/tokens.css`
+2. `build/tokens.dark.css`
+3. `<stylesRoot>/main.scss`
+
+Worked example from `src/main.tsx` (with styles under `src/styles/`):
 ```ts
-import './build/tokens.css';
-import './build/tokens.dark.css';
-import './styles/main.scss'; // or src/styles/main.scss
+import '../build/tokens.css';
+import '../build/tokens.dark.css';
+import './styles/main.scss';
 ```
 
 Toggle dark mode programmatically:

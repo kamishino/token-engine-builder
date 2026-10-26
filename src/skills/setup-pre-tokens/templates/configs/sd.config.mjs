@@ -1,6 +1,3 @@
-import { existsSync } from 'node:fs';
-import StyleDictionary from 'style-dictionary';
-
 const lightSources = [
   'tokens/primitive/**/*.tokens.json',
   'tokens/semantic/light.tokens.json',
@@ -43,45 +40,11 @@ export default {
         return lines.join('\n');
       },
     },
-    actions: {
-      'build-dark-theme': {
-        do: async () => {
-          if (existsSync('tokens/semantic/dark.tokens.json')) {
-            const darkSd = new StyleDictionary({
-              source: [
-                'tokens/primitive/**/*.tokens.json',
-                'tokens/semantic/dark.tokens.json',
-                'tokens/component/**/*.tokens.json',
-              ],
-              platforms: {
-                cssDark: {
-                  transformGroup: 'css',
-                  buildPath: 'build/',
-                  files: [
-                    {
-                      destination: 'tokens.dark.css',
-                      format: 'css/variables',
-                      options: {
-                        selector: '[data-theme="dark"]',
-                        outputReferences: true,
-                      },
-                    },
-                  ],
-                },
-              },
-            });
-            await darkSd.buildAllPlatforms();
-          }
-        },
-        undo: () => {},
-      },
-    },
   },
   platforms: {
     cssLight: {
       transformGroup: 'css',
       buildPath: 'build/',
-      actions: ['build-dark-theme'],
       files: [
         {
           destination: 'tokens.css',

@@ -75,8 +75,9 @@ Wire Biome into npm scripts:
 
 ## 5. Verification
 
-Verify Biome runs cleanly:
+Format and verify Biome runs cleanly:
 ```bash
-npx biome check .
+npm run format
+npm run format:check
 ```
 Expected output: all files formatted and linted with zero errors.

@@ -114,7 +114,7 @@ flowchart TD
 ```
 Skill packages are colocated under `src/skills/<skill>/` (`SKILL.md`, `templates/`, `assets/`, `scripts/`) and mirrored 1:1 into `dist/<skill>/` by the `sync-skill-packages` Vite plugin. The standalone CLI entry point (`src/cli/index.ts`) bundles into `dist/cli/token-engine.mjs` and is registered as `"bin": { "token-engine": "dist/cli/token-engine.mjs" }`.
 
-The legacy 7 micro-skills (`ask-kami`, `token-extract`, `token-style`, `token-math`, `token-audit`, `token-build`, `improve-design-system`) remain available as deprecated compatibility bridges, routing agents to the unified `design-tokens` skill and `token-engine` CLI.
+The legacy 7 micro-skills (`ask-kami`, `token-extract`, `token-style`, `token-math`, `token-audit`, `token-build`, `improve-design-system`) remain available as deprecated compatibility bridges, routing agents to the unified `design-tokens` skill and `token-engine` CLI. `setup-pre-tokens` is a hand-invoked, scriptless setup skill that prepares target projects (pinned toolchain, Sass 7-1 + BEM, 3-tier token seeds) before `design-tokens` runs.
 ## 2. Module contracts (`src/shared/`)
 
 | Module                | Owns                                                                                         | Key exports                                                                                                                                                                                                                                                            |

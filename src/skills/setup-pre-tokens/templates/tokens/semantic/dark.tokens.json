@@ -7,26 +7,26 @@
         "canvas": { "$value": "{color.neutral.950}", "$type": "color" },
         "surface": { "$value": "{color.neutral.900}", "$type": "color" },
         "subtle": { "$value": "{color.neutral.800}", "$type": "color" },
-        "raised": { "$value": "{color.neutral.950}", "$type": "color" }
+        "raised": { "$value": "{color.primary.950}", "$type": "color" }
       },
       "text": {
         "primary": { "$value": "{color.neutral.50}", "$type": "color" },
         "secondary": { "$value": "{color.neutral.300}", "$type": "color" },
-        "tertiary": { "$value": "{color.neutral.400}", "$type": "color" },
-        "disabled": { "$value": "{color.neutral.600}", "$type": "color" },
+        "tertiary": { "$value": "{color.neutral.300}", "$type": "color" },
+        "disabled": { "$value": "{color.neutral.500}", "$type": "color" },
         "inverse": { "$value": "{color.neutral.900}", "$type": "color" },
-        "link": { "$value": "{color.primary.300}", "$type": "color" }
+        "link": { "$value": "{color.primary.100}", "$type": "color" }
       },
       "action": {
-        "primary": { "$value": "{color.primary.400}", "$type": "color" },
-        "primary-hover": { "$value": "{color.primary.300}", "$type": "color" },
-        "primary-text": { "$value": "{color.black}", "$type": "color" }
+        "primary": { "$value": "{color.primary.100}", "$type": "color" },
+        "primary-hover": { "$value": "{color.primary.50}", "$type": "color" },
+        "primary-text": { "$value": "{color.neutral.950}", "$type": "color" }
       },
       "border": {
         "subtle": { "$value": "{color.neutral.800}", "$type": "color" },
         "default": { "$value": "{color.neutral.700}", "$type": "color" },
         "strong": { "$value": "{color.neutral.500}", "$type": "color" },
-        "focus": { "$value": "{color.primary.400}", "$type": "color" }
+        "focus": { "$value": "{color.primary.100}", "$type": "color" }
       }
     }
   },

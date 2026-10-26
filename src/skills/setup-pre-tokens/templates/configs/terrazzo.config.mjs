@@ -4,11 +4,15 @@ import sass from '@terrazzo/plugin-sass';
 
 export default defineConfig({
   tokens: [
-    './tokens/primitive/**/*.tokens.json',
+    './tokens/primitive/color.tokens.json',
+    './tokens/primitive/spacing.tokens.json',
+    './tokens/primitive/typography.tokens.json',
+    './tokens/primitive/radius.tokens.json',
     './tokens/semantic/light.tokens.json',
-    './tokens/component/**/*.tokens.json',
+    './tokens/component/button.tokens.json',
   ],
   outDir: './build/',
+  lint: { build: { enabled: false } },
   plugins: [
     css({
       filename: 'tokens.css',

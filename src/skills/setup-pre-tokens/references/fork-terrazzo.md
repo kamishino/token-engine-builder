@@ -36,53 +36,9 @@ Do not install `style-dictionary`, and do not write `sd.config.mjs`.
 
 ## 3. Configuration Scaffolding
 
-Scaffold `terrazzo.config.mjs` (or `.ts`) at the project root based on `templates/configs/terrazzo.config.mjs`:
+Copy `templates/configs/terrazzo.config.mjs` to `terrazzo.config.mjs` at the project root.
 
-```ts
-import { defineConfig } from '@terrazzo/cli';
-import css from '@terrazzo/plugin-css';
-import sass from '@terrazzo/plugin-sass';
-
-export default defineConfig({
-  tokens: [
-    './tokens/primitive/**/*.tokens.json',
-    './tokens/semantic/light.tokens.json',
-    './tokens/component/**/*.tokens.json',
-  ],
-  outDir: './build/',
-  plugins: [
-    css({
-      filename: 'tokens.css',
-      modeSelectors: [{ mode: 'light', selectors: [':root'] }],
-    }),
-    sass({
-      filename: 'index.scss',
-    }),
-  ],
-});
-```
-
-If dark theme tokens exist (`tokens/semantic/dark.tokens.json`), scaffold a secondary configuration `terrazzo.dark.config.mjs`:
-
-```ts
-import { defineConfig } from '@terrazzo/cli';
-import css from '@terrazzo/plugin-css';
-
-export default defineConfig({
-  tokens: [
-    './tokens/primitive/**/*.tokens.json',
-    './tokens/semantic/dark.tokens.json',
-    './tokens/component/**/*.tokens.json',
-  ],
-  outDir: './build/',
-  plugins: [
-    css({
-      filename: 'tokens.dark.css',
-      modeSelectors: [{ mode: 'dark', selectors: ['[data-theme="dark"]'] }],
-    }),
-  ],
-});
-```
+If dark theme tokens exist (`tokens/semantic/dark.tokens.json`), also copy `templates/configs/terrazzo.dark.config.mjs` to `terrazzo.dark.config.mjs`.
 
 ---
 
@@ -91,18 +47,33 @@ export default defineConfig({
 In `package.json`, set the token build script:
 ```json
 "scripts": {
-  "tokens:build": "tz build && tz build --config terrazzo.dark.config.mjs"
+  "tokens:build": "tz build && tz build --config terrazzo.dark.config.mjs && node scripts/tz-vars.mjs"
 }
 ```
 
 ### Sass Variables Limitation & Integration
-Because Terrazzo outputs to a single global `outDir` (`./build/index.scss`), update `styles/abstracts/_index.scss` to forward the generated Terrazzo index:
-```scss
-// styles/abstracts/_index.scss
-@forward '../../build/index';
-@forward 'mixins';
+Terrazzo's `@terrazzo/plugin-sass` emits a `$__token-values` map with a `@function token($name)` helper rather than flat `$kebab-case` SCSS variables. To maintain uniform Sass syntax (`$semantic-color-action-primary`, `$spacing-4`) across both compilers without coupling partials to Terrazzo's `token(...)` function, create `scripts/tz-vars.mjs` to extract variables from `build/tokens.css` into `<stylesRoot>/abstracts/_variables.scss`:
+
+```js
+import { readFileSync, writeFileSync } from 'node:fs';
+
+const css = readFileSync('build/tokens.css', 'utf8');
+const lines = ['// Generated from Terrazzo tokens.css', ''];
+for (const line of css.split('\n')) {
+  const match = line.match(/^\s*--([a-z0-9-]+):\s*([^;]+);/);
+  if (match) {
+    const [, name, val] = match;
+    const root = name.split('-')[0];
+    if (root === 'semantic' || root === 'component' || root === 'layout') {
+      lines.push(`$${name}: var(--${name});`);
+    } else if (root === 'spacing' || root === 'font' || root === 'radius' || root === 'rhythm') {
+      lines.push(`$${name}: ${val.trim()};`);
+    }
+  }
+}
+lines.push('');
+writeFileSync('<stylesRoot>/abstracts/_variables.scss', lines.join('\n'));
 ```
-Alternatively, configure Sass bundler include paths to point directly to `build/`.
 
 ---
 

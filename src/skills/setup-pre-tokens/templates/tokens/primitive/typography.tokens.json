@@ -9,10 +9,12 @@
     "xs": { "$value": { "value": 10.24, "unit": "px" }, "$type": "dimension" },
     "sm": { "$value": { "value": 12.8, "unit": "px" }, "$type": "dimension" },
     "base": { "$value": { "value": 16, "unit": "px" }, "$type": "dimension" },
-    "md": { "$value": { "value": 20, "unit": "px" }, "$type": "dimension" },
-    "lg": { "$value": { "value": 25, "unit": "px" }, "$type": "dimension" },
-    "xl": { "$value": { "value": 31.25, "unit": "px" }, "$type": "dimension" },
-    "2xl": { "$value": { "value": 39.06, "unit": "px" }, "$type": "dimension" }
+    "lg": { "$value": { "value": 20, "unit": "px" }, "$type": "dimension" },
+    "xl": { "$value": { "value": 25, "unit": "px" }, "$type": "dimension" },
+    "2xl": { "$value": { "value": 31.25, "unit": "px" }, "$type": "dimension" },
+    "3xl": { "$value": { "value": 39.063, "unit": "px" }, "$type": "dimension" },
+    "4xl": { "$value": { "value": 48.828, "unit": "px" }, "$type": "dimension" },
+    "5xl": { "$value": { "value": 61.035, "unit": "px" }, "$type": "dimension" }
   },
   "font-weight": {
     "$type": "fontWeight",
@@ -23,11 +25,25 @@
   },
   "line-height": {
     "$type": "number",
-    "base": { "$value": 1.5, "$type": "number" }
+    "xs": { "$value": 1.563, "$type": "number" },
+    "sm": { "$value": 1.25, "$type": "number" },
+    "base": { "$value": 1.25, "$type": "number" },
+    "lg": { "$value": 1.2, "$type": "number" },
+    "xl": { "$value": 1.28, "$type": "number" },
+    "2xl": { "$value": 1.28, "$type": "number" },
+    "3xl": { "$value": 1.229, "$type": "number" },
+    "4xl": { "$value": 1.229, "$type": "number" },
+    "5xl": { "$value": 1.245, "$type": "number" }
   },
   "rhythm": {
     "$type": "dimension",
+    "half": { "$value": { "value": 12, "unit": "px" }, "$type": "dimension" },
+    "baseline": { "$value": { "value": 24, "unit": "px" }, "$type": "dimension" },
     "1": { "$value": { "value": 24, "unit": "px" }, "$type": "dimension" },
-    "2": { "$value": { "value": 48, "unit": "px" }, "$type": "dimension" }
+    "2": { "$value": { "value": 48, "unit": "px" }, "$type": "dimension" },
+    "3": { "$value": { "value": 72, "unit": "px" }, "$type": "dimension" },
+    "4": { "$value": { "value": 96, "unit": "px" }, "$type": "dimension" },
+    "5": { "$value": { "value": 120, "unit": "px" }, "$type": "dimension" },
+    "6": { "$value": { "value": 144, "unit": "px" }, "$type": "dimension" }
   }
 }

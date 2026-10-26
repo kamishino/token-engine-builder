@@ -14,7 +14,7 @@ Audit matrix and default tooling configuration for `setup-pre-tokens`.
 | **Token Compiler** | `sd.config.*`, `style-dictionary.config.*`, `"style-dictionary"` | `style-dictionary@^5` | `terrazzo` |
 | **Alternative Compiler** | `terrazzo.config.*`, `"@terrazzo/cli"` | `@terrazzo/cli@^2`<br>`@terrazzo/plugin-css@^2`<br>`@terrazzo/plugin-sass@^2` | `style-dictionary` |
 | **CSS Architecture** | `.scss` files, `"sass"` in `package.json` | `sass@^1` | `itcss`, `tailwind`, `smacss` |
-| **CSS Transformer** | `postcss.config.*`, `.postcssrc*`, `"lightningcss"`, `"postcss"` | *(None by default)* | `lightning`, `postcss` |
+| **CSS Transformer** | `postcss.config.*`, `.postcssrc*`, `"lightningcss"`, `"postcss"`, `transformer: 'lightningcss'` in a Vite config | *(None by default)* | `lightning`, `postcss` |
 | **Tokens Directory** | `tokens/**/*.tokens.json` | *(Scaffolds 3-tier seeds)* | — |
 | **Styles Directory** | `src/styles/` or `styles/` | *(Scaffolds 7-1 partials)* | — |
 
@@ -36,8 +36,8 @@ Determine the package manager by inspecting lockfiles in the project root:
 ## 3. Styles Root Resolution
 
 - If `src/styles/` exists $\to$ use `src/styles`.
-- If `src/` exists but `src/styles/` does not $\to$ use `src/styles`.
 - If `styles/` exists at the root $\to$ use `styles`.
+- If `src/` exists $\to$ use `src/styles`.
 - Otherwise $\to$ default to `styles`.
 
 Substitute `__STYLES_ROOT__` in all templates using the resolved relative posix path.
