@@ -224,25 +224,18 @@ const CASES = [
     run: async () => {
       const sDir = join(skillsRoot, 'design-tokens');
       expectFile(join(sDir, 'SKILL.md'), 'SKILL.md');
-      const example = readJson(join(sDir, 'assets/style-spec.example.json'));
+      const example = readJson(join(sDir, 'assets/tokens.config.example.json'));
       const primaries = example.palette.filter((p) => p.role === 'primary');
       if (primaries.length !== 1) {
         throw new Error(`expected 1 primary in example spec, found ${primaries.length}`);
       }
       for (const ref of [
-        'style-clusters.md',
-        'design-mappings.md',
-        'color-naming.md',
-        'discovery-checklist.md',
-        'scales.md',
         'contrast.md',
-        'heuristics.md',
-        'ui-library-profiles.md',
-        'routing-table.md',
-        'report-format.md',
+        'diagnose-and-report.md',
+        'discovery-and-evidence.md',
         'engine-and-build.md',
-        'token-math.md',
-        'dtcg-tiers.md',
+        'palette.md',
+        'token-system.md',
       ]) {
         expectFile(join(sDir, 'references', ref), `references/${ref}`);
       }
@@ -277,7 +270,7 @@ const CASES = [
     run: async () => {
       const dir = work('S0');
       cpSync(
-        join(skillsRoot, 'design-tokens/assets/style-spec.example.json'),
+        join(skillsRoot, 'design-tokens/assets/tokens.config.example.json'),
         join(dir, 'tokens.config.json'),
       );
       const res = runBundled('sync', ['--spec', 'tokens.config.json', '--theme', 'all', '--force'], dir);
@@ -295,15 +288,15 @@ const CASES = [
     run: async () => {
       const dir = work('seed');
       cpSync(
-        join(skillsRoot, 'design-tokens/assets/style-spec.example.json'),
-        join(dir, 'style-spec.json'),
+        join(skillsRoot, 'design-tokens/assets/tokens.config.example.json'),
+        join(dir, 'tokens.config.json'),
       );
 
       // 1. generate
       const genRes = run(
         'token-math',
         'generate.mjs',
-        ['--spec', 'style-spec.json', '--out', 'tokens'],
+        ['--spec', 'tokens.config.json', '--out', 'tokens'],
         dir,
       );
       expectExit(genRes, 0, 'seed generate');
@@ -314,7 +307,7 @@ const CASES = [
       const auditRes = run(
         'token-audit',
         'audit.mjs',
-        ['--tokens', 'tokens', '--spec', 'style-spec.json'],
+        ['--tokens', 'tokens', '--spec', 'tokens.config.json'],
         dir,
       );
       expectExit(auditRes, 0, 'seed audit');
@@ -328,7 +321,7 @@ const CASES = [
       const buildRes = run(
         'token-build',
         'build.mjs',
-        ['--tokens', 'tokens', '--out', 'build', '--theme', 'light', '--spec', 'style-spec.json'],
+        ['--tokens', 'tokens', '--out', 'build', '--theme', 'light', '--spec', 'tokens.config.json'],
         dir,
       );
       expectExit(buildRes, 0, 'seed build light');
@@ -357,7 +350,7 @@ const CASES = [
           '--theme',
           'dark',
           '--spec',
-          'style-spec.json',
+          'tokens.config.json',
         ],
         dir,
       );
@@ -403,7 +396,7 @@ const CASES = [
       const res = run(
         'token-extract',
         'extract.mjs',
-        ['--root', 'input', '--out', 'style-spec.json'],
+        ['--root', 'input', '--out', 'tokens.config.json'],
         dir,
       );
       expectExit(res, 1, 'empty extract');
@@ -412,8 +405,8 @@ const CASES = [
         'no color signals found — fall back to the design-tokens interview',
         'empty extract stderr',
       );
-      if (existsSync(join(dir, 'style-spec.json'))) {
-        throw new Error('style-spec.json should not exist for empty extraction');
+      if (existsSync(join(dir, 'tokens.config.json'))) {
+        throw new Error('tokens.config.json should not exist for empty extraction');
       }
     },
   },
@@ -437,11 +430,11 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       const res = run(
         'token-extract',
         'extract.mjs',
-        ['--root', 'input', '--out', 'style-spec.json'],
+        ['--root', 'input', '--out', 'tokens.config.json'],
         dir,
       );
       expectExit(res, 0, 'css-theme extract');
-      const spec = readJson(join(dir, 'style-spec.json'));
+      const spec = readJson(join(dir, 'tokens.config.json'));
       const roles = spec.palette.map((p) => p.role);
       if (JSON.stringify(roles) !== JSON.stringify(['primary', 'secondary', 'accent'])) {
         throw new Error(`expected [primary, secondary, accent], got ${JSON.stringify(roles)}`);
@@ -477,11 +470,11 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       const res = run(
         'token-extract',
         'extract.mjs',
-        ['--root', 'input', '--out', 'style-spec.json'],
+        ['--root', 'input', '--out', 'tokens.config.json'],
         dir,
       );
       expectExit(res, 0, 'tailwind-v3 extract');
-      const spec = readJson(join(dir, 'style-spec.json'));
+      const spec = readJson(join(dir, 'tokens.config.json'));
       const roles = spec.palette.map((p) => p.role);
       if (!roles.includes('primary') || !roles.includes('secondary') || !roles.includes('accent')) {
         throw new Error(`expected 3 roles including primary, secondary, accent; got ${roles}`);
@@ -504,12 +497,12 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       const res = run(
         'token-extract',
         'extract.mjs',
-        ['--root', 'input', '--out', 'style-spec.json'],
+        ['--root', 'input', '--out', 'tokens.config.json'],
         dir,
       );
       expectExit(res, 0, 'design.md extract');
       expectContains(res.stdout, 'frontmatter: colors.primary', 'frontmatter note');
-      const spec = readJson(join(dir, 'style-spec.json'));
+      const spec = readJson(join(dir, 'tokens.config.json'));
       expectClose(spec.palette[0].anchor.h, 46.23, 2.0, 'primary H');
       expectClose(spec.palette[1].anchor.h, 188.4, 2.0, 'secondary H (should be ~188.4 cyan)');
       if (spec.harmony !== 'analogous') {
@@ -542,11 +535,11 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       const res = run(
         'token-extract',
         'extract.mjs',
-        ['--html', 'input/page.html', '--out', 'style-spec.json'],
+        ['--html', 'input/page.html', '--out', 'tokens.config.json'],
         dir,
       );
       expectExit(res, 0, 'html extract');
-      const spec = readJson(join(dir, 'style-spec.json'));
+      const spec = readJson(join(dir, 'tokens.config.json'));
       if (spec.palette.length < 2) {
         throw new Error(`expected at least 2 palette entries, got ${spec.palette.length}`);
       }
@@ -582,13 +575,13 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
         const res = await runAsync(
           'token-extract',
           'extract.mjs',
-          ['--url', url, '--out', 'style-spec.json'],
+          ['--url', url, '--out', 'tokens.config.json'],
           dir,
         );
         expectExit(res, 0, 'url extract');
         expectContains(res.stdout, 'evidence:', 'url evidence stdout');
         expectContains(res.stdout, `http://127.0.0.1:${port}`, 'url source in evidence');
-        const spec = readJson(join(dir, 'style-spec.json'));
+        const spec = readJson(join(dir, 'tokens.config.json'));
         if (spec.palette.length < 2) {
           throw new Error(`expected at least 2 palette entries, got ${spec.palette.length}`);
         }
@@ -609,11 +602,11 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       mkdirSync(input, { recursive: true });
       writeFileSync(join(input, 'theme.css'), '@theme { --color-primary: #123456; }', 'utf8');
 
-      // 1. First run creates style-spec.json
+      // 1. First run creates tokens.config.json
       const res1 = run(
         'token-extract',
         'extract.mjs',
-        ['--root', 'input', '--out', 'style-spec.json'],
+        ['--root', 'input', '--out', 'tokens.config.json'],
         dir,
       );
       expectExit(res1, 0, 'extract first');
@@ -622,7 +615,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       const res2 = run(
         'token-extract',
         'extract.mjs',
-        ['--root', 'input', '--out', 'style-spec.json'],
+        ['--root', 'input', '--out', 'tokens.config.json'],
         dir,
       );
       expectExit(res2, 3, 'extract second no force');
@@ -648,7 +641,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       const resForce = run(
         'token-extract',
         'extract.mjs',
-        ['--root', 'input', '--out', 'style-spec.json', '--force'],
+        ['--root', 'input', '--out', 'tokens.config.json', '--force'],
         dir,
       );
       expectExit(resForce, 0, 'extract force');
@@ -676,7 +669,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
     run: async () => {
       const dir = work('M1');
       cpSync(
-        join(root, 'test/fixtures/style-spec.compact.json'),
+        join(root, 'test/fixtures/tokens.config.compact.json'),
         join(dir, 'spec.json'),
       );
       const res = run(
@@ -702,7 +695,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
     title: 'math: custom theme',
     run: async () => {
       const dir = work('M2');
-      const spec = readJson(join(root, 'test/fixtures/style-spec.compact.json'));
+      const spec = readJson(join(root, 'test/fixtures/tokens.config.compact.json'));
       spec.themes = {
         midnight: { mode: 'dark', surfaceSteps: { canvas: 100 }, actionStep: 50 },
       };
@@ -741,7 +734,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
     run: async () => {
       const dir = work('M3');
       cpSync(
-        join(root, 'test/fixtures/style-spec.compact.json'),
+        join(root, 'test/fixtures/tokens.config.compact.json'),
         join(dir, 'spec.json'),
       );
 
@@ -817,9 +810,9 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
         dir,
       );
       expectExit(resMissing, 2, 'missing spec');
-      expectContains(resMissing.stderr, 'style-spec not found:', 'missing spec stderr');
+      expectContains(resMissing.stderr, 'tokens config not found:', 'missing spec stderr');
 
-      const badSpec = readJson(join(root, 'test/fixtures/style-spec.compact.json'));
+      const badSpec = readJson(join(root, 'test/fixtures/tokens.config.compact.json'));
       badSpec.palette.push({
         role: 'primary',
         name: 'red',
@@ -853,7 +846,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       const res = run(
         'token-audit',
         'audit.mjs',
-        ['--tokens', 'tokens', '--spec', 'style-spec.json'],
+        ['--tokens', 'tokens', '--spec', 'tokens.config.json'],
         dir,
       );
       expectExit(res, 0, 'audit pass');
@@ -874,7 +867,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       const res = run(
         'token-audit',
         'audit.mjs',
-        ['--tokens', 'tokens', '--spec', 'style-spec.json', '--json'],
+        ['--tokens', 'tokens', '--spec', 'tokens.config.json', '--json'],
         dir,
       );
       expectExit(res, 0, 'audit json');
@@ -896,7 +889,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
     title: 'audit: low contrast override',
     run: async () => {
       const dir = work('A3');
-      const spec = readJson(join(skillsRoot, 'design-tokens/assets/style-spec.example.json'));
+      const spec = readJson(join(skillsRoot, 'design-tokens/assets/tokens.config.example.json'));
       spec.overrides = {
         light: {
           'semantic.color.text.tertiary': '{color.neutral.200}',
@@ -954,7 +947,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       expectContains(resFloor.stdout, 'min WCAG ratio 7:1', 'min ratio 7 header');
 
       // 3. Spec target minWcagRatio 7 fails
-      const spec7 = readJson(join(dir, 'style-spec.json'));
+      const spec7 = readJson(join(dir, 'tokens.config.json'));
       spec7.targets = { minWcagRatio: 7 };
       writeJson(join(dir, 'spec7.json'), spec7);
 
@@ -1022,7 +1015,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
           '--theme',
           'light',
           '--spec',
-          'style-spec.json',
+          'tokens.config.json',
         ],
         dir,
       );
@@ -1100,7 +1093,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
           '--prefix',
           'ds',
           '--spec',
-          'style-spec.json',
+          'tokens.config.json',
         ],
         dir,
       );
@@ -1123,7 +1116,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       const res = run(
         'token-build',
         'build.mjs',
-        ['--tokens', 'tokens', '--out', 'build-vis', '--visualizer', '--spec', 'style-spec.json'],
+        ['--tokens', 'tokens', '--out', 'build-vis', '--visualizer', '--spec', 'tokens.config.json'],
         dir,
       );
       expectExit(res, 0, 'build visualizer');
@@ -1182,7 +1175,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       const resExists = run(
         'token-build',
         'build.mjs',
-        ['--tokens', 'tokens', '--out', 'build', '--theme', 'light', '--spec', 'style-spec.json'],
+        ['--tokens', 'tokens', '--out', 'build', '--theme', 'light', '--spec', 'tokens.config.json'],
         dir,
       );
       expectExit(resExists, 3, 'build overwrite refuse');
@@ -1193,7 +1186,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       const resTamper = run(
         'token-build',
         'build.mjs',
-        ['--tokens', 'tokens', '--out', 'build', '--theme', 'light', '--spec', 'style-spec.json'],
+        ['--tokens', 'tokens', '--out', 'build', '--theme', 'light', '--spec', 'tokens.config.json'],
         dir,
       );
       expectExit(resTamper, 3, 'build tamper refuse');
@@ -1215,7 +1208,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
           '--theme',
           'light',
           '--spec',
-          'style-spec.json',
+          'tokens.config.json',
           '--force',
         ],
         dir,
@@ -1231,7 +1224,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       const dir = work('B8');
       cpSync(seedDir, dir, { recursive: true });
 
-      const otherSpec = readJson(join(dir, 'style-spec.json'));
+      const otherSpec = readJson(join(dir, 'tokens.config.json'));
       otherSpec.palette[0].anchor.h = 300;
       writeJson(join(dir, 'binding.json'), otherSpec);
 
@@ -1432,7 +1425,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       // 1. spec only
       const dSpec = join(baseDir, 'spec-only');
       mkdirSync(dSpec, { recursive: true });
-      cpSync(join(seedDir, 'style-spec.json'), join(dSpec, 'style-spec.json'));
+      cpSync(join(seedDir, 'tokens.config.json'), join(dSpec, 'tokens.config.json'));
       const resSpec = run('ask-kami', 'route.mjs', ['--root', '.'], dSpec);
       expectContains(resSpec.stdout, 'state: spec=valid tokens=missing', 'spec-only state');
       expectContains(resSpec.stdout, 'next: generate', 'spec-only next');
@@ -1440,8 +1433,8 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       // 2. tokens unaudited
       const dTok = join(baseDir, 'tokens-un');
       mkdirSync(dTok, { recursive: true });
-      cpSync(join(seedDir, 'style-spec.json'), join(dTok, 'style-spec.json'));
-      run('token-math', 'generate.mjs', ['--spec', 'style-spec.json', '--out', 'tokens'], dTok);
+      cpSync(join(seedDir, 'tokens.config.json'), join(dTok, 'tokens.config.json'));
+      run('token-math', 'generate.mjs', ['--spec', 'tokens.config.json', '--out', 'tokens'], dTok);
       const resTok = run('ask-kami', 'route.mjs', ['--root', '.'], dTok);
       expectContains(resTok.stdout, 'tokens=present audit=missing', 'tokens-un state');
       expectContains(resTok.stdout, 'next: audit', 'tokens-un next');
@@ -1449,7 +1442,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       // 3. audited no build
       const dAud = join(baseDir, 'audited');
       mkdirSync(dAud, { recursive: true });
-      cpSync(join(seedDir, 'style-spec.json'), join(dAud, 'style-spec.json'));
+      cpSync(join(seedDir, 'tokens.config.json'), join(dAud, 'tokens.config.json'));
       cpSync(join(seedDir, 'tokens'), join(dAud, 'tokens'), { recursive: true });
       const resAud = run('ask-kami', 'route.mjs', ['--root', '.'], dAud);
       expectContains(resAud.stdout, 'audit=pass build=missing', 'audited state');
@@ -1484,13 +1477,13 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       // Invalid spec
       const badDir = join(dir, 'bad');
       mkdirSync(badDir, { recursive: true });
-      const badSpec = readJson(join(dir, 'style-spec.json'));
+      const badSpec = readJson(join(dir, 'tokens.config.json'));
       badSpec.palette.push({
         role: 'primary',
         name: 'red',
         anchor: { l: 0.5, c: 0.1, h: 20, alpha: 1 },
       });
-      writeJson(join(badDir, 'style-spec.json'), badSpec);
+      writeJson(join(badDir, 'tokens.config.json'), badSpec);
 
       const resBad = run('ask-kami', 'route.mjs', ['--root', '.'], badDir);
       expectContains(resBad.stdout, 'spec=invalid', 'invalid spec state');
@@ -1573,7 +1566,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       const dir = work('D3');
 
       // 1. low contrast
-      const spec = readJson(join(skillsRoot, 'design-tokens/assets/style-spec.example.json'));
+      const spec = readJson(join(skillsRoot, 'design-tokens/assets/tokens.config.example.json'));
       spec.overrides = { light: { 'semantic.color.text.tertiary': '{color.neutral.200}' } };
       writeJson(join(dir, 'low.json'), spec);
 
@@ -1626,7 +1619,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
     requiresSeed: true,
     run: async () => {
       const dir = work('D4');
-      cpSync(join(seedDir, 'style-spec.json'), join(dir, 'style-spec.json'));
+      cpSync(join(seedDir, 'tokens.config.json'), join(dir, 'tokens.config.json'));
       cpSync(join(seedDir, 'tokens'), join(dir, 'tokens'), { recursive: true });
 
       // Missing build
@@ -1645,7 +1638,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       const customSpec = resolve(join(dir, 'custom-spec.json'));
       const customTokens = resolve(join(dir, 'custom-tokens'));
       const customBuild = resolve(join(dir, 'custom-build'));
-      cpSync(join(dir, 'style-spec.json'), customSpec);
+      cpSync(join(dir, 'tokens.config.json'), customSpec);
       cpSync(join(dir, 'tokens'), customTokens, { recursive: true });
       mkdirSync(customBuild, { recursive: true });
 

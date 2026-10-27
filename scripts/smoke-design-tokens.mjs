@@ -132,13 +132,13 @@ try {
       '--root',
       tempDir,
       '--out',
-      join(tempDir, 'style-spec.json'),
+      join(tempDir, 'tokens.config.json'),
       '--audit-baseline',
       '--force',
     ],
     { cwd: tempDir, encoding: 'utf8' },
   );
-  assert(existsSync(join(tempDir, 'style-spec.json')), 'emits candidate style-spec.json');
+  assert(existsSync(join(tempDir, 'tokens.config.json')), 'emits candidate tokens.config.json');
   assert(existsSync(join(tempDir, '.pre-audit-baseline.json')), 'emits .pre-audit-baseline.json');
   assert(existsSync(join(tempDir, 'pre-audit-baseline.md')), 'emits pre-audit-baseline.md');
 
@@ -154,7 +154,7 @@ try {
       cliPath,
       'sync',
       '--spec',
-      join(tempDir, 'style-spec.json'),
+      join(tempDir, 'tokens.config.json'),
       '--tokens',
       join(tempDir, 'tokens'),
       '--out',

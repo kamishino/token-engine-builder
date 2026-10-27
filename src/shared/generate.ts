@@ -38,7 +38,7 @@ export function generateTokens(opts: GenerateTokensOptions): GenerateTokensResul
   if (!existsSync(specPath)) {
     return {
       code: EXIT.USAGE,
-      error: `style-spec not found: ${specPath} (run skill design-tokens or token-engine init first)`,
+      error: `tokens config not found: ${specPath} (run skill design-tokens or token-engine init first)`,
     };
   }
 
@@ -122,7 +122,7 @@ export function runGenerate(argv = process.argv.slice(2)): number {
     return 0;
   }
 
-  const specPath = fromCwd(getArg(argv, '--spec', 'style-spec.json'));
+  const specPath = fromCwd(getArg(argv, '--spec', 'tokens.config.json'));
   const outDir = fromCwd(getArg(argv, '--out', 'tokens'));
   const force = hasFlag(argv, '--force');
   const dryRun = hasFlag(argv, '--dry-run');

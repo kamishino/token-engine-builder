@@ -43,7 +43,7 @@ test('buildUiProfile emits distinct polarized radix blocks for root and dark', a
     const outDir = join(dir, 'out');
     runGenerate([
       '--spec',
-      'src/skills/design-tokens/assets/style-spec.example.json',
+      'src/skills/design-tokens/assets/tokens.config.example.json',
       '--out',
       tokensDir,
     ]);
@@ -67,7 +67,7 @@ test('buildUiProfile builds fluent, antd, mui, chakra, and shadcn profiles succe
     const outDir = join(dir, 'out');
     runGenerate([
       '--spec',
-      'src/skills/design-tokens/assets/style-spec.example.json',
+      'src/skills/design-tokens/assets/tokens.config.example.json',
       '--out',
       tokensDir,
     ]);
@@ -89,7 +89,7 @@ test('renderProfile returns content for all eight profiles without writing files
     const tokensDir = join(dir, 'tokens');
     runGenerate([
       '--spec',
-      'src/skills/design-tokens/assets/style-spec.example.json',
+      'src/skills/design-tokens/assets/tokens.config.example.json',
       '--out',
       tokensDir,
     ]);

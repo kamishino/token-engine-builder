@@ -4,7 +4,7 @@ import test from 'node:test';
 import { loadStyleSpec } from '../src/shared/spec.ts';
 import { planThemes } from '../src/shared/theme-plan.ts';
 
-const EXAMPLE = 'src/skills/design-tokens/assets/style-spec.example.json';
+const EXAMPLE = 'src/skills/design-tokens/assets/tokens.config.example.json';
 const base = JSON.parse(readFileSync(EXAMPLE, 'utf8'));
 
 test('planThemes emits generated themes with stable aliases', () => {

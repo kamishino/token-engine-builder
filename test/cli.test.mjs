@@ -7,7 +7,7 @@ import test from 'node:test';
 import { EXIT } from '../src/shared/exit-codes.ts';
 import { runCli, runSync, usage } from '../src/cli/index.ts';
 
-const exampleSpec = 'src/skills/design-tokens/assets/style-spec.example.json';
+const exampleSpec = 'src/skills/design-tokens/assets/tokens.config.example.json';
 
 test('token-engine usage prints CLI commands and options', () => {
   const text = usage();
@@ -70,7 +70,7 @@ test('runCli scaffold creates companion configs', async () => {
 test('runSync executes complete pipeline end-to-end in a single pass', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'cli-sync-'));
   try {
-    const specPath = join(dir, 'style-spec.json');
+    const specPath = join(dir, 'tokens.config.json');
     writeFileSync(specPath, readFileSync(exampleSpec, 'utf8'), 'utf8');
     const tokensDir = join(dir, 'tokens');
     const outDir = join(dir, 'build');
@@ -138,7 +138,7 @@ test('runCli routes --help to specific subcommands correctly', async () => {
 test('runSync refuses overwrite without --force on existing targets, and succeeds with --force', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'cli-refusal-'));
   try {
-    const specPath = join(dir, 'style-spec.json');
+    const specPath = join(dir, 'tokens.config.json');
     writeFileSync(specPath, readFileSync(exampleSpec, 'utf8'), 'utf8');
     const tokensDir = join(dir, 'tokens');
     const outDir = join(dir, 'build');
@@ -189,7 +189,7 @@ test('runSync --json outputs parseable JSON report', async () => {
     output += args.join(' ') + '\n';
   };
   try {
-    const specPath = join(dir, 'style-spec.json');
+    const specPath = join(dir, 'tokens.config.json');
     writeFileSync(specPath, readFileSync(exampleSpec, 'utf8'), 'utf8');
     const tokensDir = join(dir, 'tokens');
     const outDir = join(dir, 'build');
@@ -229,7 +229,7 @@ test('runCli propagates EXIT taxonomy exit codes', async () => {
     assert.equal(codeValidation, EXIT.VALIDATION);
 
     // 3. runCli(['audit']) against failing-contrast fixture -> EXIT.AUDIT (4)
-    const validSpecPath = join(dir, 'style-spec.json');
+    const validSpecPath = join(dir, 'tokens.config.json');
     const specData = JSON.parse(readFileSync(exampleSpec, 'utf8'));
     specData.palette[0].anchor.l = 0.95;
     writeFileSync(validSpecPath, JSON.stringify(specData, null, 2), 'utf8');

@@ -62,7 +62,7 @@ test('auditTokens returns a passing report for the generated example tree', () =
     const tokensDir = join(dir, 'tokens');
     runGenerate([
       '--spec',
-      'src/skills/design-tokens/assets/style-spec.example.json',
+      'src/skills/design-tokens/assets/tokens.config.example.json',
       '--out',
       tokensDir,
     ]);
@@ -79,10 +79,10 @@ test('auditTokens returns a passing report for the generated example tree', () =
 test('runAudit with --spec checks spec binding and fails on mismatch', () => {
   const dir = mkdtempSync(join(tmpdir(), 'audit-spec-'));
   try {
-    const specPath = join(dir, 'style-spec.json');
-    const changedSpecPath = join(dir, 'style-spec-changed.json');
+    const specPath = join(dir, 'tokens.config.json');
+    const changedSpecPath = join(dir, 'tokens.config-changed.json');
     const specData = JSON.parse(
-      readFileSync('src/skills/design-tokens/assets/style-spec.example.json', 'utf8'),
+      readFileSync('src/skills/design-tokens/assets/tokens.config.example.json', 'utf8'),
     );
     writeFileSync(specPath, JSON.stringify(specData, null, 2), 'utf8');
     specData.palette[0].anchor.l = 0.55;
@@ -106,9 +106,9 @@ test('runAudit with --spec checks spec binding and fails on mismatch', () => {
 test('auditTokens computes remedy suggestions for failed pairs and includes them in JSON output', () => {
   const dir = mkdtempSync(join(tmpdir(), 'audit-remedy-'));
   try {
-    const specPath = join(dir, 'style-spec.json');
+    const specPath = join(dir, 'tokens.config.json');
     const specData = JSON.parse(
-      readFileSync('src/skills/design-tokens/assets/style-spec.example.json', 'utf8'),
+      readFileSync('src/skills/design-tokens/assets/tokens.config.example.json', 'utf8'),
     );
     specData.overrides = {
       light: {
@@ -140,9 +140,9 @@ test('auditTokens computes remedy suggestions for failed pairs and includes them
 test('auditTokens falls back to background suggestion when no foreground step passes', () => {
   const dir = mkdtempSync(join(tmpdir(), 'audit-remedy-bg-'));
   try {
-    const specPath = join(dir, 'style-spec.json');
+    const specPath = join(dir, 'tokens.config.json');
     const specData = JSON.parse(
-      readFileSync('src/skills/design-tokens/assets/style-spec.example.json', 'utf8'),
+      readFileSync('src/skills/design-tokens/assets/tokens.config.example.json', 'utf8'),
     );
     specData.overrides = {
       light: {
@@ -176,7 +176,7 @@ test('runAudit with --baseline displays before-vs-after delta scorecard', () => 
     const tokensDir = join(dir, 'tokens');
     runGenerate([
       '--spec',
-      'src/skills/design-tokens/assets/style-spec.example.json',
+      'src/skills/design-tokens/assets/tokens.config.example.json',
       '--out',
       tokensDir,
     ]);
@@ -248,7 +248,7 @@ test('auditTokens fails with code 4 when non-audit component tokens form an alia
     const tokensDir = join(dir, 'tokens');
     runGenerate([
       '--spec',
-      'src/skills/design-tokens/assets/style-spec.example.json',
+      'src/skills/design-tokens/assets/tokens.config.example.json',
       '--out',
       tokensDir,
     ]);
@@ -280,7 +280,7 @@ test('auditTokens fails with code 4 when themes have asymmetric semantic token p
     const tokensDir = join(dir, 'tokens');
     runGenerate([
       '--spec',
-      'src/skills/design-tokens/assets/style-spec.example.json',
+      'src/skills/design-tokens/assets/tokens.config.example.json',
       '--out',
       tokensDir,
     ]);

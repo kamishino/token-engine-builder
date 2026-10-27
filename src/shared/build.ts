@@ -87,11 +87,11 @@ export async function compileTokens(opts: CompileTokensOptions): Promise<Compile
 
   if (specPath !== undefined) {
     if (!existsSync(specPath)) {
-      return { code: EXIT.USAGE, error: `style-spec not found: ${specPath}` };
+      return { code: EXIT.USAGE, error: `tokens config not found: ${specPath}` };
     }
     const loaded = loadSpecOrError(specPath);
     if (!loaded.ok) {
-      return { code: EXIT.VALIDATION, error: `style-spec not readable: ${loaded.error}` };
+      return { code: EXIT.VALIDATION, error: `tokens config not readable: ${loaded.error}` };
     }
     specHash = specInputHash(loaded.spec);
     guide = guideFromSpec(loaded.spec);

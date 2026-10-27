@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
@@ -231,6 +231,65 @@ test('runLint reports plugin.json skills mismatch', () => {
     writeFileSync(join(dir, 'package.json'), '{"version":"1.0.0"}', 'utf8');
     const failures = runLint({ root: dir });
     assert.ok(failures.some((f) => f.includes('does not match src/skills')));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('runLint reports orphan reference file not linked in SKILL.md', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'lint-orphan-'));
+  try {
+    const skillDir = join(dir, 'src', 'skills', 'demo');
+    makeValidSkill(skillDir);
+    const refsDir = join(skillDir, 'references');
+    mkdirSync(refsDir, { recursive: true });
+    writeFileSync(join(refsDir, 'extra.md'), '# Extra reference\n', 'utf8');
+
+    const failures = runLint({ root: dir });
+    assert.ok(failures.some((f) => f.includes('orphan reference file not linked in SKILL.md: "references/extra.md"')));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('runLint reports linked reference containing forbidden style-spec literal', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'lint-ref-literal-'));
+  try {
+    const skillDir = join(dir, 'src', 'skills', 'demo');
+    makeValidSkill(skillDir);
+    const refsDir = join(skillDir, 'references');
+    mkdirSync(refsDir, { recursive: true });
+    writeFileSync(join(refsDir, 'doc.md'), '# Doc\nUse style-spec for settings.\n', 'utf8');
+
+    // Link reference in SKILL.md to avoid orphan error
+    const skillContent = readFileSync(join(skillDir, 'SKILL.md'), 'utf8');
+    writeFileSync(
+      join(skillDir, 'SKILL.md'),
+      skillContent.replace('Interface and implementation.', 'See [references/doc.md](references/doc.md).'),
+      'utf8',
+    );
+
+    const failures = runLint({ root: dir });
+    assert.ok(failures.some((f) => f.includes('references/doc.md contains forbidden stale literal "style-spec"')));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('runLint reports invalid CLI flag documented for command in design-tokens', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'lint-rev-parity-'));
+  try {
+    const skillDir = join(dir, 'src', 'skills', 'design-tokens');
+    makeValidSkill(skillDir, 'design-tokens');
+    const skillContent = readFileSync(join(skillDir, 'SKILL.md'), 'utf8');
+    writeFileSync(
+      join(skillDir, 'SKILL.md'),
+      `${skillContent}\nRun \`token-engine.mjs audit --bogus-flag\` here.\n`,
+      'utf8',
+    );
+
+    const failures = runLint({ root: dir });
+    assert.ok(failures.some((f) => f.includes('invalid flag "--bogus-flag" documented for command "audit"')));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

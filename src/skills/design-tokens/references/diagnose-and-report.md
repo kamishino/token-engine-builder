@@ -1,5 +1,7 @@
 # Design System Review — Report Format
 
+Read during Phase 1 (Silent Context Triage) when handling a review-only or diagnostic request that outputs an HTML health report.
+
 The design system review is rendered as a single self-contained HTML file in the OS temp directory (`<tmpdir>/design-system-review-<timestamp>.html`). Tailwind and Mermaid both come from CDNs, paired with a small inline fallback CSS block so the document remains legible offline.
 
 ## Scaffold
@@ -88,11 +90,11 @@ The design system review is rendered as a single self-contained HTML file in the
         <h2 class="text-lg font-semibold mb-3">Pipeline Flow & Gate Status</h2>
         <pre class="mermaid">
 graph LR
-  Spec[style-spec.json] --> Generate[generate.mjs]
+  Spec[tokens.config.json] --> Generate[token-engine generate]
   Generate --> Tokens[3-Tier Tokens]
-  Tokens --> Audit{audit.mjs}
+  Tokens --> Audit{token-engine audit}
   Audit -->|Pass| Stamp[.token-engine-audit.json]
-  Stamp --> Build[build.mjs]
+  Stamp --> Build[token-engine build]
   Build --> Outputs[CSS & Profiles]
         </pre>
       </section>

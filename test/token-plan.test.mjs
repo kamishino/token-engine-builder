@@ -3,7 +3,7 @@ import test from 'node:test';
 import { loadStyleSpec } from '../src/shared/spec.ts';
 import { planTokenFiles } from '../src/shared/token-plan.ts';
 
-const EXAMPLE = 'src/skills/design-tokens/assets/style-spec.example.json';
+const EXAMPLE = 'src/skills/design-tokens/assets/tokens.config.example.json';
 
 test('planTokenFiles covers primitives and every semantic theme in write order', () => {
   const spec = loadStyleSpec(EXAMPLE).spec;

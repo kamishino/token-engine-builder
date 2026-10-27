@@ -14,7 +14,7 @@
  * - Flags documented in CLI COMMANDS appear in design-tokens documentation.
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { COMMANDS } from '../src/shared/cli-flags.ts';
 import { isMainModule } from '../src/shared/paths.ts';
@@ -26,6 +26,7 @@ const FORBIDDEN_LITERALS = [
   '{color.brand.500}',
   'Respect the tiers in any manual edit',
   '7 fg/bg role pairs',
+  'style-spec',
 ];
 
 const ALLOWED_FRONTMATTER_KEYS = new Set([
@@ -68,20 +69,48 @@ export function runLint({ root = rootDir } = {}) {
       }
 
       const fail = (reason) => failures.push(`${entry.name}: ${reason}`);
+      const skillContent = readFileSync(skillFile, 'utf8');
 
-      // Check prohibited stale literals
-      for (const docFile of [skillFile, readmeFile]) {
+      // Check prohibited stale literals across SKILL.md, README.md, and references/**/*.md
+      const docFiles = [skillFile, readmeFile];
+      const refsDir = join(skillDir, 'references');
+      if (existsSync(refsDir)) {
+        for (const sub of readdirSync(refsDir, { recursive: true, withFileTypes: true })) {
+          if (sub.isFile() && sub.name.endsWith('.md')) {
+            const parent = sub.parentPath ?? sub.path;
+            docFiles.push(join(parent, sub.name));
+          }
+        }
+      }
+      for (const docFile of docFiles) {
         if (!existsSync(docFile)) continue;
         const content = readFileSync(docFile, 'utf8');
         for (const forbidden of FORBIDDEN_LITERALS) {
           if (content.includes(forbidden)) {
-            fail(
-              `${docFile.endsWith('SKILL.md') ? 'SKILL.md' : 'README.md'} contains forbidden stale literal "${forbidden}"`,
-            );
+            const label =
+              docFile === skillFile
+                ? 'SKILL.md'
+                : docFile === readmeFile
+                  ? 'README.md'
+                  : relative(skillDir, docFile).replaceAll('\\', '/');
+            fail(`${label} contains forbidden stale literal "${forbidden}"`);
           }
         }
       }
 
+      // Orphan references guard: every references/*.md must be linked in SKILL.md
+      if (existsSync(refsDir)) {
+        for (const sub of readdirSync(refsDir, { recursive: true, withFileTypes: true })) {
+          if (sub.isFile() && sub.name.endsWith('.md')) {
+            const parent = sub.parentPath ?? sub.path;
+            const fullPath = join(parent, sub.name);
+            const relPath = relative(skillDir, fullPath).replaceAll('\\', '/');
+            if (!skillContent.includes(relPath)) {
+              fail(`orphan reference file not linked in SKILL.md: "${relPath}"`);
+            }
+          }
+        }
+      }
       // Prohibit README.md in skill package and check child entries
       for (const sub of readdirSync(skillDir, { withFileTypes: true })) {
         if (sub.name === 'SKILL.md') continue;
@@ -100,7 +129,6 @@ export function runLint({ root = rootDir } = {}) {
         fail('agents/openai.yaml is missing');
       }
 
-      const skillContent = readFileSync(skillFile, 'utf8');
       if (
         /<([a-z0-9-]+)-root>\/scripts\//.test(skillContent) &&
         !skillContent.includes('Never run a command containing literal')
@@ -232,6 +260,44 @@ export function runLint({ root = rootDir } = {}) {
           failures.push(
             `design-tokens: missing documentation for CLI flag "${flag}" (command "${command}")`,
           );
+        }
+      }
+    }
+  }
+
+  // Reverse flag parity: every flag documented on a token-engine invocation in design-tokens docs must exist in COMMANDS
+  const dtSkillDir = join(skillsDir, 'design-tokens');
+  if (existsSync(dtSkillDir)) {
+    const docPaths = [join(dtSkillDir, 'SKILL.md')];
+    const dtRefsDir = join(dtSkillDir, 'references');
+    if (existsSync(dtRefsDir)) {
+      for (const sub of readdirSync(dtRefsDir, { recursive: true, withFileTypes: true })) {
+        if (sub.isFile() && sub.name.endsWith('.md')) {
+          const parent = sub.parentPath ?? sub.path;
+          docPaths.push(join(parent, sub.name));
+        }
+      }
+    }
+
+    for (const docPath of docPaths) {
+      if (!existsSync(docPath)) continue;
+      const content = readFileSync(docPath, 'utf8');
+      const relDoc = relative(dtSkillDir, docPath).replaceAll('\\', '/');
+      const cmdInvocations = content.matchAll(
+        /(?:token-engine(?:\.mjs)?)\s+([a-z0-9-]+)([^\n`]+)/g,
+      );
+      for (const [, cmd, rest] of cmdInvocations) {
+        if (!(cmd in COMMANDS)) continue;
+        const spec = COMMANDS[cmd];
+        const validFlags = new Set(spec.flags.map((f) => f.flag));
+        validFlags.add('--help');
+        const flagMatches = rest.matchAll(/--[a-z0-9-]+/g);
+        for (const [flag] of flagMatches) {
+          if (!validFlags.has(flag)) {
+            failures.push(
+              `design-tokens: invalid flag "${flag}" documented for command "${cmd}" in ${relDoc}`,
+            );
+          }
         }
       }
     }

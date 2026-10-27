@@ -13,7 +13,7 @@
  *   figma       Import from or export to Figma Variables REST format
  */
 import { existsSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import { auditTokens, runAudit } from '../shared/audit.js';
 import { compileTokens, runBuild } from '../shared/build.js';
 import { usageText } from '../shared/cli-flags.js';
@@ -27,12 +27,8 @@ import { runRoute } from '../shared/route.js';
 import { detectCodebaseContext } from '../shared/system-state.js';
 import type { Logger } from '../shared/types.js';
 
-function resolveSpecArg(argv: string[], root: string): string {
-  const explicit = getArg(argv, '--spec');
-  if (explicit) return explicit;
-  if (existsSync(join(root, 'tokens.config.json'))) return 'tokens.config.json';
-  if (existsSync(join(root, 'style-spec.json'))) return 'style-spec.json';
-  return 'tokens.config.json';
+function resolveSpecArg(argv: string[]): string {
+  return getArg(argv, '--spec', 'tokens.config.json');
 }
 
 export function usage(): string {
@@ -52,7 +48,7 @@ Commands:
   figma       Import from or export to Figma Variables REST format
 
 Options:
-  --spec <path>         Path to tokens.config.json (default: tokens.config.json or style-spec.json)
+  --spec <path>         Path to tokens.config.json (default: tokens.config.json)
   --tokens <dir>        Tokens directory (default: tokens)
   --out <dir>           Build output directory (default: build)
   --theme <name>        Theme to compile: 'all' (default for multi-theme) or theme name (default: light)
@@ -74,7 +70,7 @@ Exit codes:
   2  Usage error (unknown command, missing argument, or invalid CLI flag)
   3  Guard refusal (destination exists, tampered files, unsafe path, missing audit stamp)
   4  Audit failure (contrast floor or unresolved alias gatekeeper shortfall)
-  5  Validation failure (StyleSpec schema validation, syntax, or JSON parse error)`;
+  5  Validation failure (tokens.config.json schema validation, syntax, or JSON parse error)`;
 }
 
 const SYNC_USAGE = `Usage: token-engine sync [options]
@@ -82,7 +78,7 @@ const SYNC_USAGE = `Usage: token-engine sync [options]
 Run complete token pipeline in one pass (extract → math → audit → build).
 
 Options:
-  --spec <path>         Path to tokens.config.json (default: tokens.config.json or style-spec.json)
+  --spec <path>         Path to tokens.config.json (default: tokens.config.json)
   --tokens <dir>        Tokens directory (default: tokens)
   --out <dir>           Build output directory (default: build)
   --theme <name>        Theme to compile: 'all' (default for multi-theme) or theme name (default: light)
@@ -103,9 +99,9 @@ Detect codebase context and initialize tokens.config.json.
 
 Options:
   --root <dir>          Root directory to scan (default: .)
-  --out <path>          Output path for generated spec (default: tokens.config.json)
   --force               Overwrite existing spec file
   --dry-run             Preview extraction without writing
+  --json                Emit machine-readable JSON output
   --help                Show this help message`;
 
 const SCAFFOLD_USAGE = `Usage: token-engine scaffold [options]
@@ -119,12 +115,13 @@ Options:
   --css <name>          CSS import file to generate: native (default) or tailwind
   --force               Overwrite existing configuration files
   --dry-run             Preview scaffolding without writing
+  --json                Emit machine-readable JSON output
   --help                Show this help message`;
 
 export async function runSync(argv: string[]): Promise<number> {
   const rootArg = getArg(argv, '--root');
   const root = rootArg !== undefined ? fromCwd(rootArg) : process.cwd();
-  const specArg = resolveSpecArg(argv, root);
+  const specArg = resolveSpecArg(argv);
   const specPath = resolve(root, specArg);
   const tokensArg = getArg(argv, '--tokens', 'tokens');
   const tokensDir = resolve(root, tokensArg);
@@ -325,7 +322,7 @@ export async function runCli(argv = process.argv.slice(2)): Promise<number> {
       const context = detectCodebaseContext(root);
       console.log(`codebase context: maturity=${context.maturity} runtime=${context.runtime} pkg=${context.packageManager}`);
       if (context.maturity === 'brownfield') {
-        const outArg = resolveSpecArg(rest, root);
+        const outArg = resolveSpecArg(rest);
         console.log(`existing styling detected; extracting candidate ${outArg}...`);
         return runExtract(['--out', outArg, ...rest]);
       }

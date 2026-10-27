@@ -8,7 +8,7 @@ import { EXIT } from '../src/shared/exit-codes.ts';
 import { runRoute } from '../src/shared/route.ts';
 import { runAudit } from '../src/shared/audit.ts';
 import { runGenerate } from '../src/shared/generate.ts';
-const exampleSpec = 'src/skills/design-tokens/assets/style-spec.example.json';
+const exampleSpec = 'src/skills/design-tokens/assets/tokens.config.example.json';
 
 test('runRoute returns 0 and prints missing spec state on empty directory', () => {
   const dir = mkdtempSync(join(tmpdir(), 'route-empty-'));
@@ -38,7 +38,7 @@ test('runRoute returns 0 and prints missing spec state on empty directory', () =
 test('runRoute detects generated tree and suggests next action', () => {
   const dir = mkdtempSync(join(tmpdir(), 'route-tokens-'));
   try {
-    const specPath = join(dir, 'style-spec.json');
+    const specPath = join(dir, 'tokens.config.json');
     writeFileSync(specPath, readFileSync(exampleSpec, 'utf8'), 'utf8');
     const tokensDir = join(dir, 'tokens');
     assert.equal(runGenerate(['--spec', specPath, '--out', tokensDir]), 0);
@@ -57,7 +57,7 @@ test('runRoute detects generated tree and suggests next action', () => {
 test('runRoute detects shadow-dom and tailors token-build command with --selector', () => {
   const dir = mkdtempSync(join(tmpdir(), 'route-shadow-'));
   try {
-    const specPath = join(dir, 'style-spec.json');
+    const specPath = join(dir, 'tokens.config.json');
     writeFileSync(specPath, readFileSync(exampleSpec, 'utf8'), 'utf8');
     const tokensDir = join(dir, 'tokens');
     runGenerate(['--spec', specPath, '--out', tokensDir]);

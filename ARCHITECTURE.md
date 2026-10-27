@@ -86,14 +86,14 @@ flowchart TD
     
     Discover --> Choice{Codebase has styling?}
     Choice -->|Brownfield: CSS/TS found| PreAudit[📝 Stage 1: As-Is Contrast Baseline Scan<br/>Pair raw CSS colors & evaluate WCAG + APCA]
-    Choice -->|Greenfield: No styles| Interview[🎨 Stage 1: Socratic Brand Interview<br/>Establish anchor colors in style-spec.json]
+    Choice -->|Greenfield: No styles| Interview[🎨 Stage 1: Socratic Brand Interview<br/>Establish anchor colors in tokens.config.json]
     
-    PreAudit -->|Emits style-spec.json & .pre-audit-baseline.json| MathGen[📐 Stage 2: Deterministic Token Math<br/>Calculate 11-step OKLCH ramps & 4px scales]
-    Interview -->|Emits style-spec.json| MathGen
+    PreAudit -->|Emits tokens.config.json & .pre-audit-baseline.json| MathGen[📐 Stage 2: Deterministic Token Math<br/>Calculate 11-step OKLCH ramps & 4px scales]
+    Interview -->|Emits tokens.config.json| MathGen
     
     MathGen -->|Emits 3-tier tokens/ tree| AuditGate{🔐 Stage 3: Dual-Gate Contrast Audit<br/>WCAG ≥ 4.5:1 & APCA |Lc| ≥ 60}
     
-    AuditGate -->|❌ FAIL| Remedy[🛠️ Compute Remedy Suggestion<br/>Suggest ramp step override in style-spec.json]
+    AuditGate -->|❌ FAIL| Remedy[🛠️ Compute Remedy Suggestion<br/>Suggest ramp step override in tokens.config.json]
     Remedy --> MathGen
     
     AuditGate -->|✅ PASS| Stamp[📜 Write Cryptographic Stamp<br/>.token-engine-audit.json + Delta Scorecard Table]

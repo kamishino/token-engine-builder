@@ -113,6 +113,7 @@ export const COMMANDS: Record<CommandKey, CommandSpec> = {
       { flag: '--css', arg: 'native|tailwind' },
       { flag: '--force' },
       { flag: '--dry-run' },
+      { flag: '--json' },
     ],
   },
   route: {

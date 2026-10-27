@@ -6,7 +6,7 @@ import test from 'node:test';
 import { inspectSystem, resolveSystemPaths } from '../src/shared/system-state.ts';
 import { runGenerate } from '../src/shared/generate.ts';
 
-const exampleSpec = 'src/skills/design-tokens/assets/style-spec.example.json';
+const exampleSpec = 'src/skills/design-tokens/assets/tokens.config.example.json';
 
 test('inspectSystem correctly classifies missing system in empty directory', () => {
   const dir = mkdtempSync(join(tmpdir(), 'system-empty-'));
@@ -46,17 +46,17 @@ test('inspectSystem reflects generated token tree and detects tampered provenanc
   }
 });
 
-test('resolveSystemPaths resolves tokens.config.json with fallback to style-spec.json', () => {
+test('resolveSystemPaths resolves tokens.config.json without fallback to style-spec.json', () => {
   const dir = mkdtempSync(join(tmpdir(), 'system-spec-paths-'));
   try {
     // Neither exists: defaults to tokens.config.json
     assert.equal(resolveSystemPaths(dir).spec, join(dir, 'tokens.config.json'));
 
-    // Only style-spec.json exists: falls back to style-spec.json
+    // Only style-spec.json exists: still resolves to tokens.config.json (no legacy fallback)
     writeFileSync(join(dir, 'style-spec.json'), '{}', 'utf8');
-    assert.equal(resolveSystemPaths(dir).spec, join(dir, 'style-spec.json'));
+    assert.equal(resolveSystemPaths(dir).spec, join(dir, 'tokens.config.json'));
 
-    // tokens.config.json created: prefers tokens.config.json
+    // tokens.config.json created: resolves to tokens.config.json
     writeFileSync(join(dir, 'tokens.config.json'), '{}', 'utf8');
     assert.equal(resolveSystemPaths(dir).spec, join(dir, 'tokens.config.json'));
   } finally {

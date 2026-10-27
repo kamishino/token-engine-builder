@@ -15,7 +15,7 @@ test('validateStyleSpec fails closed on missing palette or wrong arity', () => {
   assert.ok(invalid2.errors.some((e) => e.includes('palette must contain 3–5 colors')));
 });
 
-test('validateStyleSpec validates valid style-spec and warns on out-of-gamut anchor', () => {
+test('validateStyleSpec validates valid tokens config and warns on out-of-gamut anchor', () => {
   const valid = validateStyleSpec({
     name: 'test-brand',
     palette: [

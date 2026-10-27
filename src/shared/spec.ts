@@ -43,7 +43,7 @@ export function validateStyleSpec(raw: unknown): StyleSpecValidationResult {
   const warnings: string[] = [];
 
   if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
-    return { valid: false, errors: ['style-spec must be a JSON object'], warnings: [] };
+    return { valid: false, errors: ['tokens config must be a JSON object'], warnings: [] };
   }
 
   const obj = raw as Record<string, unknown>;
@@ -319,7 +319,7 @@ export function loadStyleSpec(pathOrJson: string | Record<string, unknown>): {
 
   const result = validateStyleSpec(raw);
   if (!result.valid || result.spec === undefined) {
-    throw new Error(`invalid style-spec: ${result.errors.join('; ')}`);
+    throw new Error(`invalid tokens config: ${result.errors.join('; ')}`);
   }
 
   return {

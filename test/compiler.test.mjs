@@ -20,7 +20,7 @@ test('buildTokens compiles DTCG tokens to CSS, Tailwind @theme, docs, and visual
     const outDir = join(dir, 'out');
     runGenerate([
       '--spec',
-      'src/skills/design-tokens/assets/style-spec.example.json',
+      'src/skills/design-tokens/assets/tokens.config.example.json',
       '--out',
       tokensDir,
     ]);
@@ -85,7 +85,7 @@ test('buildTokens supports custom CSS selector scoping', async () => {
     const outDir = join(dir, 'out');
     runGenerate([
       '--spec',
-      'src/skills/design-tokens/assets/style-spec.example.json',
+      'src/skills/design-tokens/assets/tokens.config.example.json',
       '--out',
       tokensDir,
     ]);
@@ -123,7 +123,7 @@ test('buildMultiThemeTokens emits consolidated CSS and per-theme files', async (
     const outDir = join(dir, 'out');
     runGenerate([
       '--spec',
-      'src/skills/design-tokens/assets/style-spec.example.json',
+      'src/skills/design-tokens/assets/tokens.config.example.json',
       '--out',
       tokensDir,
     ]);
@@ -179,7 +179,7 @@ test('buildTokens fails closed when required token is missing', async () => {
     const outDir = join(dir, 'out');
     runGenerate([
       '--spec',
-      'src/skills/design-tokens/assets/style-spec.example.json',
+      'src/skills/design-tokens/assets/tokens.config.example.json',
       '--out',
       tokensDir,
     ]);

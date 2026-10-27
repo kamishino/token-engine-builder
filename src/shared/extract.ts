@@ -1,6 +1,6 @@
 /**
  * extract — scan an existing project (CSS/SCSS/JSON/JS/TS/HTML) for color,
- * font, and radius signals and write a candidate style-spec.json.
+ * font, and radius signals and write a candidate tokens.config.json.
  *
  * Extraction is evidence, not migration: nothing scanned is modified, and
  * the candidate must pass design-tokens read-back before generation runs.
@@ -711,7 +711,7 @@ export async function extractSpec(opts: ExtractSpecOptions): Promise<ExtractSpec
     rootArg,
     urlArg,
     htmlArg,
-    outArg = 'style-spec.json',
+    outArg = 'tokens.config.json',
     auditBaseline = false,
     outBaselineArg,
     force = false,
@@ -803,7 +803,7 @@ export async function extractSpec(opts: ExtractSpecOptions): Promise<ExtractSpec
   if (!validation.valid) {
     return {
       code: EXIT.VALIDATION,
-      error: `candidate style-spec validation failed: ${validation.errors.join('; ')}`,
+      error: `candidate tokens config validation failed: ${validation.errors.join('; ')}`,
     };
   }
   for (const warning of validation.warnings) {
@@ -858,7 +858,7 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
   const rootArg = getArg(argv, '--root');
   const urlArg = getArg(argv, '--url');
   const htmlArg = getArg(argv, '--html');
-  const outArg = getArg(argv, '--out', 'style-spec.json');
+  const outArg = getArg(argv, '--out', 'tokens.config.json');
   const auditBaseline = hasFlag(argv, '--audit-baseline');
   const outBaselineArg = getArg(argv, '--out-baseline');
   const force = hasFlag(argv, '--force');

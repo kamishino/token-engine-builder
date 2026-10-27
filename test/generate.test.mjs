@@ -8,12 +8,12 @@ import { specInputHash, TOKENS_MANIFEST_NAME } from '../src/shared/guard.ts';
 import { loadStyleSpec } from '../src/shared/spec.ts';
 import { runGenerate } from '../src/shared/generate.ts';
 
-const exampleSpec = 'src/skills/design-tokens/assets/style-spec.example.json';
+const exampleSpec = 'src/skills/design-tokens/assets/tokens.config.example.json';
 
 test('runGenerate succeeds on clean re-run and refuses tampered write without --force', () => {
   const dir = mkdtempSync(join(tmpdir(), 'generate-refusal-'));
   try {
-    const specPath = join(dir, 'style-spec.json');
+    const specPath = join(dir, 'tokens.config.json');
     writeFileSync(specPath, readFileSync(exampleSpec, 'utf8'), 'utf8');
     const outDir = join(dir, 'tokens');
     assert.equal(runGenerate(['--spec', specPath, '--out', outDir]), 0);
@@ -42,7 +42,7 @@ test('runGenerate writes a manifest whose inputHash matches specInputHash', () =
 test('runGenerate returns 1 when an override has a typo path', () => {
   const dir = mkdtempSync(join(tmpdir(), 'generate-override-typo-'));
   try {
-    const specPath = join(dir, 'style-spec.json');
+    const specPath = join(dir, 'tokens.config.json');
     const specData = JSON.parse(readFileSync(exampleSpec, 'utf8'));
     specData.overrides = {
       light: { 'semantic.color.text.tertiaryy': '{color.neutral.200}' },

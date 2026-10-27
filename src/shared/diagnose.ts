@@ -67,7 +67,7 @@ export function diagnoseDesignSystem(root: string, paths: SystemPaths): Diagnosi
     findings.push({
       id: 'spec-missing',
       severity: 'error',
-      title: 'Missing style-spec.json',
+      title: 'Missing tokens.config.json',
       detail: 'No design token specification was found in the project.',
       evidence: [paths.spec],
       next: 'design-tokens: interview for brand aesthetic or token-engine extract from existing CSS',
@@ -76,8 +76,8 @@ export function diagnoseDesignSystem(root: string, paths: SystemPaths): Diagnosi
     findings.push({
       id: 'spec-invalid',
       severity: 'error',
-      title: 'Invalid style-spec.json',
-      detail: state.spec.error ?? 'style-spec.json failed validation',
+      title: 'Invalid tokens.config.json',
+      detail: state.spec.error ?? 'tokens.config.json failed validation',
       evidence: [state.spec.error ?? paths.spec],
       next: 'design-tokens: review and correct tokens.config.json schema errors',
     });
@@ -85,7 +85,7 @@ export function diagnoseDesignSystem(root: string, paths: SystemPaths): Diagnosi
     findings.push({
       id: 'spec-warnings',
       severity: 'warning',
-      title: 'style-spec.json contains design warnings',
+      title: 'tokens.config.json contains design warnings',
       detail: 'The specification carries warnings (e.g. out-of-gamut anchor or non-catalog name).',
       evidence: state.spec.warnings,
       next: 'token-engine generate: review printed warnings during token generation',
@@ -220,8 +220,8 @@ export function diagnoseDesignSystem(root: string, paths: SystemPaths): Diagnosi
     findings.push({
       id: `binding-${state.binding}`,
       severity: 'error',
-      title: `Token tree does not match style-spec.json (${state.binding})`,
-      detail: 'The tokens were generated from a different or stale style-spec.json.',
+      title: `Token tree does not match tokens.config.json (${state.binding})`,
+      detail: 'The tokens were generated from a different or stale tokens.config.json.',
       evidence: [paths.spec, paths.tokens],
       next: 'token-engine generate: run token-engine generate --spec tokens.config.json --out tokens --force',
     });

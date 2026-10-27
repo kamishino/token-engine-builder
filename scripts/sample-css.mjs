@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Generate sample CSS from the example style-spec via the built skill bundles,
+ * Generate sample CSS from the example tokens config via the built skill bundles,
  * diff it against the checked-in gold standards, then lint it with stylelint.
  * Temp dir is removed afterwards; paths here use forward slashes because the
  * bundled Style Dictionary glob layer needs them.
@@ -59,7 +59,7 @@ export function runSampleCss({ root = rootDir } = {}) {
   }
 
   const cliScript = 'dist/cli/token-engine.mjs';
-  const exampleSpec = join(rootDir, 'dist/design-tokens/assets/style-spec.example.json').replaceAll('\\', '/');
+  const exampleSpec = join(rootDir, 'dist/design-tokens/assets/tokens.config.example.json').replaceAll('\\', '/');
 
   try {
     run(cliScript, [

@@ -11,7 +11,7 @@ import { publishCssOutputs } from '../src/shared/guard.ts';
 import { loadStyleSpec } from '../src/shared/spec.ts';
 import { runBuild } from '../src/shared/build.ts';
 test('guideFromSpec maps palette roles and typography to DESIGN.md guide data', () => {
-  const spec = loadStyleSpec('src/skills/design-tokens/assets/style-spec.example.json').spec;
+  const spec = loadStyleSpec('src/skills/design-tokens/assets/tokens.config.example.json').spec;
   const guide = guideFromSpec(spec);
   const primary = spec.palette.find((entry) => entry.role === 'primary');
   const secondary = spec.palette.find((entry) => entry.role === 'secondary');
@@ -71,7 +71,7 @@ test('runBuild supports --theme all, --selector, --package, and emits typed TS/J
     const { runGenerate } = await import('../src/shared/generate.ts');
     runGenerate([
       '--spec',
-      'src/skills/design-tokens/assets/style-spec.example.json',
+      'src/skills/design-tokens/assets/tokens.config.example.json',
       '--out',
       tokensDir,
     ]);
@@ -127,7 +127,7 @@ test('runBuild single theme succeeds from tokens directory outside process.cwd()
     const { runGenerate } = await import('../src/shared/generate.ts');
     runGenerate([
       '--spec',
-      'src/skills/design-tokens/assets/style-spec.example.json',
+      'src/skills/design-tokens/assets/tokens.config.example.json',
       '--out',
       tokensDir,
     ]);

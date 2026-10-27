@@ -88,7 +88,7 @@ export interface PlannedTheme {
 export function planThemes(spec: StyleSpec): PlannedTheme[] {
   const stepCount = spec.rampSteps ?? 11;
   const primaryEntry = spec.palette.find((entry) => entry.role === 'primary');
-  if (primaryEntry === undefined) throw new Error('style-spec palette has no primary role');
+  if (primaryEntry === undefined) throw new Error('tokens config palette has no primary role');
   const rampSteps = Object.keys(buildRamp(primaryEntry.anchor, stepCount)).map(Number);
   const pickStep = (target: number): number =>
     rampSteps.reduce((best, step) =>

@@ -23,7 +23,7 @@ test('runExtract extracts palette with primary, secondary, and accent roles from
       'utf8',
     );
 
-    const outSpecPath = join(dir, 'style-spec.json');
+    const outSpecPath = join(dir, 'tokens.config.json');
     const exitCode = await runExtract(['--root', dir, '--out', outSpecPath, '--force']);
 
     assert.equal(exitCode, 0);
@@ -41,7 +41,7 @@ test('runExtract extracts palette with primary, secondary, and accent roles from
 test('runExtract returns 1 on project with no color signals without terminating process', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'extract-empty-'));
   try {
-    const outSpecPath = join(dir, 'style-spec.json');
+    const outSpecPath = join(dir, 'tokens.config.json');
     const exitCode = await runExtract(['--root', dir, '--out', outSpecPath, '--force']);
     assert.equal(exitCode, 1);
   } finally {
@@ -64,7 +64,7 @@ test('runExtract emits harmony analogous when secondary and accent are synthesiz
       'utf8',
     );
 
-    const outSpecPath = join(dir, 'style-spec.json');
+    const outSpecPath = join(dir, 'tokens.config.json');
     const exitCode = await runExtract(['--root', dir, '--out', outSpecPath, '--force']);
 
     assert.equal(exitCode, 0);
@@ -98,7 +98,7 @@ test('runExtract with --audit-baseline generates pre-audit JSON and Markdown rep
       'utf8',
     );
 
-    const outSpecPath = join(dir, 'style-spec.json');
+    const outSpecPath = join(dir, 'tokens.config.json');
     const exitCode = await runExtract([
       '--root',
       dir,

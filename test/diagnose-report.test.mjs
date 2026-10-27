@@ -7,7 +7,7 @@ import test from 'node:test';
 import { runDiagnose } from '../src/shared/diagnose.ts';
 import { runGenerate } from '../src/shared/generate.ts';
 
-const exampleSpec = 'src/skills/design-tokens/assets/style-spec.example.json';
+const exampleSpec = 'src/skills/design-tokens/assets/tokens.config.example.json';
 
 test('runDiagnose --help returns 0', () => {
   assert.equal(runDiagnose(['--help']), 0);
@@ -37,7 +37,7 @@ test('runDiagnose on empty directory prints valid JSON with spec-missing', () =>
 test('runDiagnose on generated tree prints valid JSON with valid spec and present tokens', () => {
   const dir = mkdtempSync(join(tmpdir(), 'diag-script-tree-'));
   try {
-    const specPath = join(dir, 'style-spec.json');
+    const specPath = join(dir, 'tokens.config.json');
     writeFileSync(specPath, readFileSync(exampleSpec, 'utf8'), 'utf8');
     const tokensDir = join(dir, 'tokens');
     assert.equal(runGenerate(['--spec', specPath, '--out', tokensDir]), 0);

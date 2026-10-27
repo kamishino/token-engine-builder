@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -66,21 +66,28 @@ for (const skill of SKILLS) {
     }
   }
 
-  // 4. routing table verification
+  // 4. reference commands verification
   if (skill === 'design-tokens') {
-    const routingPath = join(skillDir, 'references/routing-table.md');
-    if (!existsSync(routingPath)) {
-      fail('design-tokens: missing references/routing-table.md');
+    const refsDir = join(skillDir, 'references');
+    if (!existsSync(refsDir)) {
+      fail('design-tokens: missing references/ directory');
     } else {
-      const routingMd = readFileSync(routingPath, 'utf8');
-      const routeCmds = [
-        ...routingMd.matchAll(/node <([a-z0-9-]+)-root>\/scripts\/([a-z0-9.-]+\.mjs)/g),
-      ];
-      for (const [, target, script] of routeCmds) {
+      const refFiles = readdirSync(refsDir).filter((f) => f.endsWith('.md'));
+      const routeCmds = new Set();
+      for (const refFile of refFiles) {
+        const mdContent = readFileSync(join(refsDir, refFile), 'utf8');
+        for (const [, target, script] of mdContent.matchAll(
+          /node <([a-z0-9-]+)-root>\/scripts\/([a-z0-9.-]+\.mjs)/g,
+        )) {
+          routeCmds.add(`${target}:${script}`);
+        }
+      }
+      for (const entry of routeCmds) {
+        const [target, script] = entry.split(':');
         const targetRoot = target === 'skill' ? skillDir : join(distDir, target);
         const scriptPath = join(targetRoot, 'scripts', script);
         if (!existsSync(scriptPath)) {
-          fail(`design-tokens routing table references missing script: ${scriptPath}`);
+          fail(`design-tokens references point to missing script: ${scriptPath}`);
           continue;
         }
         const res = spawnSync(process.execPath, [scriptPath, '--help'], {
@@ -88,9 +95,9 @@ for (const skill of SKILLS) {
           cwd: distDir,
         });
         if (res.status !== 0 || !res.stdout.includes('Usage:')) {
-          fail(`design-tokens routing table command ${target}/${script} failed (exit ${res.status})`);
+          fail(`design-tokens script reference ${target}/${script} failed (exit ${res.status})`);
         } else {
-          pass(`design-tokens routing table -> ${target}/${script} --help`);
+          pass(`design-tokens script reference -> ${target}/${script} --help`);
         }
       }
     }

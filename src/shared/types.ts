@@ -89,7 +89,7 @@ export interface CustomThemeConfig {
 /** Output of design-tokens interview / token-engine init; input to token-engine generate. */
 export interface StyleSpec {
   name: string;
-  /** Kobayashi style cluster id the anchor was picked from, when resolved (see references/style-clusters.md). */
+  /** Kobayashi style cluster id the anchor was picked from, when resolved (see references/palette.md in the design-tokens skill). */
   cluster?: string;
   /** Provenance only: guidance method the agent used when picking the palette. Generate does not derive colors from it. */
   harmony?: HarmonyMethod;

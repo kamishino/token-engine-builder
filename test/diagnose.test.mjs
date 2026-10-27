@@ -9,7 +9,7 @@ import { runAudit } from '../src/shared/audit.ts';
 import { runBuild } from '../src/shared/build.ts';
 import { runGenerate } from '../src/shared/generate.ts';
 
-const exampleSpec = 'src/skills/design-tokens/assets/style-spec.example.json';
+const exampleSpec = 'src/skills/design-tokens/assets/tokens.config.example.json';
 
 test('diagnoseDesignSystem reports spec-missing and routing nextActions on empty directory', () => {
   const dir = mkdtempSync(join(tmpdir(), 'diag-empty-'));
@@ -33,7 +33,7 @@ test('diagnoseDesignSystem reports spec-missing and routing nextActions on empty
 test('diagnoseDesignSystem reports spec-invalid with scriptless token-style nextAction', () => {
   const dir = mkdtempSync(join(tmpdir(), 'diag-invalid-'));
   try {
-    const specPath = join(dir, 'style-spec.json');
+    const specPath = join(dir, 'tokens.config.json');
     const specData = JSON.parse(readFileSync(exampleSpec, 'utf8'));
     specData.palette.push({
       role: 'primary',
@@ -57,7 +57,7 @@ test('diagnoseDesignSystem reports spec-invalid with scriptless token-style next
 test('diagnoseDesignSystem flags low-contrast override with audit-fail and remedy', () => {
   const dir = mkdtempSync(join(tmpdir(), 'diag-remedy-'));
   try {
-    const specPath = join(dir, 'style-spec.json');
+    const specPath = join(dir, 'tokens.config.json');
     const specData = JSON.parse(readFileSync(exampleSpec, 'utf8'));
     specData.overrides = {
       light: {
@@ -85,7 +85,7 @@ test('diagnoseDesignSystem flags low-contrast override with audit-fail and remed
 test('diagnoseDesignSystem reports healthy tree with no error findings', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'diag-healthy-'));
   try {
-    const specPath = join(dir, 'style-spec.json');
+    const specPath = join(dir, 'tokens.config.json');
     writeFileSync(specPath, readFileSync(exampleSpec, 'utf8'), 'utf8');
 
     const tokensDir = join(dir, 'tokens');
