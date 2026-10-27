@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Standalone smoke-test harness: runs 39 end-to-end scenarios against
+ * Standalone smoke-test harness: runs 44 end-to-end scenarios against
  * freshly built dist/ skill copies in an isolated temporary install root.
  */
 import { spawn, spawnSync } from 'node:child_process';
@@ -9,6 +9,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   symlinkSync,
@@ -21,10 +22,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const distDir = join(root, 'dist');
-const SKILLS = [
-  'design-tokens',
-  'setup-pre-tokens',
-];
+const SKILLS = ['design-tokens', 'setup-pre-tokens'];
 
 if (!existsSync(distDir)) {
   console.error('dist/ directory missing; run npm run build first');
@@ -208,11 +206,34 @@ const CASES = [
         'figma',
       ];
       const dir = work('P1');
+      const helpOutputs = {};
       for (const cmd of subcommands) {
         const res = run(cmd, null, ['--help'], dir);
         expectExit(res, 0, `token-engine ${cmd} --help`);
         expectContains(res.stdout, 'Usage:', `${cmd} usage`);
+        helpOutputs[cmd] = res.stdout;
       }
+      expectContains(helpOutputs['init'], '--spec', 'init --spec');
+      expectContains(helpOutputs['scaffold'], 'none', 'scaffold none');
+      expectContains(helpOutputs['extract'], '--audit-baseline', 'extract --audit-baseline');
+
+      const resRootRaw = spawnSync(process.execPath, [cliEntry, '--help'], {
+        cwd: dir,
+        encoding: 'utf8',
+      });
+      const resRoot = {
+        code: resRootRaw.status ?? 1,
+        stdout: resRootRaw.stdout || '',
+        stderr: resRootRaw.stderr || '',
+      };
+      expectExit(resRoot, 0, 'token-engine --help');
+      expectContains(resRoot.stdout, 'Usage:', 'root usage');
+      expectNotContains(
+        resRoot.stdout,
+        '--audit-baseline',
+        'root usage has no global --audit-baseline',
+      );
+
       const resBundled = runBundled('sync', ['--help'], dir);
       expectExit(resBundled, 0, 'bundled engine sync --help');
       expectContains(resBundled.stdout, 'Usage:', 'bundled engine usage');
@@ -262,6 +283,73 @@ const CASES = [
       }
     },
   },
+  {
+    id: 'P4',
+    title: 'packaging: canonical 3-tier templates mirrored identically to both skills',
+    run: async () => {
+      const expectedTemplateTokens = [
+        'component/alert.tokens.json',
+        'component/avatar.tokens.json',
+        'component/badge.tokens.json',
+        'component/button.tokens.json',
+        'component/card.tokens.json',
+        'component/dialog.tokens.json',
+        'component/input.tokens.json',
+        'component/table.tokens.json',
+        'component/tooltip.tokens.json',
+        'primitive/animation.tokens.json',
+        'primitive/color.tokens.json',
+        'primitive/grid.tokens.json',
+        'primitive/radius.tokens.json',
+        'primitive/shadow.tokens.json',
+        'primitive/spacing.tokens.json',
+        'primitive/typography.tokens.json',
+        'primitive/z-index.tokens.json',
+        'semantic/dark.tokens.json',
+        'semantic/high-contrast.tokens.json',
+        'semantic/light.tokens.json',
+      ];
+
+      for (const skill of SKILLS) {
+        const tokensDir = join(skillsRoot, skill, 'templates', 'tokens');
+        if (!existsSync(tokensDir)) {
+          throw new Error(`expected templates/tokens missing in ${skill}`);
+        }
+        const entries = readdirSync(tokensDir, { recursive: true })
+          .map((p) => p.replace(/\\/g, '/'))
+          .filter((p) => p.endsWith('.tokens.json'))
+          .sort();
+        if (JSON.stringify(entries) !== JSON.stringify(expectedTemplateTokens)) {
+          throw new Error(
+            `template tokens mismatch in ${skill}:\nactual: ${JSON.stringify(entries)}\nexpected: ${JSON.stringify(expectedTemplateTokens)}`,
+          );
+        }
+      }
+
+      for (const relPath of expectedTemplateTokens) {
+        const dtFile = readFileSync(
+          join(skillsRoot, 'design-tokens', 'templates', 'tokens', relPath),
+          'utf8',
+        );
+        const setupFile = readFileSync(
+          join(skillsRoot, 'setup-pre-tokens', 'templates', 'tokens', relPath),
+          'utf8',
+        );
+        if (dtFile !== setupFile) {
+          throw new Error(`template token content diverged between skills: ${relPath}`);
+        }
+      }
+
+      expectFile(
+        join(skillsRoot, 'setup-pre-tokens', 'templates', 'configs', 'sd.config.mjs'),
+        'setup sd.config.mjs',
+      );
+      expectFile(
+        join(skillsRoot, 'setup-pre-tokens', 'templates', 'styles', 'main.scss'),
+        'setup main.scss',
+      );
+    },
+  },
 
   // --- Bundled Engine & Pipeline Seed ---
   {
@@ -273,7 +361,11 @@ const CASES = [
         join(skillsRoot, 'design-tokens/assets/tokens.config.example.json'),
         join(dir, 'tokens.config.json'),
       );
-      const res = runBundled('sync', ['--spec', 'tokens.config.json', '--theme', 'all', '--force'], dir);
+      const res = runBundled(
+        'sync',
+        ['--spec', 'tokens.config.json', '--theme', 'all', '--force'],
+        dir,
+      );
       expectExit(res, 0, 'bundled engine sync');
       expectFile(join(dir, 'build/tokens.css'), 'bundled sync tokens.css');
       expectFile(join(dir, 'build/theme.css'), 'bundled sync theme.css');
@@ -321,7 +413,16 @@ const CASES = [
       const buildRes = run(
         'token-build',
         'build.mjs',
-        ['--tokens', 'tokens', '--out', 'build', '--theme', 'light', '--spec', 'tokens.config.json'],
+        [
+          '--tokens',
+          'tokens',
+          '--out',
+          'build',
+          '--theme',
+          'light',
+          '--spec',
+          'tokens.config.json',
+        ],
         dir,
       );
       expectExit(buildRes, 0, 'seed build light');
@@ -383,6 +484,31 @@ const CASES = [
 
       seedDir = dir;
       seedOk = true;
+    },
+  },
+  {
+    id: 'S2',
+    title: 'sync: engine-only compiler-of-record without sd.config',
+    run: async () => {
+      const dir = work('S2');
+      cpSync(
+        join(skillsRoot, 'design-tokens/assets/tokens.config.example.json'),
+        join(dir, 'tokens.config.json'),
+      );
+      if (existsSync(join(dir, 'sd.config.mjs'))) {
+        throw new Error('sd.config.mjs should not exist in S2 work directory');
+      }
+      const res = runBundled(
+        'sync',
+        ['--spec', 'tokens.config.json', '--force', '--out', 'build/engine', '--theme', 'all'],
+        dir,
+      );
+      expectExit(res, 0, 'sync engine-only');
+      expectFile(join(dir, 'build/engine/tokens.css'), 'engine tokens.css');
+      if (existsSync(join(dir, 'build/tokens.css'))) {
+        throw new Error('build/tokens.css should not exist when sd.config.mjs is absent');
+      }
+      expectFile(join(dir, 'tokens/.token-engine-audit.json'), 'audit stamp');
     },
   },
 
@@ -668,10 +794,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
     title: 'math: compact spec 9-step ramp',
     run: async () => {
       const dir = work('M1');
-      cpSync(
-        join(root, 'test/fixtures/tokens.config.compact.json'),
-        join(dir, 'spec.json'),
-      );
+      cpSync(join(root, 'test/fixtures/tokens.config.compact.json'), join(dir, 'spec.json'));
       const res = run(
         'token-math',
         'generate.mjs',
@@ -733,10 +856,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
     title: 'math: guards (exists, dry-run, tamper force)',
     run: async () => {
       const dir = work('M3');
-      cpSync(
-        join(root, 'test/fixtures/tokens.config.compact.json'),
-        join(dir, 'spec.json'),
-      );
+      cpSync(join(root, 'test/fixtures/tokens.config.compact.json'), join(dir, 'spec.json'));
 
       // 1. First generate
       const res1 = run(
@@ -994,6 +1114,22 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       expectContains(res.stderr, 'tokens dir not found', 'missing tokens error');
     },
   },
+  {
+    id: 'A7',
+    title: 'audit: shipped canonical seed templates pass standalone',
+    run: async () => {
+      const dir = work('A7');
+      cpSync(join(skillsRoot, 'setup-pre-tokens/templates/tokens'), join(dir, 'tokens'), {
+        recursive: true,
+      });
+      const res = run('token-audit', 'audit.mjs', ['--tokens', 'tokens', '--theme', 'both'], dir);
+      expectExit(res, 0, 'seed audit standalone');
+      expectContains(res.stdout, 'audit PASS', 'seed audit pass');
+      expectContains(res.stdout, '[light]', 'seed audit light');
+      expectContains(res.stdout, '[dark]', 'seed audit dark');
+      expectContains(res.stdout, '[high-contrast]', 'seed audit high-contrast');
+    },
+  },
 
   // --- Build Scenarios ---
   {
@@ -1116,7 +1252,15 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       const res = run(
         'token-build',
         'build.mjs',
-        ['--tokens', 'tokens', '--out', 'build-vis', '--visualizer', '--spec', 'tokens.config.json'],
+        [
+          '--tokens',
+          'tokens',
+          '--out',
+          'build-vis',
+          '--visualizer',
+          '--spec',
+          'tokens.config.json',
+        ],
         dir,
       );
       expectExit(res, 0, 'build visualizer');
@@ -1125,6 +1269,24 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       const html = readFileSync(visPath, 'utf8');
       expectContains(html, '<!DOCTYPE html>', 'doctype html');
       expectContains(html, 'Example Brand — Visualizer (light)', 'visualizer title');
+      expectContains(html, '<h2>2. Semantic Colors</h2>', 'semantic colors heading');
+      expectContains(html, '<h2>3. Typography</h2>', 'typography heading');
+      expectContains(html, '<h2>4. Component Specimens</h2>', 'component specimens heading');
+      expectContains(html, 'feedback-danger', 'feedback-danger ramp');
+      expectContains(html, 'Font family:', 'font family line');
+      expectContains(html, '>Aa</span>', 'typography specimen Aa');
+      expectContains(html, 'action.primary', 'action.primary badge');
+      expectContains(html, '{color.cerulean.', 'semantic source column');
+      expectContains(html, 'regular 400', 'weights sample');
+      if (!/#[0-9a-f]{6}\b/i.test(html)) {
+        throw new Error('expected visualizer to contain at least one hex color code');
+      }
+      expectNotContains(html, 'No typography tokens', 'typography tokens should be present');
+      expectNotContains(
+        html,
+        'No semantic color tokens',
+        'semantic color tokens should be present',
+      );
     },
   },
   {
@@ -1175,7 +1337,16 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       const resExists = run(
         'token-build',
         'build.mjs',
-        ['--tokens', 'tokens', '--out', 'build', '--theme', 'light', '--spec', 'tokens.config.json'],
+        [
+          '--tokens',
+          'tokens',
+          '--out',
+          'build',
+          '--theme',
+          'light',
+          '--spec',
+          'tokens.config.json',
+        ],
         dir,
       );
       expectExit(resExists, 3, 'build overwrite refuse');
@@ -1186,7 +1357,16 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       const resTamper = run(
         'token-build',
         'build.mjs',
-        ['--tokens', 'tokens', '--out', 'build', '--theme', 'light', '--spec', 'tokens.config.json'],
+        [
+          '--tokens',
+          'tokens',
+          '--out',
+          'build',
+          '--theme',
+          'light',
+          '--spec',
+          'tokens.config.json',
+        ],
         dir,
       );
       expectExit(resTamper, 3, 'build tamper refuse');
@@ -1553,9 +1733,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
         throw new Error('expected visualizer-missing info finding');
       }
       if (json.nextActions[0]?.skill !== 'diagnose') {
-        throw new Error(
-          `expected nextAction diagnose, got ${json.nextActions[0]?.skill}`,
-        );
+        throw new Error(`expected nextAction diagnose, got ${json.nextActions[0]?.skill}`);
       }
     },
   },
@@ -1630,9 +1808,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
         throw new Error('expected build-missing warning finding');
       }
       if (jsonNoBuild.nextActions[0]?.skill !== 'build') {
-        throw new Error(
-          `expected nextAction build, got ${jsonNoBuild.nextActions[0]?.skill}`,
-        );
+        throw new Error(`expected nextAction build, got ${jsonNoBuild.nextActions[0]?.skill}`);
       }
       // Overrides
       const customSpec = resolve(join(dir, 'custom-spec.json'));
