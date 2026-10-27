@@ -1,0 +1,9 @@
+@use '../abstracts' as *;
+
+body {
+  background-color: $semantic-color-bg-canvas;
+  color: $semantic-color-text-primary;
+
+  // Mirrors font-family.sans in tokens/primitive/typography.tokens.json (Sass cannot read the JSON).
+  font-family: Inter, system-ui, sans-serif;
+}

@@ -16,6 +16,7 @@ import {
   discoverScriptEntries,
   listSkills,
   syncSkillPackages,
+  syncSkillsMirror,
   writeBuildStamp,
 } from './build-engine.mjs';
 
@@ -102,6 +103,12 @@ export function runBuildAll(argv = process.argv.slice(2), { root = rootDir, runV
   for (const skill of [...plan.builtSkills, ...plan.staticSkills]) {
     writeBuildStamp(distDir, skill);
   }
+  const mirrorDir = join(root, 'skills');
+  const allCurrentSkills = [...new Set([...plan.builtSkills, ...plan.staticSkills])];
+  const skillsToMirror = plan.wipe
+    ? allCurrentSkills
+    : plan.requested.filter((s) => allCurrentSkills.includes(s));
+  syncSkillsMirror(distDir, mirrorDir, skillsToMirror, { prune: plan.wipe });
 
   console.log(
     `\n[build] done: ${plan.scriptEntries.length} script(s) across ${plan.builtSkills.length} skill(s) → dist/`,

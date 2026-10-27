@@ -3,3 +3,7 @@ test/fixtures/gold/components.example.md
 test/fixtures/gold/design.example.md
 test/fixtures/gold/shadcn.example.css
 test/fixtures/gold/bootstrap.example.css
+
+# Generated build artifacts and committed mirror
+dist/
+skills/

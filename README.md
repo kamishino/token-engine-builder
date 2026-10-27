@@ -6,12 +6,13 @@ Builds and packages self-contained AI agent skills and a unified CLI for 3-tier 
 
 ## Skills
 
-| Skill                                                    | Type               | What it does                                                                                                            |
-| -------------------------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| [design-tokens](src/skills/design-tokens/SKILL.md)       | **Flagship Skill** | Cognitive design token architecture: discovery, OKLCH scales, dual-gate audit, and framework integration               |
+| Skill                                                    | Type               | What it does                                                                                                                                            |
+| -------------------------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [design-tokens](src/skills/design-tokens/SKILL.md)       | **Flagship Skill** | Cognitive design token architecture: discovery, OKLCH scales, dual-gate audit, and framework integration                                                |
 | [setup-pre-tokens](src/skills/setup-pre-tokens/SKILL.md) | Setup Skill        | Scriptless, hand-invoked step 0: installs/configures formatter, Stylelint, Style Dictionary, Sass 7-1 + BEM and 3-tier token seeds before design-tokens |
 
 All deterministic pipeline operations (`sync`, `init`, `audit`, `build`, `extract`, `generate`, `scaffold`, `route`, `diagnose`, `figma`) are driven by the unified `token-engine` CLI bundled directly inside `design-tokens` (`<skill-root>/scripts/token-engine.mjs`). Inside a checkout of this repo, `npx token-engine` resolves the repo-local `bin`; installed skills bundle the same CLI, and agents must invoke `<skill-root>/scripts/token-engine.mjs` — never `npx`.
+
 ## Where skills install
 
 Agent tools read skills from different folders. Common locations (check your agent's docs):
@@ -55,7 +56,34 @@ The legacy 7 micro-skills (`token-style`, `token-extract`, `token-math`, `token-
 
 Raw values live only in `primitive/`; semantic (per-theme) and component tokens are `{alias}`-only. See `ARCHITECTURE.md` §3.
 
-## Install the skills (release)
+## Install the skills
+
+[![skills.sh](https://skills.sh/b/kamishino/token-engine-builder)](https://skills.sh/kamishino/token-engine-builder)
+
+Install directly to your coding agents across machines using the [`skills`](https://skills.sh) CLI (requires Node `>=22.12`):
+
+```bash
+# Interactive global install — prompts for skills and detects your agents (Claude Code, omp/.agents, Codex, OpenCode, and 75+ more):
+npx skills add kamishino/token-engine-builder -g
+
+# One-shot global install for a specific agent:
+npx skills add kamishino/token-engine-builder --skill design-tokens -g -a claude-code -y
+
+# Project-scoped install (saved into ./.agents/skills or ./.claude/skills and committed with your repo):
+npx skills add kamishino/token-engine-builder --skill '*' -a claude-code -y
+
+# Update installed skills across projects or globally:
+npx skills update
+
+# Remove skills:
+npx skills remove kamishino/token-engine-builder -g
+```
+
+> **Windows tip**: If symlink creation fails due to Windows Developer Mode permissions, re-run with `--copy` to install independent copies instead of symlinks.
+>
+> **Contributor warning**: If you work on this repo locally and use `npm run deploy` (which links `dist/` directly via junctions into `~/.agents/skills`), do not run `npx skills add -g` into the same directory to avoid overwriting live dev symlinks.
+
+### Offline / manual install (release zips)
 
 Download a per-skill zip (`token-engine-design-tokens-v*.zip`, `token-engine-setup-pre-tokens-v*.zip`) or the full bundle (`token-engine-builder-v*.zip`) from the [latest release](https://github.com/kamishino/token-engine-builder/releases/latest), extract into your agent's skills directory (see [Where skills install](#where-skills-install)) — done. Requires Node `>=22.12`; no install step, dependencies are inlined in each bundle.
 
@@ -88,6 +116,7 @@ npx token-engine sync --theme all --selector ":host, :root" --package @tokens
 ```
 
 Outputs generated in one pass:
+
 - `tokens/`: 3-tier DTCG token JSON (`primitive/`, `semantic/`, `component/`).
 - `build/tokens.css`: CSS custom properties with automatic `@media (prefers-color-scheme: dark)` and `[data-theme="dark"]` switching.
 - `build/tokens.js` & `build/tokens.d.ts`: Strongly typed ESM dictionary for Canvas, WebGL, and runtime scripts.

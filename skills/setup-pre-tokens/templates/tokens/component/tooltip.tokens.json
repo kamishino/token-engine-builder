@@ -1,0 +1,13 @@
+{
+  "$description": "Tier 3 — tooltip. Floating contextual information bubble tokens.",
+  "component": {
+    "tooltip": {
+      "bg": { "$value": "{semantic.color.text.primary}", "$type": "color" },
+      "text": { "$value": "{semantic.color.bg.canvas}", "$type": "color" },
+      "radius": { "$value": "{radius.sm}", "$type": "dimension" },
+      "padding-x": { "$value": "{layout.inset.sm}", "$type": "dimension" },
+      "padding-y": { "$value": "{layout.inset.xs}", "$type": "dimension" },
+      "font-size": { "$value": "{font-size.xs}", "$type": "dimension" }
+    }
+  }
+}

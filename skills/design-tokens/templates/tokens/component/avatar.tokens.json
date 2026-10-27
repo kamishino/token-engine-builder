@@ -1,0 +1,13 @@
+{
+  "$description": "Tier 3 — avatar. User profile representation tokens.",
+  "component": {
+    "avatar": {
+      "bg": { "$value": "{semantic.color.bg.subtle}", "$type": "color" },
+      "text": { "$value": "{semantic.color.text.primary}", "$type": "color" },
+      "border": { "$value": "{semantic.color.border.default}", "$type": "color" },
+      "radius": { "$value": "{radius.full}", "$type": "dimension" },
+      "size": { "$value": "{layout.inset.xl}", "$type": "dimension" },
+      "font-size": { "$value": "{font-size.sm}", "$type": "dimension" }
+    }
+  }
+}

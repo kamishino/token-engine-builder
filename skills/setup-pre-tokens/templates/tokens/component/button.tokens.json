@@ -1,0 +1,17 @@
+{
+  "$description": "Tier 3 — button. Aliases to semantic color roles (spacing/radius alias primitives by convention).",
+  "component": {
+    "button": {
+      "bg": { "$value": "{semantic.color.action.primary}", "$type": "color" },
+      "bg-hover": { "$value": "{semantic.color.action.primary-hover}", "$type": "color" },
+      "text": { "$value": "{semantic.color.action.primary-text}", "$type": "color" },
+      "focus-ring": { "$value": "{semantic.color.border.focus}", "$type": "color" },
+      "disabled-bg": { "$value": "{semantic.color.bg.subtle}", "$type": "color" },
+      "disabled-text": { "$value": "{semantic.color.text.disabled}", "$type": "color" },
+      "radius": { "$value": "{radius.md}", "$type": "dimension" },
+      "padding-x": { "$value": "{layout.inset.md}", "$type": "dimension" },
+      "padding-y": { "$value": "{layout.inset.sm}", "$type": "dimension" },
+      "font-size": { "$value": "{font-size.base}", "$type": "dimension" }
+    }
+  }
+}

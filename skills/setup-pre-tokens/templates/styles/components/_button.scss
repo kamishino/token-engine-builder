@@ -1,0 +1,33 @@
+@use '../abstracts' as *;
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: $component-button-padding-y $component-button-padding-x;
+  border-radius: $component-button-radius;
+  font-size: $component-button-font-size;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+
+  &--primary {
+    background-color: $component-button-bg;
+    color: $component-button-text;
+
+    &:hover {
+      background-color: $component-button-bg-hover;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $component-button-focus-ring;
+      outline-offset: 2px;
+    }
+
+    &:disabled {
+      background-color: $component-button-disabled-bg;
+      color: $component-button-disabled-text;
+      cursor: not-allowed;
+    }
+  }
+}

@@ -1,5 +1,11 @@
 export function listSkills(skillsDir: string): string[];
 export function syncSkillPackages(skillsDir: string, distDir: string): void;
+export function syncSkillsMirror(
+  distDir: string,
+  mirrorDir: string,
+  skillNames: string[],
+  options?: { prune?: boolean },
+): void;
 export function discoverSkillEntries(skillsDir: string): Record<string, string>;
 export function discoverScriptEntries(
   skillsDir: string,

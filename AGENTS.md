@@ -11,6 +11,8 @@ TypeScript + Vite (SSR/Node lib mode) builder that packages colocated AI agent s
 - `src/skills/` — flagship cognitive skill `design-tokens` (Matt Pocock model: discovery, Socratic palette, single-pass sync, framework wiring) and prerequisite setup skill `setup-pre-tokens`.
 - `scripts/build-all.mjs` — one Vite pass per skill/CLI so no shared chunk leaks into `dist/`.
 - `vite.config.ts` — entry discovery, `sync-skill-packages` plugin (`SKILL.md` + `templates/` + `assets/` + `examples/` + `references/` mirror, `chmod 0o755`).
+- `skills/` — generated mirror of built `dist/<skill>/` for `npx skills add`; never hand-edit, CI diff-gates it.
+
 ## WHY — intent
 
 Tiers: raw values only in `primitive/`; `semantic/` (per-theme, same paths) and `component/` are `{alias}`-only. `audit.mjs` enforces it — exit 0 ships, exit 1 stops.
@@ -37,7 +39,7 @@ Node `>=22.12`. Pure contracts verified via `npm test` (`node:test` unit tests i
 
 ## Working rules
 
-- Edit source, not the mirror: engine code in `src/shared/` + `src/cli/`, skill content in `src/skills/<skill>/` (`SKILL.md`, `references/`, `assets/`; token templates live in `src/shared/templates/tokens/` and mirror into both skills at build). Never hand-edit `dist/`.
+- Edit source, not the mirror: engine code in `src/shared/` + `src/cli/`, skill content in `src/skills/<skill>/` (`SKILL.md`, `references/`, `assets/`; token templates live in `src/shared/templates/tokens/` and mirror into both skills at build). Never hand-edit `dist/` or `skills/`.
 - Shared code goes in `src/shared/`; skills import it — Rollup inlines it per skill at build time.
 - New CLI flag → update that skill's `SKILL.md` usage line in the same commit.
 - Token schema move → update `src/shared/templates` + `compiler.ts` + audit expectations together.

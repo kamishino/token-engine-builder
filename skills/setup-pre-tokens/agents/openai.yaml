@@ -1,0 +1,5 @@
+interface:
+  display_name: 'Setup Pre-Tokens'
+  short_description: 'Install and configure token/CSS prerequisites before design-tokens'
+policy:
+  allow_implicit_invocation: false

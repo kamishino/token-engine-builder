@@ -1,0 +1,18 @@
+{
+  "$description": "Tier 1 — motion durations and easings (DTCG duration + cubicBezier).",
+  "animation": {
+    "duration": {
+      "$type": "duration",
+      "fast": { "$value": { "value": 150, "unit": "ms" } },
+      "base": { "$value": { "value": 250, "unit": "ms" } },
+      "slow": { "$value": { "value": 400, "unit": "ms" } }
+    },
+    "easing": {
+      "$type": "cubicBezier",
+      "standard": { "$value": [0.2, 0, 0, 1] },
+      "emphasized": { "$value": [0.05, 0.7, 0.1, 1] },
+      "decelerate": { "$value": [0, 0, 0.2, 1] },
+      "accelerate": { "$value": [0.3, 0, 1, 1] }
+    }
+  }
+}

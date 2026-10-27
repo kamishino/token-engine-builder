@@ -13,12 +13,12 @@
   "skills": [
     {
       "name": "design-tokens",
-      "path": "dist/design-tokens",
+      "path": "skills/design-tokens",
       "description": "Design, audit, and refactor W3C design tokens."
     },
     {
       "name": "setup-pre-tokens",
-      "path": "dist/setup-pre-tokens",
+      "path": "skills/setup-pre-tokens",
       "description": "Set up a project's token/CSS prerequisites: formatter, Stylelint, Style Dictionary, Sass 7-1 + BEM, and 3-tier token seeds."
     }
   ]

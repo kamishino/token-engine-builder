@@ -1,0 +1,18 @@
+{
+  "$description": "Tier 3 — input. Aliases only.",
+  "component": {
+    "input": {
+      "bg": { "$value": "{semantic.color.bg.canvas}", "$type": "color" },
+      "text": { "$value": "{semantic.color.text.primary}", "$type": "color" },
+      "border": { "$value": "{semantic.color.border.strong}", "$type": "color" },
+      "focus-border": { "$value": "{semantic.color.border.focus}", "$type": "color" },
+      "error-border": { "$value": "{semantic.color.feedback.danger.text}", "$type": "color" },
+      "disabled-bg": { "$value": "{semantic.color.bg.subtle}", "$type": "color" },
+      "disabled-text": { "$value": "{semantic.color.text.disabled}", "$type": "color" },
+      "radius": { "$value": "{radius.sm}", "$type": "dimension" },
+      "padding-x": { "$value": "{layout.inset.base}", "$type": "dimension" },
+      "padding-y": { "$value": "{layout.inset.sm}", "$type": "dimension" },
+      "font-size": { "$value": "{font-size.base}", "$type": "dimension" }
+    }
+  }
+}

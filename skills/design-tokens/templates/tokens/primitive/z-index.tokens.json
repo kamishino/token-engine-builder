@@ -1,0 +1,13 @@
+{
+  "$description": "Tier 1 — stacking order scale. Gaps leave room for in-between layers without renumbering.",
+  "z-index": {
+    "$type": "number",
+    "base": { "$value": 0 },
+    "raised": { "$value": 10 },
+    "dropdown": { "$value": 100 },
+    "sticky": { "$value": 200 },
+    "overlay": { "$value": 300 },
+    "modal": { "$value": 400 },
+    "toast": { "$value": 500 }
+  }
+}

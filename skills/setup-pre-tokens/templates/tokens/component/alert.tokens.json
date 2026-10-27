@@ -1,0 +1,13 @@
+{
+  "$description": "Tier 3 — alert. Banner and callout container tokens.",
+  "component": {
+    "alert": {
+      "bg": { "$value": "{semantic.color.bg.subtle}", "$type": "color" },
+      "text": { "$value": "{semantic.color.text.primary}", "$type": "color" },
+      "border": { "$value": "{semantic.color.border.default}", "$type": "color" },
+      "icon": { "$value": "{semantic.color.action.primary}", "$type": "color" },
+      "radius": { "$value": "{radius.md}", "$type": "dimension" },
+      "padding": { "$value": "{layout.inset.md}", "$type": "dimension" }
+    }
+  }
+}

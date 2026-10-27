@@ -11,6 +11,7 @@ import {
   listSkills,
   readBuildStamp,
   syncSkillPackages,
+  syncSkillsMirror,
   writeBuildStamp,
 } from '../scripts/build-engine.mjs';
 
@@ -123,6 +124,59 @@ test('syncSkillPackages copies SKILL.md and static directories to dist', () => {
     syncSkillPackages(skillsDir, distDir);
     assert.ok(existsSync(join(distDir, 'alpha', 'SKILL.md')));
     assert.ok(existsSync(join(distDir, 'alpha', 'references', 'x.md')));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+test('syncSkillsMirror copies dist skills to mirror, excludes buildstamp, handles prune and deletion', () => {
+  const root = mkdtempSync(join(tmpdir(), 'sync-mirror-test-'));
+  try {
+    const distDir = join(root, 'dist');
+    const mirrorDir = join(root, 'skills');
+
+    // Setup dist/alpha with SKILL.md, a script, a subfolder, and a .buildstamp
+    mkdirSync(join(distDir, 'alpha', 'scripts'), { recursive: true });
+    mkdirSync(join(distDir, 'alpha', 'references'), { recursive: true });
+    writeFileSync(join(distDir, 'alpha', 'SKILL.md'), '# alpha\n', 'utf8');
+    writeFileSync(join(distDir, 'alpha', 'scripts', 'run.mjs'), 'console.log("run");\n', 'utf8');
+    writeFileSync(join(distDir, 'alpha', 'references', 'guide.md'), '# guide\n', 'utf8');
+    writeFileSync(
+      join(distDir, 'alpha', '.buildstamp'),
+      JSON.stringify({ builtAt: 12345, bundleHash: 'abc' }),
+      'utf8',
+    );
+
+    // Setup dist/beta
+    mkdirSync(join(distDir, 'beta'), { recursive: true });
+    writeFileSync(join(distDir, 'beta', 'SKILL.md'), '# beta\n', 'utf8');
+
+    // Initial sync of both skills with prune: true
+    syncSkillsMirror(distDir, mirrorDir, ['alpha', 'beta'], { prune: true });
+
+    assert.ok(existsSync(join(mirrorDir, 'alpha', 'SKILL.md')));
+    assert.ok(existsSync(join(mirrorDir, 'alpha', 'scripts', 'run.mjs')));
+    assert.ok(existsSync(join(mirrorDir, 'alpha', 'references', 'guide.md')));
+    assert.ok(!existsSync(join(mirrorDir, 'alpha', '.buildstamp')), 'must exclude .buildstamp');
+    assert.ok(existsSync(join(mirrorDir, 'beta', 'SKILL.md')));
+    assert.ok(existsSync(join(mirrorDir, 'README.md')), 'must write skills/README.md');
+
+    // File deleted from dist/alpha/references/guide.md should disappear on re-sync
+    rmSync(join(distDir, 'alpha', 'references', 'guide.md'));
+    syncSkillsMirror(distDir, mirrorDir, ['alpha'], { prune: false });
+    assert.ok(
+      !existsSync(join(mirrorDir, 'alpha', 'references', 'guide.md')),
+      'deleted file must disappear',
+    );
+    // beta remains because prune was false
+    assert.ok(
+      existsSync(join(mirrorDir, 'beta', 'SKILL.md')),
+      'prune:false must keep sibling mirror',
+    );
+
+    // Re-sync with prune: true and only ['alpha'] -> beta must be pruned
+    syncSkillsMirror(distDir, mirrorDir, ['alpha'], { prune: true });
+    assert.ok(!existsSync(join(mirrorDir, 'beta')), 'prune:true must remove unlisted skill');
+    assert.ok(existsSync(join(mirrorDir, 'alpha', 'SKILL.md')), 'alpha must remain');
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

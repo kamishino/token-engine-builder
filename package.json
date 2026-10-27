@@ -26,7 +26,8 @@
     "format:write": "prettier --write .",
     "check": "npm run typecheck && npm run lint && npm run lint:skills && npm run test && npm run build && npm run lint:css",
     "smoke:contract": "node scripts/smoke-skill-contract.mjs",
-    "smoke": "npm run build && node scripts/smoke-all.mjs && node scripts/smoke-skill-contract.mjs && node scripts/smoke-design-tokens.mjs"
+    "smoke:install": "node scripts/smoke-install.mjs",
+    "smoke": "npm run build && node scripts/smoke-all.mjs && node scripts/smoke-skill-contract.mjs && node scripts/smoke-design-tokens.mjs && node scripts/smoke-install.mjs"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.3",
@@ -38,6 +39,7 @@
     "playwright": "^1.64.1",
     "postcss-scss": "^4.0.9",
     "prettier": "^3.9.10",
+    "skills": "^1.7.4",
     "style-dictionary": "^5.7.0",
     "stylelint": "^17.16.0",
     "stylelint-config-standard": "^40.0.0",

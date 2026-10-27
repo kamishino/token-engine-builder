@@ -1,0 +1,5 @@
+interface:
+  display_name: 'Design Tokens'
+  short_description: 'Design, audit, and refactor W3C design tokens'
+policy:
+  allow_implicit_invocation: true

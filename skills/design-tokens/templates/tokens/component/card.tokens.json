@@ -1,0 +1,13 @@
+{
+  "$description": "Tier 3 — card. Aliases only.",
+  "component": {
+    "card": {
+      "bg": { "$value": "{semantic.color.bg.surface}", "$type": "color" },
+      "bg-hover": { "$value": "{semantic.color.bg.raised}", "$type": "color" },
+      "text": { "$value": "{semantic.color.text.primary}", "$type": "color" },
+      "border": { "$value": "{semantic.color.border.strong}", "$type": "color" },
+      "radius": { "$value": "{radius.lg}", "$type": "dimension" },
+      "padding": { "$value": "{layout.inset.lg}", "$type": "dimension" }
+    }
+  }
+}
