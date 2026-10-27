@@ -48,7 +48,7 @@ export interface SemanticColorRole {
   path: string;
   /** Nested keys below `semantic.color`; exactly two levels. */
   keys: readonly [string, string];
-  /** Key in token-math's `THEME_REGISTRY.targets`. */
+  /** Key in target registry. */
   target: string;
 }
 

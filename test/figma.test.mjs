@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import { EXIT } from '../src/shared/exit-codes.ts';
 import { checkTokensProvenance, sha256Hex, TOKENS_MANIFEST_NAME } from '../src/shared/guard.ts';
 import {
   dtcgTokensToFigma,
@@ -11,7 +12,7 @@ import {
   loadTokenTrees,
   runFigma,
   toFigmaFile,
-} from '../src/skills/token-build/scripts/figma.ts';
+} from '../src/shared/figma.ts';
 
 test('dtcgTokensToFigma exports dimension objects to FLOAT and returns loss reports', () => {
   const tree = {
@@ -199,10 +200,10 @@ test('runFigma from-figma import writes provenance and enforces --force on exist
     const manifest = JSON.parse(readFileSync(join(outTokensDir, TOKENS_MANIFEST_NAME), 'utf8'));
     assert.equal(manifest.inputHash, sha256Hex(payloadBytes));
 
-    assert.equal(runFigma(['--from-figma', figmaJsonPath, '--out', outTokensDir]), 1);
+    assert.equal(runFigma(['--from-figma', figmaJsonPath, '--out', outTokensDir]), EXIT.REFUSAL);
 
     writeFileSync(join(outTokensDir, 'primitive', 'figma-imported.tokens.json'), 'tampered', 'utf8');
-    assert.equal(runFigma(['--from-figma', figmaJsonPath, '--out', outTokensDir]), 1);
+    assert.equal(runFigma(['--from-figma', figmaJsonPath, '--out', outTokensDir]), EXIT.REFUSAL);
 
     assert.equal(runFigma(['--from-figma', figmaJsonPath, '--out', outTokensDir, '--force']), 0);
   } finally {

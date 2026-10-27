@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { roleForColorName } from '../src/skills/token-extract/scripts/extract.ts';
+import { roleForColorName } from '../src/shared/extract.ts';
 
 test('roleForColorName classifies both Tailwind naming schemes', () => {
   assert.equal(roleForColorName('primary'), 'primary');

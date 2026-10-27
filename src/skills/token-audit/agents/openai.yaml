@@ -1,3 +1,0 @@
-interface:
-  display_name: 'Token Audit'
-  short_description: 'Dual WCAG 2.1 and APCA contrast gatekeeper and provenance manifest validator'

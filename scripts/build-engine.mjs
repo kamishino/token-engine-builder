@@ -37,11 +37,10 @@ export function syncSkillPackages(skillsDir, distDir) {
       if (file.endsWith('.mjs')) chmodSync(join(outScripts, file), 0o755);
     }
   }
-  const mathTemplates = join(skillsDir, 'token-math', 'templates');
-  if (existsSync(mathTemplates)) {
-    cpSync(mathTemplates, join(distDir, 'cli', 'templates'), { recursive: true });
-    cpSync(mathTemplates, join(distDir, 'templates'), { recursive: true });
-    cpSync(mathTemplates, join(distDir, 'design-tokens', 'templates'), { recursive: true });
+  const sharedTemplates = join(skillsDir, '..', 'shared', 'templates');
+  if (existsSync(sharedTemplates)) {
+    cpSync(sharedTemplates, join(distDir, 'templates'), { recursive: true });
+    cpSync(sharedTemplates, join(distDir, 'design-tokens', 'templates'), { recursive: true });
   }
   const cliOutput = join(distDir, 'cli', 'token-engine.mjs');
   if (existsSync(cliOutput)) {

@@ -11,7 +11,7 @@ disable-model-invocation: true
 
 Prepare a frontend project with self-sufficient token and CSS prerequisites so `tokens:build` passes out-of-the-box, establishing the token foundation `design-tokens` then authors brand decisions on.
 
-## Architecture: Seams & Decoupling
+## Architecture: Seams and Decoupling
 
 Treat the prerequisite foundation as a zero-decision mechanical substrate:
 - **Interface & Implementation**: The `tokens:build` and `lint:styles` scripts, entry outputs (`build/tokens.css`, `build/tokens.dark.css`, `<stylesRoot>/main.scss`), pinned devDependencies, and Sass 7-1 module architecture (`@use`).

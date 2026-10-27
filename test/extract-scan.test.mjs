@@ -12,7 +12,7 @@ import {
   scanFile,
   scanRenderedTarget,
   scanTextColors,
-} from '../src/skills/token-extract/scripts/extract.ts';
+} from '../src/shared/extract.ts';
 
 test('scanFile reads Tailwind v3 and v4 palettes into roles', () => {
   const state = createScanState();
@@ -50,7 +50,7 @@ test('parseDesignFrontmatter reads the machine-readable contract with double or 
   assert.deepEqual(singleQuoted.rounded, { sm: 4, md: 8, lg: 16 });
   assert.equal(singleQuoted.density, 'compact');
 
-  const fixture = readFileSync('src/skills/token-extract/examples/DESIGN.md', 'utf8');
+  const fixture = readFileSync('test/fixtures/DESIGN.md', 'utf8');
   const parsedFixture = parseDesignFrontmatter(fixture, 'DESIGN.md');
   assert.equal(parsedFixture.primary, '#b3541e');
   assert.equal(parsedFixture.secondary, '#2e6f6a');

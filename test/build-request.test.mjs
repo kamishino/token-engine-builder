@@ -4,13 +4,14 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import { EXIT } from '../src/shared/exit-codes.ts';
 import { oklchToHex } from '../src/shared/colors.ts';
 import { guideFromSpec } from '../src/shared/compiler.ts';
 import { publishCssOutputs } from '../src/shared/guard.ts';
 import { loadStyleSpec } from '../src/shared/spec.ts';
-import { runBuild } from '../src/skills/token-build/scripts/build.ts';
+import { runBuild } from '../src/shared/build.ts';
 test('guideFromSpec maps palette roles and typography to DESIGN.md guide data', () => {
-  const spec = loadStyleSpec('src/skills/token-style/assets/style-spec.example.json').spec;
+  const spec = loadStyleSpec('src/skills/design-tokens/assets/style-spec.example.json').spec;
   const guide = guideFromSpec(spec);
   const primary = spec.palette.find((entry) => entry.role === 'primary');
   const secondary = spec.palette.find((entry) => entry.role === 'secondary');
@@ -52,11 +53,11 @@ test('runBuild emits structured diagnostics when tokens directory is missing', a
   console.error = (...args) => messages.push(args.join(' '));
   try {
     const code = await runBuild(['--tokens', '/nonexistent-tokens-dir-test']);
-    assert.equal(code, 1);
+    assert.equal(code, EXIT.USAGE);
     const output = messages.join('\n');
     assert.match(output, /state: missing-tokens/);
-    assert.match(output, /next: token-extract/);
-    assert.match(output, /why: token-build requires/);
+    assert.match(output, /next: token-engine extract/);
+    assert.match(output, /why: token-engine build requires/);
   } finally {
     console.error = originalError;
   }
@@ -67,10 +68,10 @@ test('runBuild supports --theme all, --selector, --package, and emits typed TS/J
   try {
     const tokensDir = join(dir, 'tokens');
     const outDir = join(dir, 'out');
-    const { runGenerate } = await import('../src/skills/token-math/scripts/generate.ts');
+    const { runGenerate } = await import('../src/shared/generate.ts');
     runGenerate([
       '--spec',
-      'src/skills/token-style/assets/style-spec.example.json',
+      'src/skills/design-tokens/assets/style-spec.example.json',
       '--out',
       tokensDir,
     ]);
@@ -113,6 +114,35 @@ test('runBuild supports --theme all, --selector, --package, and emits typed TS/J
     assert.equal(pkgJson.main, './tokens.js');
     assert.equal(pkgJson.types, './tokens.d.ts');
     assert.equal(pkgJson.exports['./css'], './tokens.css');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('runBuild single theme succeeds from tokens directory outside process.cwd()', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'build-external-tokens-'));
+  try {
+    const tokensDir = join(dir, 'tokens');
+    const outDir = join(dir, 'out');
+    const { runGenerate } = await import('../src/shared/generate.ts');
+    runGenerate([
+      '--spec',
+      'src/skills/design-tokens/assets/style-spec.example.json',
+      '--out',
+      tokensDir,
+    ]);
+
+    const code = await runBuild([
+      '--tokens',
+      tokensDir,
+      '--out',
+      outDir,
+      '--theme',
+      'light',
+      '--allow-unaudited',
+    ]);
+    assert.equal(code, 0);
+    assert.ok(existsSync(join(outDir, 'tokens.css')));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

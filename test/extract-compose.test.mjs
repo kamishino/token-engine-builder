@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { composeStyleSpec } from '../src/skills/token-extract/scripts/extract.ts';
+import { composeStyleSpec } from '../src/shared/extract.ts';
 
 test('composeStyleSpec builds a three-role palette from evidence', () => {
   const composed = composeStyleSpec({

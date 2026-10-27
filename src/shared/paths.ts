@@ -23,24 +23,20 @@ export function templatePath(importMetaUrl: string, ...segments: string[]): stri
   const root = skillRoot(importMetaUrl);
   const direct = resolve(root, 'templates', ...segments);
   if (existsSync(direct)) return direct;
-  const fromSkills = resolve(root, 'skills', 'token-math', 'templates', ...segments);
-  if (existsSync(fromSkills)) return fromSkills;
-  const fromMath = resolve(root, 'token-math', 'templates', ...segments);
-  if (existsSync(fromMath)) return fromMath;
-  const fromSiblingMath = resolve(root, '..', 'token-math', 'templates', ...segments);
-  if (existsSync(fromSiblingMath)) return fromSiblingMath;
-  const fromSrc = resolve(root, 'src', 'skills', 'token-math', 'templates', ...segments);
-  if (existsSync(fromSrc)) return fromSrc;
+  const fromShared = resolve(root, 'shared', 'templates', ...segments);
+  if (existsSync(fromShared)) return fromShared;
+  const fromParent = resolve(root, '..', 'templates', ...segments);
+  if (existsSync(fromParent)) return fromParent;
   return direct;
 }
 
 /** The installed folder of a sibling skill (`<skills-dir>/<skillName>`). */
-export function siblingSkillRoot(importMetaUrl: string, skillName: string): string {
+function siblingSkillRoot(importMetaUrl: string, skillName: string): string {
   return resolve(skillRoot(importMetaUrl), '..', skillName);
 }
 
 /** True if the directory belongs to a development/builder worktree. */
-export function isDevelopmentPath(pathStr: string): boolean {
+function isDevelopmentPath(pathStr: string): boolean {
   const normalized = pathStr.replace(/\\/g, '/');
   if (
     normalized.includes('/token-engine-builder/dist') ||

@@ -8,7 +8,7 @@ TypeScript + Vite (SSR/Node lib mode) builder that packages colocated AI agent s
 
 - `src/shared/` — bundled engine: `colors.ts` (OKLCH), `scales.ts` (type/spacing), `compiler.ts` (Style Dictionary v5), `paths.ts` (portable resolution), `types.ts` (DTCG types).
 - `src/cli/` — unified deterministic CLI (`bin/token-engine` → `dist/cli/token-engine.mjs`): single-pass `sync`, `init`, `audit`, `build`, `extract`, `scaffold`.
-- `src/skills/` — flagship cognitive skill `design-tokens` (Matt Pocock model: discovery, Socratic palette, single-pass sync, framework wiring) + 7 legacy micro-skills kept as deprecated compatibility bridges.
+- `src/skills/` — flagship cognitive skill `design-tokens` (Matt Pocock model: discovery, Socratic palette, single-pass sync, framework wiring) and prerequisite setup skill `setup-pre-tokens`.
 - `scripts/build-all.mjs` — one Vite pass per skill/CLI so no shared chunk leaks into `dist/`.
 - `vite.config.ts` — entry discovery, `sync-skill-packages` plugin (`SKILL.md` + `templates/` + `assets/` + `examples/` + `references/` mirror, `chmod 0o755`).
 ## WHY — intent
@@ -40,7 +40,7 @@ Node `>=22.12`. Pure contracts verified via `npm test` (`node:test` unit tests i
 - Edit the colocated skill, not the mirror: `src/skills/<skill>/scripts/*.ts`, templates, assets. Never hand-edit `dist/`.
 - Shared code goes in `src/shared/`; skills import it — Rollup inlines it per skill at build time.
 - New CLI flag → update that skill's `SKILL.md` usage line in the same commit.
-- Token schema move → update `token-math` templates + `compiler.ts` + audit expectations together.
+- Token schema move → update `src/shared/templates` + `compiler.ts` + audit expectations together.
 - Build pipeline move → update `vite.config.ts` + `scripts/build-all.mjs` + `ARCHITECTURE.md` §4 together.
 - Docs never restate `package.json` scripts or `--help` output — point at them.
 - Every user-visible change ships with a changeset file (`.changeset/<name>.md`, patch/minor); `npm run release` consumes them into a version bump.

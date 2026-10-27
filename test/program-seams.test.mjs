@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { EXIT } from '../src/shared/exit-codes.ts';
 import { getArg, isMainModule } from '../src/shared/paths.ts';
-import { runRoute } from '../src/skills/ask-kami/scripts/route.ts';
-import { runDiagnose } from '../src/skills/improve-design-system/scripts/diagnose.ts';
-import { runAudit } from '../src/skills/token-audit/scripts/audit.ts';
-import { runBuild } from '../src/skills/token-build/scripts/build.ts';
-import { runFigma } from '../src/skills/token-build/scripts/figma.ts';
-import { runExtract } from '../src/skills/token-extract/scripts/extract.ts';
-import { runGenerate } from '../src/skills/token-math/scripts/generate.ts';
+import { runAudit } from '../src/shared/audit.ts';
+import { runBuild } from '../src/shared/build.ts';
+import { runDiagnose } from '../src/shared/diagnose.ts';
+import { runExtract } from '../src/shared/extract.ts';
+import { runFigma } from '../src/shared/figma.ts';
+import { runGenerate } from '../src/shared/generate.ts';
+import { runRoute } from '../src/shared/route.ts';
 
 test('isMainModule correctly identifies module execution context', () => {
   assert.equal(isMainModule('file:///nonexistent/target.ts'), false);
@@ -37,7 +38,7 @@ test('runGenerate, runAudit, runBuild, runExtract, runFigma execute through prog
   assert.equal(figmaCode, 0);
 
   const figmaErrCode = runFigma([]);
-  assert.equal(figmaErrCode, 1);
+  assert.equal(figmaErrCode, EXIT.USAGE);
 
   const routeCode = runRoute(['--help']);
   assert.equal(routeCode, 0);

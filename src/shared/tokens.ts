@@ -261,11 +261,40 @@ export function loadTokenTree(
 
   const checkUnresolvedAliases = (): string[] => {
     const unresolved: string[] = [];
-    for (const [path, entry] of flat) {
+    for (const [startPath, entry] of flat) {
       if (typeof entry.value === 'string') {
         const match = ALIAS.exec(entry.value.trim());
-        if (match?.[1] !== undefined && !flat.has(match[1])) {
-          unresolved.push(`${path} → ${match[1]}`);
+        if (match?.[1] !== undefined) {
+          const visited = new Set<string>([startPath]);
+          let current = match[1];
+          const chain = [startPath, current];
+          let depth = 0;
+          while (depth < 16) {
+            if (!flat.has(current)) {
+              unresolved.push(chain.join(' → '));
+              break;
+            }
+            if (visited.has(current)) {
+              unresolved.push(chain.join(' → '));
+              break;
+            }
+            visited.add(current);
+            const targetVal = flat.get(current)?.value;
+            if (typeof targetVal === 'string') {
+              const nextMatch = ALIAS.exec(targetVal.trim());
+              if (nextMatch?.[1] !== undefined) {
+                current = nextMatch[1];
+                chain.push(current);
+                depth++;
+                if (depth >= 16) {
+                  unresolved.push(chain.join(' → '));
+                  break;
+                }
+                continue;
+              }
+            }
+            break;
+          }
         }
       }
     }

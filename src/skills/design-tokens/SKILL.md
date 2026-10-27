@@ -20,9 +20,20 @@ Treat the design token system as a **deep module**:
 - **The Deletion Test**: Deleting the token definitions exposes raw values across dozens of components; keeping them encapsulates styling complexity behind a one-line seam.
 
 Consult sibling references on demand:
-- [`references/engine-and-build.md`](references/engine-and-build.md): Bundled CLI acceleration (`token-engine sync`), compiler-of-record rules, and cognitive fallback workflow.
+- [`references/engine-and-build.md`](references/engine-and-build.md): Bundled CLI acceleration (`token-engine sync`), subcommand capability table, and compiler-of-record rules.
 - [`references/token-math.md`](references/token-math.md): The 11-step OKLCH lightness ramp, chroma scaling curves, and cognitive contrast heuristics.
 - [`references/dtcg-tiers.md`](references/dtcg-tiers.md): The 3-tier W3C DTCG schema (`primitive/`, `semantic/`, `component/`), decoupling invariants, and canonical `tokens.config.json` contract.
+- [`references/style-clusters.md`](references/style-clusters.md): 16 Kobayashi aesthetic clusters and admissible OKLCH anchor bounding boxes.
+- [`references/design-mappings.md`](references/design-mappings.md): Translating qualitative brand vibes into concrete token spec adjustments.
+- [`references/color-naming.md`](references/color-naming.md): The 144-color offline catalog and deterministic naming rules for primitive keys.
+- [`references/color-architecture.md`](references/color-architecture.md): Palette foundation, 6 harmony methods, and feedback role derivations.
+- [`references/discovery-checklist.md`](references/discovery-checklist.md): Pre-interview codebase inspection protocol for brownfield styling.
+- [`references/scales.md`](references/scales.md): Modular typography scale, vertical rhythm grid lines, fluid clamps, and spacing multipliers.
+- [`references/contrast.md`](references/contrast.md): 42 canonical contrast pairs, WCAG 2.1 AA / APCA $|L_c| \ge 60$ floors, and remediation ladder.
+- [`references/heuristics.md`](references/heuristics.md): Brownfield code scoring, candidate ranking rules, and extraction heuristics.
+- [`references/ui-library-profiles.md`](references/ui-library-profiles.md): Mappings for 8 UI libraries (shadcn, bootstrap, primevue, antd, mui, chakra, radix, fluent).
+- [`references/routing-table.md`](references/routing-table.md): Design system state decision matrix and next-action resolution.
+- [`references/report-format.md`](references/report-format.md): Design system diagnostic review report format and proposal scaffolding.
 - [`references/specimen-template.html`](references/specimen-template.html): Standalone HTML specimen scaffold with live theme toggles and contrast badges.
 
 ---
@@ -39,10 +50,12 @@ Inspect repository structure before creating or editing files:
 
 ### 2. Socratic Aesthetic Synthesis
 Translate brand intent into harmonious OKLCH anchors:
-- **Greenfield**: Guide palette selection with mood metaphors and aesthetic clusters.
+- **Greenfield**: Guide palette selection with mood metaphors and aesthetic clusters. Follow [`references/discovery-checklist.md`](references/discovery-checklist.md) for context, then conduct a structured interview (≤7 questions: personality adjectives → cluster via [`references/style-clusters.md`](references/style-clusters.md), primary anchor color, ramp steps [5, 9, 11], typography family + line-height [1.25, 1.5, 1.75], density [`comfortable` vs `compact`], corner radii [sharp 2/4/8, soft 4/8/16, round 8/16/24]). Read back the whole pick (cluster, role, name, OKLCH, reason) before recording into `tokens.config.json` matching `assets/style-spec.example.json`.
 - **Brownfield**: Consolidate mined colors into unified functional roles via semantic intent clustering (collapsing drifting hues into purposeful ramps).
-  - *Engine option*: Run extraction to mine candidate anchors:
+  - *Engine options*: Run extraction to mine candidate anchors from code, a URL, or an HTML file:
     `node <skill-root>/scripts/token-engine.mjs extract --root . --out tokens.config.json --audit-baseline`
+    `node <skill-root>/scripts/token-engine.mjs extract --url <url> --out tokens.config.json`
+    `node <skill-root>/scripts/token-engine.mjs extract --html <file.html> --out tokens.config.json`
 - Propose the consolidated palette for human approval before generating or authoring tokens.
 - **Done when**: The user approves the consolidated palette roles and anchors.
 
@@ -58,7 +71,16 @@ Construct or replace the 3-tier DTCG token hierarchy:
   2. If the project contains `sd.config.mjs`, run the target's build script:
      `<pm> run tokens:build`
      This is the compiler of record for `build/tokens.css`, `build/tokens.dark.css`, and `<stylesRoot>/abstracts/_variables.scss`.
-  3. If sync exits 1 at audit, report failing contrast pairs and adjust anchors in `tokens.config.json`. Never pass `--allow-unaudited`.
+  3. If sync exits 4 at audit, report failing contrast pairs and adjust anchors in `tokens.config.json`. Never pass `--allow-unaudited`.
+  4. *Targeted subcommands*: Run standalone subcommands through the same bundled engine (`node <skill-root>/scripts/token-engine.mjs <cmd>`) when targeted actions are required:
+     - `generate`: scaffold 3-tier tokens without compiling (`generate --spec tokens.config.json --out tokens`).
+     - `audit`: inspect contrast floors, single themes, or delta scorecards (`audit --tokens tokens --theme both --min-ratio 4.5 --min-apca 60 --baseline .pre-audit-baseline.json --json`).
+     - `build`: compile to specific UI profiles or visualizer (`build --tokens tokens --out build --profile shadcn|bootstrap|primevue|antd|mui|chakra|radix|fluent --format all --prefix brand --visualizer`).
+     - `figma`: bidirectional translation with Figma Variables collections (`figma --to-figma tokens --out figma-variables.json` or `figma --from-figma figma-variables.json --out tokens`).
+     - `diagnose`: evaluate design system health and findings (`diagnose --root . --spec tokens.config.json --tokens tokens --build build`).
+     - `init` / `route`: state triage and onboarding (`init --root .` or `route --root . --json`).
+     - `scaffold`: generate companion toolchain configs (`scaffold --root . --formatter prettier --linter stylelint --css native`).
+     See [`references/engine-and-build.md`](references/engine-and-build.md) for flag details and exit codes (0 ok, 2 usage, 3 refusal, 4 audit fail, 5 validation).
 - **Branch B: Cognitive Lane (Zero-Binary Fallback)**:
   1. Author token files directly under `tokens/` per [`references/dtcg-tiers.md`](references/dtcg-tiers.md) and [`references/token-math.md`](references/token-math.md): DTCG object color primitives, all 17 semantic roles + feedback roles (`light.tokens.json`, `dark.tokens.json`), and component tokens.
   2. Compile CSS: run `npm run tokens:build` if `sd.config.mjs` is present, else author `build/tokens.css` directly from resolved variables.

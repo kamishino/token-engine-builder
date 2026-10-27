@@ -275,7 +275,7 @@ async function componentSpecsFormat(args: TokenFormatArgs): Promise<string> {
     '## States\n\n' +
       'Button carries enabled, hover, focus, and disabled states; input carries enabled, focus, error, and disabled; card carries enabled and hover; ' +
       'table carries row-hover; badge, alert, dialog, avatar, and tooltip define surface, border, and typography tokens across light and dark themes. ' +
-      'All foreground, background, and meaningful boundary pairs are contrast-gated by token-audit; disabled states are tokenized here but WCAG-exempt from the audit gate.\n',
+      'All foreground, background, and meaningful boundary pairs are contrast-gated by token-engine audit; disabled states are tokenized here but WCAG-exempt from the audit gate.\n',
   );
   sections.push(
     '## Composite patterns\n\n' +
@@ -341,7 +341,7 @@ async function designMdFormat(args: TokenFormatArgs): Promise<string> {
     });
   const dos = guide?.dos ?? [
     'Bind semantic and layout roles in components, not primitive steps.',
-    'Run token-audit before token-build; ship only on a passing gate.',
+    'Run token-engine audit before token-engine build; ship only on a passing gate.',
   ];
   const donts = guide?.donts ?? [
     'Do not hand-edit generated files (tokens, CSS, this document) — they are provenance-manifest guarded.',
@@ -628,14 +628,6 @@ export function artifactNames(
     if (targetCategory !== undefined && artifact.category !== targetCategory) return false;
     return true;
   }).map((artifact) => artifact.name);
-}
-
-export function artifactPaths(
-  outDir: string,
-  options: { visualizer?: boolean | undefined; format?: 'all' | 'css' | 'ts' | undefined } = {},
-): string[] {
-  const buildPath = outDir.endsWith('/') ? outDir : `${outDir}/`;
-  return artifactNames(options).map((name) => `${buildPath}${name}`);
 }
 
 export interface CompiledOutputs {

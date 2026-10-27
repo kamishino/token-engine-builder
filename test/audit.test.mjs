@@ -4,9 +4,10 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { auditTokens } from '../src/shared/audit-report.ts';
-import { runAudit } from '../src/skills/token-audit/scripts/audit.ts';
-import { runGenerate } from '../src/skills/token-math/scripts/generate.ts';
+import { evaluateAudit as auditTokens } from '../src/shared/audit-report.ts';
+import { runAudit } from '../src/shared/audit.ts';
+import { EXIT } from '../src/shared/exit-codes.ts';
+import { runGenerate } from '../src/shared/generate.ts';
 
 test('runAudit fails closed on empty tokens directory and writes no stamp', () => {
   const dir = mkdtempSync(join(tmpdir(), 'audit-empty-'));
@@ -14,7 +15,7 @@ test('runAudit fails closed on empty tokens directory and writes no stamp', () =
     const tokensDir = join(dir, 'tokens');
     mkdirSync(tokensDir);
     const code = runAudit(['--tokens', tokensDir]);
-    assert.equal(code, 1);
+    assert.equal(code, EXIT.AUDIT);
     assert.equal(existsSync(join(tokensDir, '.token-engine-audit.json')), false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -27,11 +28,11 @@ test('runAudit emits structured diagnostics when tokens directory is missing', (
   console.error = (...args) => messages.push(args.join(' '));
   try {
     const code = runAudit(['--tokens', '/nonexistent-tokens-dir-test']);
-    assert.equal(code, 1);
+    assert.equal(code, EXIT.USAGE);
     const output = messages.join('\n');
     assert.match(output, /state: missing-tokens/);
-    assert.match(output, /next: token-extract/);
-    assert.match(output, /why: token-audit requires/);
+    assert.match(output, /next: token-engine extract/);
+    assert.match(output, /why: token-engine audit requires/);
   } finally {
     console.error = originalError;
   }
@@ -48,7 +49,7 @@ test('runAudit fails closed on theme with missing roles and writes no stamp', ()
       'utf8',
     );
     const code = runAudit(['--tokens', tokensDir]);
-    assert.equal(code, 1);
+    assert.equal(code, EXIT.AUDIT);
     assert.equal(existsSync(join(tokensDir, '.token-engine-audit.json')), false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -61,7 +62,7 @@ test('auditTokens returns a passing report for the generated example tree', () =
     const tokensDir = join(dir, 'tokens');
     runGenerate([
       '--spec',
-      'src/skills/token-style/assets/style-spec.example.json',
+      'src/skills/design-tokens/assets/style-spec.example.json',
       '--out',
       tokensDir,
     ]);
@@ -81,7 +82,7 @@ test('runAudit with --spec checks spec binding and fails on mismatch', () => {
     const specPath = join(dir, 'style-spec.json');
     const changedSpecPath = join(dir, 'style-spec-changed.json');
     const specData = JSON.parse(
-      readFileSync('src/skills/token-style/assets/style-spec.example.json', 'utf8'),
+      readFileSync('src/skills/design-tokens/assets/style-spec.example.json', 'utf8'),
     );
     writeFileSync(specPath, JSON.stringify(specData, null, 2), 'utf8');
     specData.palette[0].anchor.l = 0.55;
@@ -95,7 +96,7 @@ test('runAudit with --spec checks spec binding and fails on mismatch', () => {
     assert.equal(existsSync(join(tokensDir, '.token-engine-audit.json')), true);
 
     // Changed spec -> fail, stamp removed
-    assert.equal(runAudit(['--tokens', tokensDir, '--spec', changedSpecPath]), 1);
+    assert.equal(runAudit(['--tokens', tokensDir, '--spec', changedSpecPath]), EXIT.AUDIT);
     assert.equal(existsSync(join(tokensDir, '.token-engine-audit.json')), false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -107,7 +108,7 @@ test('auditTokens computes remedy suggestions for failed pairs and includes them
   try {
     const specPath = join(dir, 'style-spec.json');
     const specData = JSON.parse(
-      readFileSync('src/skills/token-style/assets/style-spec.example.json', 'utf8'),
+      readFileSync('src/skills/design-tokens/assets/style-spec.example.json', 'utf8'),
     );
     specData.overrides = {
       light: {
@@ -141,7 +142,7 @@ test('auditTokens falls back to background suggestion when no foreground step pa
   try {
     const specPath = join(dir, 'style-spec.json');
     const specData = JSON.parse(
-      readFileSync('src/skills/token-style/assets/style-spec.example.json', 'utf8'),
+      readFileSync('src/skills/design-tokens/assets/style-spec.example.json', 'utf8'),
     );
     specData.overrides = {
       light: {
@@ -175,7 +176,7 @@ test('runAudit with --baseline displays before-vs-after delta scorecard', () => 
     const tokensDir = join(dir, 'tokens');
     runGenerate([
       '--spec',
-      'src/skills/token-style/assets/style-spec.example.json',
+      'src/skills/design-tokens/assets/style-spec.example.json',
       '--out',
       tokensDir,
     ]);
@@ -236,6 +237,62 @@ test('runAudit with --baseline displays before-vs-after delta scorecard', () => 
     assert.ok(output.includes('.btn-primary'));
     assert.ok(output.includes('Fixed by Token Math'));
     assert.ok(output.includes('Maintained'));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('auditTokens fails with code 4 when non-audit component tokens form an alias cycle', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'audit-comp-cycle-'));
+  try {
+    const tokensDir = join(dir, 'tokens');
+    runGenerate([
+      '--spec',
+      'src/skills/design-tokens/assets/style-spec.example.json',
+      '--out',
+      tokensDir,
+    ]);
+
+    // Introduce a component-only alias cycle
+    writeFileSync(
+      join(tokensDir, 'component', 'button.tokens.json'),
+      JSON.stringify({
+        component: {
+          button: {
+            bg: { $value: '{component.button.hoverBg}', $type: 'color' },
+            hoverBg: { $value: '{component.button.bg}', $type: 'color' },
+          },
+        },
+      }),
+      'utf8',
+    );
+
+    const result = runAudit(['--tokens', tokensDir]);
+    assert.equal(result, EXIT.AUDIT);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('auditTokens fails with code 4 when themes have asymmetric semantic token paths', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'audit-parity-'));
+  try {
+    const tokensDir = join(dir, 'tokens');
+    runGenerate([
+      '--spec',
+      'src/skills/design-tokens/assets/style-spec.example.json',
+      '--out',
+      tokensDir,
+    ]);
+
+    // Add extra semantic token only to light theme
+    const lightPath = join(tokensDir, 'semantic', 'light.tokens.json');
+    const lightData = JSON.parse(readFileSync(lightPath, 'utf8'));
+    lightData.semantic.color.action.secondary = '{color.sky.500}';
+    writeFileSync(lightPath, JSON.stringify(lightData, null, 2), 'utf8');
+
+    const result = runAudit(['--tokens', tokensDir, '--theme', 'both']);
+    assert.equal(result, EXIT.AUDIT);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

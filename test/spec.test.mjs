@@ -136,3 +136,42 @@ test('validateStyleSpec warns on non-catalog palette names and passes catalog na
   assert.equal(withCatalog.valid, true);
   assert.ok(!withCatalog.warnings.some((w) => w.includes('is not a vendored catalog color name')));
 });
+
+test('validateStyleSpec accepts layout overrides and rejects non-semantic non-layout prefixes', () => {
+  const validLayout = validateStyleSpec({
+    name: 'Layout Spec',
+    palette: [
+      { role: 'primary', name: 'blue', anchor: { l: 0.5, c: 0.1, h: 250 } },
+      { role: 'secondary', name: 'teal', anchor: { l: 0.5, c: 0.1, h: 180 } },
+      { role: 'accent', name: 'coral', anchor: { l: 0.5, c: 0.1, h: 30 } },
+    ],
+    typography: { fontFamily: 'Inter', baseSizePx: 16, ratio: 1.25 },
+    overrides: {
+      light: {
+        'layout.inset.md': '{spacing.6}',
+      },
+    },
+  });
+  assert.equal(validLayout.valid, true);
+
+  const invalidPrefix = validateStyleSpec({
+    name: 'Invalid Prefix Spec',
+    palette: [
+      { role: 'primary', name: 'blue', anchor: { l: 0.5, c: 0.1, h: 250 } },
+      { role: 'secondary', name: 'teal', anchor: { l: 0.5, c: 0.1, h: 180 } },
+      { role: 'accent', name: 'coral', anchor: { l: 0.5, c: 0.1, h: 30 } },
+    ],
+    typography: { fontFamily: 'Inter', baseSizePx: 16, ratio: 1.25 },
+    overrides: {
+      light: {
+        'color.neutral.500': '{color.blue.500}',
+      },
+    },
+  });
+  assert.equal(invalidPrefix.valid, false);
+  assert.ok(
+    invalidPrefix.errors.some((e) =>
+      e.includes('must start with semantic. or layout. with an alias value'),
+    ),
+  );
+});

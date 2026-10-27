@@ -180,7 +180,7 @@ export interface AuditResult {
   themes: Record<string, AuditReport>;
 }
 
-export function auditTokens(
+export function evaluateAudit(
   tokensDir: string,
   options: {
     theme?: string | undefined;
@@ -199,6 +199,7 @@ export function auditTokens(
       ? discovered
       : [options.theme];
   const reports = new Map<string, AuditReport>();
+  const semanticPathsByTheme = new Map<string, Set<string>>();
 
   for (const themeName of themes) {
     let tree: LoadedTokenTree;
@@ -215,7 +216,36 @@ export function auditTokens(
       });
       continue;
     }
+    const semanticPaths = new Set<string>();
+    for (const [path, entry] of tree.flat) {
+      if (entry.tier === 'semantic' || path.startsWith('semantic.')) {
+        semanticPaths.add(path);
+      }
+    }
+    semanticPathsByTheme.set(themeName, semanticPaths);
     reports.set(themeName, evaluateTheme(tree, floors));
+  }
+
+  if (themes.length > 1 && semanticPathsByTheme.size > 1) {
+    const allSemanticPaths = new Set<string>();
+    for (const paths of semanticPathsByTheme.values()) {
+      for (const p of paths) allSemanticPaths.add(p);
+    }
+    for (const [themeName, paths] of semanticPathsByTheme) {
+      const missing: string[] = [];
+      for (const p of allSemanticPaths) {
+        if (!paths.has(p)) {
+          missing.push(`missing semantic token in theme "${themeName}": ${p}`);
+        }
+      }
+      if (missing.length > 0) {
+        const report = reports.get(themeName);
+        if (report) {
+          report.unresolvedAliases.push(...missing);
+          report.pass = false;
+        }
+      }
+    }
   }
 
   const provenance = checkTokensProvenance(tokensDir);

@@ -1,5 +1,5 @@
 # Generated gold standard: byte-diffed against Style Dictionary output; Prettier would reformat the header comment.
-src/skills/token-build/examples/components.example.md
-src/skills/token-build/examples/design.example.md
-src/skills/token-build/examples/shadcn.example.css
-src/skills/token-build/examples/bootstrap.example.css
+test/fixtures/gold/components.example.md
+test/fixtures/gold/design.example.md
+test/fixtures/gold/shadcn.example.css
+test/fixtures/gold/bootstrap.example.css

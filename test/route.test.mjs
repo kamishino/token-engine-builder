@@ -4,11 +4,11 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { runRoute } from '../src/skills/ask-kami/scripts/route.ts';
-import { runAudit } from '../src/skills/token-audit/scripts/audit.ts';
-import { runGenerate } from '../src/skills/token-math/scripts/generate.ts';
-
-const exampleSpec = 'src/skills/token-style/assets/style-spec.example.json';
+import { EXIT } from '../src/shared/exit-codes.ts';
+import { runRoute } from '../src/shared/route.ts';
+import { runAudit } from '../src/shared/audit.ts';
+import { runGenerate } from '../src/shared/generate.ts';
+const exampleSpec = 'src/skills/design-tokens/assets/style-spec.example.json';
 
 test('runRoute returns 0 and prints missing spec state on empty directory', () => {
   const dir = mkdtempSync(join(tmpdir(), 'route-empty-'));
@@ -23,13 +23,12 @@ test('runRoute returns 0 and prints missing spec state on empty directory', () =
     } finally {
       console.log = originalLog;
     }
-    assert.match(output, /^next: token-style$/m);
+    assert.match(output, /^next: design-tokens$/m);
     assert.match(
       output,
-      /next: token-extract — node .*extract\.mjs --root \. --out style-spec\.json/,
+      /next: extract — node .*token-engine\.mjs extract --root \. --out tokens\.config\.json/,
     );
     assert.doesNotMatch(output, /node \.\/scripts/);
-    assert.doesNotMatch(output, /token-style — .*generate\.mjs/);
     assert.equal(runRoute(['--root', dir, '--json']), 0);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -109,6 +108,43 @@ test('runRoute with --scaffold creates toolchain companion files', () => {
 
     const tailwindImport = readFileSync(join(dir, 'theme.import.css'), 'utf8');
     assert.ok(tailwindImport.includes('@import "tailwindcss";'));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('runRoute with --scaffold refuses when target exists without --force and succeeds with --force', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'route-scaffold-collision-'));
+  try {
+    // Pre-create target file
+    writeFileSync(join(dir, '.prettierrc.json'), '{"preexisting": true}', 'utf8');
+
+    const codeWithoutForce = runRoute([
+      '--root',
+      dir,
+      '--scaffold',
+      '--formatter',
+      'prettier',
+      '--linter',
+      'stylelint',
+      '--css',
+      'tailwind',
+    ]);
+    assert.equal(codeWithoutForce, EXIT.REFUSAL);
+
+    const codeWithForce = runRoute([
+      '--root',
+      dir,
+      '--scaffold',
+      '--formatter',
+      'prettier',
+      '--linter',
+      'stylelint',
+      '--css',
+      'tailwind',
+      '--force',
+    ]);
+    assert.equal(codeWithForce, EXIT.OK);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

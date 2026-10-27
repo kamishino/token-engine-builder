@@ -120,11 +120,6 @@ function entriesFor(skill, dist = distDir) {
   );
   return entries.sort((a, b) => a.arc.localeCompare(b.arc));
 }
-export const SKILL_BUCKETS = {
-  creation: ['token-style', 'token-extract', 'token-math'],
-  governance: ['token-audit', 'token-build'],
-  routing: ['ask-kami', 'improve-design-system'],
-};
 
 export const SBOM_ROOTS = Object.freeze(['colorjs.io', 'style-dictionary']);
 
@@ -199,9 +194,6 @@ export function planRelease(root, version, { keyPresent = false } = {}) {
     artifacts.push({ kind: 'skill', name: `token-engine-${s}-v${version}.zip`, skill: s });
   }
   artifacts.push({ kind: 'bundle', name: `token-engine-builder-v${version}.zip` });
-  for (const bucket of Object.keys(SKILL_BUCKETS)) {
-    artifacts.push({ kind: 'bucket', name: `token-engine-${bucket}-v${version}.zip`, bucket });
-  }
   if (existsSync(join(root, 'package-lock.json'))) {
     artifacts.push({ kind: 'sbom', name: `token-engine-builder-v${version}.cyclonedx.json` });
   }
@@ -304,25 +296,16 @@ export function runPackage(argv = process.argv.slice(2), { root = rootDir } = {}
       console.log(`[package] ${item.skill} → release/${item.name}`);
     } else if (item.kind === 'bundle') {
       const entries = plan.skills.flatMap((skill) => skillEntries.get(skill) ?? []);
-      if (pluginEntry !== null) entries.push(pluginEntry);
-      writeZip(entries, out);
-      artifacts.push(out);
-      console.log(`[package] bundle → release/${item.name}`);
-    } else if (item.kind === 'bucket') {
-      const bucketSkills = SKILL_BUCKETS[item.bucket];
-      const entries = [];
-      for (const skill of bucketSkills) {
-        const skillEntryList = skillEntries.get(skill);
-        if (skillEntryList === undefined) {
-          console.error(`[package] bucket:${item.bucket} missing required skill: ${skill}`);
-          return 1;
-        }
-        entries.push(...skillEntryList);
+      const cliDir = join(currentDistDir, 'cli');
+      if (existsSync(cliDir)) {
+        walk(cliDir, (path) =>
+          entries.push({ path, arc: `cli/${relative(cliDir, path).replaceAll('\\', '/')}` }),
+        );
       }
       if (pluginEntry !== null) entries.push(pluginEntry);
-      writeZip(entries, out);
+      writeZip(entries.sort((a, b) => a.arc.localeCompare(b.arc)), out);
       artifacts.push(out);
-      console.log(`[package] bucket:${item.bucket} → release/${item.name}`);
+      console.log(`[package] bundle → release/${item.name}`);
     } else if (item.kind === 'sbom') {
       const components = sbomComponents(lock, SBOM_ROOTS);
       const sbom = buildSbom({

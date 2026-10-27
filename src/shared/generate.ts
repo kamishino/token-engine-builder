@@ -12,7 +12,8 @@ import {
   specInputHash,
   writeTokensProvenance,
 } from './guard.js';
-import { templatePath } from './paths.js';
+import { fromCwd, getArg, hasFlag, isMainModule, templatePath } from './paths.js';
+import { usageText } from './cli-flags.js';
 import { loadSpecOrError } from './spec.js';
 import { planTokenFiles, type PlannedTokenFile } from './token-plan.js';
 import type { Logger } from './types.js';
@@ -37,7 +38,7 @@ export function generateTokens(opts: GenerateTokensOptions): GenerateTokensResul
   if (!existsSync(specPath)) {
     return {
       code: EXIT.USAGE,
-      error: `style-spec not found: ${specPath} (run skill token-style or token-engine init first)`,
+      error: `style-spec not found: ${specPath} (run skill design-tokens or token-engine init first)`,
     };
   }
 
@@ -113,4 +114,40 @@ export function generateTokens(opts: GenerateTokensOptions): GenerateTokensResul
   log(`generated 3-tier tokens for "${spec.name}" → ${outDir}`);
 
   return { code: EXIT.OK, specName: spec.name };
+}
+
+export function runGenerate(argv = process.argv.slice(2)): number {
+  if (hasFlag(argv, '--help')) {
+    console.log(usageText('generate'));
+    return 0;
+  }
+
+  const specPath = fromCwd(getArg(argv, '--spec', 'style-spec.json'));
+  const outDir = fromCwd(getArg(argv, '--out', 'tokens'));
+  const force = hasFlag(argv, '--force');
+  const dryRun = hasFlag(argv, '--dry-run');
+
+  const result = generateTokens({
+    specPath,
+    outDir,
+    force,
+    dryRun,
+    log: console.log,
+  });
+
+  if (result.error) {
+    console.error(result.error);
+    return result.code;
+  }
+
+  if (!dryRun) {
+    const tokensOut = getArg(argv, '--out', 'tokens');
+    console.log(`next: token-engine audit --tokens ${tokensOut} --min-ratio 4.5`);
+  }
+
+  return result.code;
+}
+
+if (isMainModule(import.meta.url, 'generate.mjs', 'generate.ts')) {
+  process.exit(runGenerate());
 }

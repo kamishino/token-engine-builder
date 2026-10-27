@@ -1,15 +1,22 @@
 #!/usr/bin/env node
 /**
  * Guard SKILL.md frontmatter, prose consistency, and flag parity:
- * - Every src/skills/<skill>/SKILL.md must carry name, description, license, compatibility, allowed-tools.
- * - Any value containing ": " must be quoted.
- * - Prohibited stale literals (e.g. color.brand.500, manual-edit advice) must not appear in SKILL.md or README.md.
- * - Flags documented in scripts' --help usage strings must appear in the corresponding SKILL.md.
+ * - Every src/skills/<skill>/SKILL.md must conform to the canonical skeleton:
+ *   - Frontmatter allowlist: name, description, license (MIT), compatibility (>=node-22.12), allowed-tools, disable-model-invocation.
+ *   - Any value containing ": " must be quoted.
+ *   - H2 headings exactly in order: Architecture: Seams and Decoupling, Process, Pre-Yield Checklist.
+ *   - Process steps match /^### \d+\. / and contain "**Done when**:".
+ *   - Pre-Yield Checklist contains at least one "- [ ]" item.
+ *   - All relative links exist on disk.
+ *   - agents/openai.yaml exists.
+ *   - No README.md in skill directory; child entries ⊆ {scripts, templates, assets, examples, references, agents}.
+ * - Plugin.json skills match src/skills directories.
+ * - Flags documented in CLI COMMANDS appear in design-tokens documentation.
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SCRIPTS } from '../src/shared/cli-flags.ts';
+import { COMMANDS } from '../src/shared/cli-flags.ts';
 import { isMainModule } from '../src/shared/paths.ts';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -20,6 +27,31 @@ const FORBIDDEN_LITERALS = [
   'Respect the tiers in any manual edit',
   '7 fg/bg role pairs',
 ];
+
+const ALLOWED_FRONTMATTER_KEYS = new Set([
+  'name',
+  'description',
+  'license',
+  'compatibility',
+  'allowed-tools',
+  'disable-model-invocation',
+]);
+
+const EXPECTED_H2_HEADINGS = [
+  'Architecture: Seams and Decoupling',
+  'Process',
+  'Pre-Yield Checklist',
+];
+
+const ALLOWED_SKILL_SUBDIRS = new Set([
+  'scripts',
+  'templates',
+  'assets',
+  'examples',
+  'references',
+  'agents',
+]);
+
 export function runLint({ root = rootDir } = {}) {
   const skillsDir = join(root, 'src', 'skills');
   const failures = [];
@@ -30,17 +62,42 @@ export function runLint({ root = rootDir } = {}) {
       const skillFile = join(skillDir, 'SKILL.md');
       const readmeFile = join(skillDir, 'README.md');
 
+      if (!existsSync(skillFile)) {
+        failures.push(`${entry.name}: missing SKILL.md`);
+        continue;
+      }
+
+      const fail = (reason) => failures.push(`${entry.name}: ${reason}`);
+
       // Check prohibited stale literals
       for (const docFile of [skillFile, readmeFile]) {
         if (!existsSync(docFile)) continue;
         const content = readFileSync(docFile, 'utf8');
         for (const forbidden of FORBIDDEN_LITERALS) {
           if (content.includes(forbidden)) {
-            failures.push(
-              `${entry.name}/${docFile.endsWith('SKILL.md') ? 'SKILL.md' : 'README.md'}: contains forbidden stale literal "${forbidden}"`,
+            fail(
+              `${docFile.endsWith('SKILL.md') ? 'SKILL.md' : 'README.md'} contains forbidden stale literal "${forbidden}"`,
             );
           }
         }
+      }
+
+      // Prohibit README.md in skill package and check child entries
+      for (const sub of readdirSync(skillDir, { withFileTypes: true })) {
+        if (sub.name === 'SKILL.md') continue;
+        if (sub.name === 'README.md') {
+          fail('README.md in skill directory is forbidden (per-skill READMEs are not packaged)');
+          continue;
+        }
+        if (!sub.isDirectory() || !ALLOWED_SKILL_SUBDIRS.has(sub.name)) {
+          fail(`unexpected entry in skill directory: "${sub.name}"`);
+        }
+      }
+
+      // Check agents/openai.yaml existence
+      const openaiYaml = join(skillDir, 'agents', 'openai.yaml');
+      if (!existsSync(openaiYaml)) {
+        fail('agents/openai.yaml is missing');
       }
 
       const skillContent = readFileSync(skillFile, 'utf8');
@@ -48,28 +105,45 @@ export function runLint({ root = rootDir } = {}) {
         /<([a-z0-9-]+)-root>\/scripts\//.test(skillContent) &&
         !skillContent.includes('Never run a command containing literal')
       ) {
-        failures.push(
-          `${entry.name}: command uses a <...-root> placeholder without the literal-execution guard`,
-        );
+        fail('command uses a <...-root> placeholder without the literal-execution guard');
       }
+
       const match = skillContent.match(/^---\n([\s\S]*?)\n---/);
       if (match?.[1] === undefined) {
-        failures.push(`${entry.name}: missing frontmatter block`);
+        fail('missing frontmatter block');
         continue;
       }
+
       const fields = new Map();
       for (const line of match[1].split('\n')) {
         const colon = line.indexOf(':');
         if (colon === -1 || line.startsWith(' ') || line.startsWith('\t')) continue;
         fields.set(line.slice(0, colon).trim(), line.slice(colon + 1).trim());
       }
-      const fail = (reason) => failures.push(`${entry.name}: ${reason}`);
+
+      for (const key of fields.keys()) {
+        if (!ALLOWED_FRONTMATTER_KEYS.has(key)) {
+          fail(
+            `frontmatter key "${key}" is not in the allowed keys: ${[...ALLOWED_FRONTMATTER_KEYS].join(', ')}`,
+          );
+        }
+      }
+
       if (fields.get('name') !== entry.name) fail(`name is ${JSON.stringify(fields.get('name'))}`);
       if (!fields.get('description')) fail('description is missing or empty');
-      if (!fields.get('license'))
+      if (!fields.get('license')) {
         fail('license is missing (Agent Skills spec optional field, required here)');
-      if (!fields.get('compatibility'))
+      } else if (fields.get('license') !== 'MIT') {
+        fail(`license must be "MIT", got ${JSON.stringify(fields.get('license'))}`);
+      }
+      if (!fields.get('compatibility')) {
         fail('compatibility is missing (Agent Skills spec optional field, required here)');
+      } else {
+        const rawComp = fields.get('compatibility');
+        if (rawComp !== '">=node-22.12"' && rawComp !== "'>=node-22.12'") {
+          fail(`compatibility must be ">=node-22.12", got ${JSON.stringify(rawComp)}`);
+        }
+      }
       if (!fields.get('allowed-tools')) {
         fail('allowed-tools is missing (Agent Skills spec space-separated string, required here)');
       }
@@ -81,41 +155,112 @@ export function runLint({ root = rootDir } = {}) {
         if (value.includes(': ') && !quoted) fail(`${key} contains an unquoted ": "`);
       }
 
-      // Flag parity: the declared flag surface must appear in SKILL.md.
-      const scriptsSubDir = join(skillDir, 'scripts');
-      if (existsSync(scriptsSubDir)) {
-        for (const scriptFile of readdirSync(scriptsSubDir)) {
-          if (!scriptFile.endsWith('.ts')) continue;
-          const key = `${entry.name}/scripts/${scriptFile.replace(/\.ts$/, '.mjs')}`;
-          const spec = SCRIPTS[key];
-          if (spec === undefined) {
-            failures.push(
-              `${entry.name}: scripts/${scriptFile}: not declared in src/shared/cli-flags.ts`,
-            );
-            continue;
+      // H2 Headings validation
+      const h2Matches = [...skillContent.matchAll(/^##\s+(.+)$/gm)].map((m) => m[1].trim());
+      if (
+        h2Matches.length !== EXPECTED_H2_HEADINGS.length ||
+        !h2Matches.every((h, i) => h === EXPECTED_H2_HEADINGS[i])
+      ) {
+        fail(
+          `H2 headings must be exactly in order [${EXPECTED_H2_HEADINGS.join(', ')}], got [${h2Matches.join(', ')}]`,
+        );
+      }
+
+      // Process steps and Done when validation
+      const processStart = skillContent.indexOf('## Process');
+      const processEnd = skillContent.indexOf('## Pre-Yield Checklist');
+      if (processStart !== -1 && processEnd !== -1) {
+        const processContent = skillContent.slice(processStart, processEnd);
+        const h3Headings = [...processContent.matchAll(/^###\s+(.+)$/gm)];
+        for (let i = 0; i < h3Headings.length; i++) {
+          const title = h3Headings[i][1].trim();
+          if (!/^### \d+\. /.test(h3Headings[i][0])) {
+            fail(`process step heading "${title}" must match /^### \\d+\\. /`);
           }
-          for (const { flag } of spec.flags) {
-            if (!new RegExp(`${flag}(?![\\w-])`).test(skillContent)) {
-              failures.push(
-                `${entry.name}: SKILL.md missing documentation for script flag "${flag}" (from scripts/${scriptFile})`,
-              );
-            }
+          const startIdx = h3Headings[i].index;
+          const nextIdx =
+            i + 1 < h3Headings.length ? h3Headings[i + 1].index : processContent.length;
+          const sectionBody = processContent.slice(startIdx, nextIdx);
+          if (!sectionBody.includes('**Done when**:')) {
+            fail(`process step "${title}" must contain "**Done when**:"`);
           }
+        }
+      }
+
+      // Pre-Yield Checklist validation
+      if (processEnd !== -1) {
+        const checklistContent = skillContent.slice(processEnd);
+        if (!checklistContent.includes('- [ ]')) {
+          fail('Pre-Yield Checklist must contain at least one "- [ ]" item');
+        }
+      }
+
+      // Relative links validation (strip code blocks first)
+      const contentWithoutCode = skillContent
+        .replace(/```[\s\S]*?```/g, '')
+        .replace(/`[^`\n]+`/g, '');
+      const linkMatches = [...contentWithoutCode.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)];
+      for (const [, target] of linkMatches) {
+        if (
+          target.startsWith('http://') ||
+          target.startsWith('https://') ||
+          target.startsWith('#')
+        ) {
+          continue;
+        }
+        const cleanTarget = target.split('#')[0].split('?')[0];
+        const resolvedTarget = resolve(skillDir, cleanTarget);
+        if (!existsSync(resolvedTarget)) {
+          fail(`relative link target "${target}" does not exist on disk`);
         }
       }
     }
   }
 
-  // Check plugin.json manifest version parity
+  // Flag parity: every declared CLI flag must appear in design-tokens SKILL.md or references/engine-and-build.md
+  const dtSkillMd = join(skillsDir, 'design-tokens', 'SKILL.md');
+  const dtEngineRef = join(skillsDir, 'design-tokens', 'references', 'engine-and-build.md');
+  if (existsSync(dtSkillMd)) {
+    const combinedDocs = [
+      readFileSync(dtSkillMd, 'utf8'),
+      existsSync(dtEngineRef) ? readFileSync(dtEngineRef, 'utf8') : '',
+    ].join('\n');
+
+    for (const [command, spec] of Object.entries(COMMANDS)) {
+      for (const { flag } of spec.flags) {
+        if (!new RegExp(`${flag}(?![\\w-])`).test(combinedDocs)) {
+          failures.push(
+            `design-tokens: missing documentation for CLI flag "${flag}" (command "${command}")`,
+          );
+        }
+      }
+    }
+  }
+
+  // Check plugin.json manifest version parity and skills set equality
   const pluginJsonPath = join(root, '.claude', 'plugin.json');
   const packageJsonPath = join(root, 'package.json');
-  if (existsSync(pluginJsonPath) && existsSync(packageJsonPath)) {
+  if (existsSync(pluginJsonPath)) {
     const pluginJson = JSON.parse(readFileSync(pluginJsonPath, 'utf8'));
-    const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
-    if (pluginJson.version !== packageJson.version) {
-      failures.push(
-        `.claude/plugin.json: version "${pluginJson.version}" drifted from package.json version "${packageJson.version}"`,
-      );
+    if (existsSync(packageJsonPath)) {
+      const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
+      if (pluginJson.version !== packageJson.version) {
+        failures.push(
+          `.claude/plugin.json: version "${pluginJson.version}" drifted from package.json version "${packageJson.version}"`,
+        );
+      }
+    }
+    if (existsSync(skillsDir)) {
+      const pluginSkillNames = (pluginJson.skills ?? []).map((s) => s.name).sort();
+      const actualSkillNames = readdirSync(skillsDir, { withFileTypes: true })
+        .filter((e) => e.isDirectory())
+        .map((e) => e.name)
+        .sort();
+      if (JSON.stringify(pluginSkillNames) !== JSON.stringify(actualSkillNames)) {
+        failures.push(
+          `.claude/plugin.json skills [${pluginSkillNames.join(', ')}] does not match src/skills [${actualSkillNames.join(', ')}]`,
+        );
+      }
     }
   }
 

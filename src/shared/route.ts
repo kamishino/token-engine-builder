@@ -105,19 +105,21 @@ export function routeProject(opts: RouteProjectOptions): RouteProjectResult {
       });
     }
 
+    let hadCollision = false;
     for (const item of scaffolds) {
       if (dryRun) {
         log(`would scaffold ${item.path}`);
       } else {
         if (existsSync(item.path) && !force) {
           console.error(`file exists: ${item.path} (pass --force to overwrite)`);
+          hadCollision = true;
         } else {
           writeFileSync(item.path, item.content, 'utf8');
           log(`scaffolded: ${item.path}`);
         }
       }
     }
-    return { code: EXIT.OK };
+    return { code: hadCollision ? EXIT.REFUSAL : EXIT.OK };
   }
 
   const paths = resolveSystemPaths(root);
@@ -154,7 +156,7 @@ export function routeProject(opts: RouteProjectOptions): RouteProjectResult {
   );
   if (diagnosis.nextActions.length === 0) {
     log(
-      'next: none — the design system is healthy; run improve-design-system for a full review',
+      'next: none — the design system is healthy; run token-engine diagnose for a full review',
     );
     return { code: EXIT.OK };
   }
@@ -180,7 +182,7 @@ export function routeProject(opts: RouteProjectOptions): RouteProjectResult {
 
 export function runRoute(argv = process.argv.slice(2)): number {
   if (hasFlag(argv, '--help')) {
-    console.log(usageText('ask-kami/scripts/route.mjs'));
+    console.log(usageText('route'));
     return 0;
   }
   const root = fromCwd(getArg(argv, '--root', '.'));
@@ -209,5 +211,5 @@ export function runRoute(argv = process.argv.slice(2)): number {
     console.error(result.error);
   }
 
-  return result.code === 0 ? 0 : 1;
+  return result.code;
 }

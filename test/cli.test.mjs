@@ -4,9 +4,10 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import { EXIT } from '../src/shared/exit-codes.ts';
 import { runCli, runSync, usage } from '../src/cli/index.ts';
 
-const exampleSpec = 'src/skills/token-style/assets/style-spec.example.json';
+const exampleSpec = 'src/skills/design-tokens/assets/style-spec.example.json';
 
 test('token-engine usage prints CLI commands and options', () => {
   const text = usage();
@@ -210,6 +211,34 @@ test('runSync --json outputs parseable JSON report', async () => {
     assert.equal(parsed.outDir, outDir);
   } finally {
     console.log = originalLog;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('runCli propagates EXIT taxonomy exit codes', async () => {
+  // 1. Unknown command -> EXIT.USAGE (2)
+  const codeUnknown = await runCli(['unknown-subcommand']);
+  assert.equal(codeUnknown, EXIT.USAGE);
+
+  const dir = mkdtempSync(join(tmpdir(), 'cli-exit-taxonomy-'));
+  try {
+    // 2. runSync on syntactically invalid spec file -> EXIT.VALIDATION (5)
+    const invalidSpecPath = join(dir, 'invalid-spec.json');
+    writeFileSync(invalidSpecPath, '{ "name": "Broken", "palette": [] }', 'utf8');
+    const codeValidation = await runSync(['--spec', invalidSpecPath, '--tokens', join(dir, 'tokens')]);
+    assert.equal(codeValidation, EXIT.VALIDATION);
+
+    // 3. runCli(['audit']) against failing-contrast fixture -> EXIT.AUDIT (4)
+    const validSpecPath = join(dir, 'style-spec.json');
+    const specData = JSON.parse(readFileSync(exampleSpec, 'utf8'));
+    specData.palette[0].anchor.l = 0.95;
+    writeFileSync(validSpecPath, JSON.stringify(specData, null, 2), 'utf8');
+
+    const tokensDir = join(dir, 'failing-tokens');
+    await runCli(['generate', '--spec', validSpecPath, '--out', tokensDir]);
+    const codeAudit = await runCli(['audit', '--tokens', tokensDir]);
+    assert.equal(codeAudit, EXIT.AUDIT);
+  } finally {
     rmSync(dir, { recursive: true, force: true });
   }
 });

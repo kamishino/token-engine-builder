@@ -6,17 +6,12 @@ Builds and packages self-contained AI agent skills and a unified CLI for 3-tier 
 
 ## Skills
 
-| Skill                                                              | Type               | What it does                                                                                                    |
-| ------------------------------------------------------------------ | ------------------ | --------------------------------------------------------------------------------------------------------------- |
-| [design-tokens](src/skills/design-tokens/SKILL.md)                 | **Flagship Skill** | Cognitive design token architecture: discovery, OKLCH scales, dual-gate audit, and framework integration       |
-| [setup-pre-tokens](src/skills/setup-pre-tokens/SKILL.md)         | Setup Skill        | Scriptless, hand-invoked step 0: installs/configures formatter, Stylelint, Style Dictionary, Sass 7-1 + BEM and 3-tier token seeds before design-tokens |
-| [ask-kami](src/skills/ask-kami/SKILL.md)                           | Deprecated Bridge  | Entry router: detects workspace state (spec, tokens, audit, build) → proposes next skill & command              |
-| [token-extract](src/skills/token-extract/SKILL.md)                 | Deprecated Bridge  | Alternative entry: scans an existing project (CSS/tokens/config) → candidate `style-spec.json` with evidence    |
-| [token-style](src/skills/token-style/SKILL.md)                     | Deprecated Bridge  | Discovery scan + Socratic interview → one OKLCH anchor recorded as `style-spec.json` (Kobayashi style clusters) |
-| [token-math](src/skills/token-math/SKILL.md)                       | Deprecated Bridge  | Generates the 3-tier DTCG token tree from the spec (ramps, type, spacing, radius, shadow, z-index, animation)   |
-| [token-audit](src/skills/token-audit/SKILL.md)                     | Deprecated Bridge  | Dual WCAG + APCA gatekeeper — exit 0 ships, exit 1 blocks                                                       |
-| [token-build](src/skills/token-build/SKILL.md)                     | Deprecated Bridge  | Compiles audited tokens to CSS custom properties + Tailwind v4 `@theme` (light / dark / high-contrast)          |
-| [improve-design-system](src/skills/improve-design-system/SKILL.md) | Deprecated Bridge  | Evaluates design system health → finds holes → writes visual REPORT_HTML with resolution steps                  |
+| Skill                                                    | Type               | What it does                                                                                                            |
+| -------------------------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| [design-tokens](src/skills/design-tokens/SKILL.md)       | **Flagship Skill** | Cognitive design token architecture: discovery, OKLCH scales, dual-gate audit, and framework integration               |
+| [setup-pre-tokens](src/skills/setup-pre-tokens/SKILL.md) | Setup Skill        | Scriptless, hand-invoked step 0: installs/configures formatter, Stylelint, Style Dictionary, Sass 7-1 + BEM and 3-tier token seeds before design-tokens |
+
+All deterministic pipeline operations (`sync`, `init`, `audit`, `build`, `extract`, `generate`, `scaffold`, `route`, `diagnose`, `figma`) are driven by the unified `token-engine` CLI bundled directly inside `design-tokens` and executable standalone via `npx token-engine`.
 ## Where skills install
 
 Agent tools read skills from different folders. Common locations (check your agent's docs):
@@ -56,13 +51,13 @@ tokens/ (DTCG JSON)    tokens.css          tokens.js + tokens.d.ts
 (3-tier ramps)         (:host / :root)     (typed ESM dictionary)
 ```
 
-The legacy 5-step serial pipeline (`token-extract` → `token-style` → `token-math` → `token-audit` → `token-build`) is collapsed into `token-engine sync`, while retaining granular CLI subcommands (`init`, `audit`, `build`, `extract`, `scaffold`) for targeted workflows.
+The legacy 7 micro-skills (`token-style`, `token-extract`, `token-math`, `token-audit`, `token-build`, `ask-kami`, `improve-design-system`) were retired in v2.0; their capabilities live in `token-engine` CLI subcommands (`sync`, `init`, `audit`, `build`, `extract`, `generate`, `scaffold`, `route`, `diagnose`, `figma`) and the flagship `design-tokens` skill.
 
 Raw values live only in `primitive/`; semantic (per-theme) and component tokens are `{alias}`-only. See `ARCHITECTURE.md` §3.
 
 ## Install the skills (release)
 
-Download a per-skill zip (or the full bundle) from the [latest release](https://github.com/kamishino/token-engine-builder/releases/latest), extract into your agent's skills directory (see [Where skills install](#where-skills-install)) — done. Requires Node `>=22.12`; no install step, dependencies are inlined in each `scripts/*.mjs`.
+Download a per-skill zip (`token-engine-design-tokens-v*.zip`, `token-engine-setup-pre-tokens-v*.zip`) or the full bundle (`token-engine-builder-v*.zip`) from the [latest release](https://github.com/kamishino/token-engine-builder/releases/latest), extract into your agent's skills directory (see [Where skills install](#where-skills-install)) — done. Requires Node `>=22.12`; no install step, dependencies are inlined in each bundle.
 
 ## Build from source
 
@@ -102,7 +97,7 @@ Outputs generated in one pass:
 ### 2. Standalone Subcommands
 
 ```bash
-# Detect codebase context and initialize style-spec.json:
+# Detect codebase context and initialize tokens.config.json:
 npx token-engine init
 
 # Run dual-gate contrast audit against a pre-audit baseline:

@@ -1,12 +1,7 @@
 {
   "name": "token-engine-builder",
   "version": "1.5.1",
-  "description": "7-skill agent pipeline for 3-tier W3C DTCG design tokens (OKLCH, WCAG+APCA, Style Dictionary v5, UI profiles, routing, and review)",
-  "buckets": {
-    "creation": ["token-style", "token-extract", "token-math"],
-    "governance": ["token-audit", "token-build"],
-    "routing": ["ask-kami", "improve-design-system"]
-  },
+  "description": "AI agent skill pipeline and unified deterministic CLI for 3-tier W3C DTCG design tokens (OKLCH, WCAG+APCA, Style Dictionary v5, UI profiles)",
   "author": {
     "name": "kamishino"
   },
@@ -17,46 +12,14 @@
   },
   "skills": [
     {
-      "name": "token-style",
-      "path": "dist/token-style",
-      "bucket": "creation",
-      "description": "Interview for brand aesthetic, then record the anchor as style-spec.json"
+      "name": "design-tokens",
+      "path": "dist/design-tokens",
+      "description": "Design, audit, and refactor W3C design tokens."
     },
     {
-      "name": "token-extract",
-      "path": "dist/token-extract",
-      "bucket": "creation",
-      "description": "Extract candidate style-spec from existing projects, HTML documents, or rendered URLs"
-    },
-    {
-      "name": "token-math",
-      "path": "dist/token-math",
-      "bucket": "creation",
-      "description": "Deterministic OKLCH ramps and 3-tier DTCG token scaffold generator"
-    },
-    {
-      "name": "token-audit",
-      "path": "dist/token-audit",
-      "bucket": "governance",
-      "description": "Dual WCAG 2.1 and APCA contrast gatekeeper and provenance manifest validator"
-    },
-    {
-      "name": "token-build",
-      "path": "dist/token-build",
-      "bucket": "governance",
-      "description": "Compile DTCG token trees to CSS variables, Tailwind v4 @theme, and UI-library profiles"
-    },
-    {
-      "name": "ask-kami",
-      "path": "dist/ask-kami",
-      "bucket": "routing",
-      "description": "Entry router: detect design-system state and propose the next skill"
-    },
-    {
-      "name": "improve-design-system",
-      "path": "dist/improve-design-system",
-      "bucket": "routing",
-      "description": "Evaluate an existing design system, find holes, and write REPORT_HTML"
+      "name": "setup-pre-tokens",
+      "path": "dist/setup-pre-tokens",
+      "description": "Set up a project's token/CSS prerequisites: formatter, Stylelint, Style Dictionary, Sass 7-1 + BEM, and 3-tier token seeds."
     }
   ]
 }

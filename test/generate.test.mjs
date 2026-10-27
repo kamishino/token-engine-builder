@@ -3,11 +3,12 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import { EXIT } from '../src/shared/exit-codes.ts';
 import { specInputHash, TOKENS_MANIFEST_NAME } from '../src/shared/guard.ts';
 import { loadStyleSpec } from '../src/shared/spec.ts';
-import { runGenerate } from '../src/skills/token-math/scripts/generate.ts';
+import { runGenerate } from '../src/shared/generate.ts';
 
-const exampleSpec = 'src/skills/token-style/assets/style-spec.example.json';
+const exampleSpec = 'src/skills/design-tokens/assets/style-spec.example.json';
 
 test('runGenerate succeeds on clean re-run and refuses tampered write without --force', () => {
   const dir = mkdtempSync(join(tmpdir(), 'generate-refusal-'));
@@ -16,9 +17,9 @@ test('runGenerate succeeds on clean re-run and refuses tampered write without --
     writeFileSync(specPath, readFileSync(exampleSpec, 'utf8'), 'utf8');
     const outDir = join(dir, 'tokens');
     assert.equal(runGenerate(['--spec', specPath, '--out', outDir]), 0);
-    assert.equal(runGenerate(['--spec', specPath, '--out', outDir]), 1);
+    assert.equal(runGenerate(['--spec', specPath, '--out', outDir]), EXIT.REFUSAL);
     writeFileSync(join(outDir, 'primitive', 'color.tokens.json'), 'tampered', 'utf8');
-    assert.equal(runGenerate(['--spec', specPath, '--out', outDir]), 1);
+    assert.equal(runGenerate(['--spec', specPath, '--out', outDir]), EXIT.REFUSAL);
     assert.equal(runGenerate(['--spec', specPath, '--out', outDir, '--force']), 0);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -48,7 +49,7 @@ test('runGenerate returns 1 when an override has a typo path', () => {
     };
     writeFileSync(specPath, JSON.stringify(specData, null, 2), 'utf8');
     const outDir = join(dir, 'tokens');
-    assert.equal(runGenerate(['--spec', specPath, '--out', outDir]), 1);
+    assert.equal(runGenerate(['--spec', specPath, '--out', outDir]), EXIT.VALIDATION);
     assert.equal(existsSync(outDir), false);
   } finally {
     rmSync(dir, { recursive: true, force: true });

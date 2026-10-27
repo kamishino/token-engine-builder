@@ -9,7 +9,7 @@ import { loadThemeTokens, ResolvedDictionary } from '../src/shared/compiler.ts';
 import { profileFileName, UI_PROFILE_IDS } from '../src/shared/profile-registry.ts';
 import { SEMANTIC_ROLE_PATHS } from '../src/shared/roles.ts';
 import { buildUiProfile, renderProfile } from '../src/shared/ui-profiles.ts';
-import { runGenerate } from '../src/skills/token-math/scripts/generate.ts';
+import { runGenerate } from '../src/shared/generate.ts';
 
 test('UI_PROFILE_IDS lists all 8 supported UI profiles', () => {
   assert.equal(UI_PROFILE_IDS.length, 8);
@@ -43,7 +43,7 @@ test('buildUiProfile emits distinct polarized radix blocks for root and dark', a
     const outDir = join(dir, 'out');
     runGenerate([
       '--spec',
-      'src/skills/token-style/assets/style-spec.example.json',
+      'src/skills/design-tokens/assets/style-spec.example.json',
       '--out',
       tokensDir,
     ]);
@@ -67,7 +67,7 @@ test('buildUiProfile builds fluent, antd, mui, chakra, and shadcn profiles succe
     const outDir = join(dir, 'out');
     runGenerate([
       '--spec',
-      'src/skills/token-style/assets/style-spec.example.json',
+      'src/skills/design-tokens/assets/style-spec.example.json',
       '--out',
       tokensDir,
     ]);
@@ -89,7 +89,7 @@ test('renderProfile returns content for all eight profiles without writing files
     const tokensDir = join(dir, 'tokens');
     runGenerate([
       '--spec',
-      'src/skills/token-style/assets/style-spec.example.json',
+      'src/skills/design-tokens/assets/style-spec.example.json',
       '--out',
       tokensDir,
     ]);
@@ -142,7 +142,7 @@ test('every profile id has a filename and a gold example', () => {
     assert.ok(fileName.length > 0);
     const extension = fileName.endsWith('.json') ? 'json' : 'css';
     assert.ok(
-      existsSync(join('src/skills/token-build/examples', `${profile}.example.${extension}`)),
+      existsSync(join('test/fixtures/gold', `${profile}.example.${extension}`)),
       `missing example for ${profile}`,
     );
   }

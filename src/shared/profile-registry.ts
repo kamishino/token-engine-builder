@@ -13,7 +13,7 @@ export const UI_PROFILE_IDS: readonly UiProfileId[] = [
   'fluent',
 ];
 
-export const PROFILE_FILE_NAMES: Record<UiProfileId, string> = {
+const PROFILE_FILE_NAMES: Record<UiProfileId, string> = {
   shadcn: 'shadcn.css',
   bootstrap: 'bootstrap.css',
   primevue: 'primevue.css',

@@ -14,21 +14,18 @@
  */
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { auditTokens } from '../shared/audit.js';
-import { compileTokens } from '../shared/build.js';
+import { auditTokens, runAudit } from '../shared/audit.js';
+import { compileTokens, runBuild } from '../shared/build.js';
 import { usageText } from '../shared/cli-flags.js';
+import { runDiagnose } from '../shared/diagnose.js';
 import { EXIT } from '../shared/exit-codes.js';
 import { runExtract } from '../shared/extract.js';
-import { generateTokens } from '../shared/generate.js';
+import { runFigma } from '../shared/figma.js';
+import { generateTokens, runGenerate } from '../shared/generate.js';
 import { fromCwd, getArg, hasFlag, isMainModule } from '../shared/paths.js';
 import { runRoute } from '../shared/route.js';
 import { detectCodebaseContext } from '../shared/system-state.js';
 import type { Logger } from '../shared/types.js';
-import { runDiagnose } from '../skills/improve-design-system/scripts/diagnose.js';
-import { runAudit } from '../skills/token-audit/scripts/audit.js';
-import { runBuild } from '../skills/token-build/scripts/build.js';
-import { runFigma } from '../skills/token-build/scripts/figma.js';
-import { runGenerate } from '../skills/token-math/scripts/generate.js';
 
 function resolveSpecArg(argv: string[], root: string): string {
   const explicit = getArg(argv, '--spec');
@@ -293,25 +290,25 @@ export async function runCli(argv = process.argv.slice(2)): Promise<number> {
         console.log(SCAFFOLD_USAGE);
         return EXIT.OK;
       case 'audit':
-        console.log(usageText('token-audit/scripts/audit.mjs').replace('audit.mjs', 'token-engine audit'));
+        console.log(usageText('audit'));
         return EXIT.OK;
       case 'build':
-        console.log(usageText('token-build/scripts/build.mjs').replace('build.mjs', 'token-engine build'));
+        console.log(usageText('build'));
         return EXIT.OK;
       case 'extract':
-        console.log(usageText('token-extract/scripts/extract.mjs').replace('extract.mjs', 'token-engine extract'));
+        console.log(usageText('extract'));
         return EXIT.OK;
       case 'generate':
-        console.log(usageText('token-math/scripts/generate.mjs').replace('generate.mjs', 'token-engine generate'));
+        console.log(usageText('generate'));
         return EXIT.OK;
       case 'figma':
-        console.log(usageText('token-build/scripts/figma.mjs').replace('figma.mjs', 'token-engine figma'));
+        console.log(usageText('figma'));
         return EXIT.OK;
       case 'diagnose':
-        console.log(usageText('improve-design-system/scripts/diagnose.mjs').replace('diagnose.mjs', 'token-engine diagnose'));
+        console.log(usageText('diagnose'));
         return EXIT.OK;
       case 'route':
-        console.log(usageText('ask-kami/scripts/route.mjs').replace('route.mjs', 'token-engine route'));
+        console.log(usageText('route'));
         return EXIT.OK;
       default:
         console.error(`unknown command "${command}"\n`);

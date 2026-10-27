@@ -11,25 +11,25 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isMainModule } from '../src/shared/paths.ts';
-import { PROFILE_FILE_NAMES, UI_PROFILE_IDS } from '../src/shared/profile-registry.ts';
+import { profileFileName, UI_PROFILE_IDS } from '../src/shared/profile-registry.ts';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 const BASE_PAIRS = [
-  ['build/tokens.css', 'src/skills/token-build/examples/tokens.example.css'],
-  ['build/theme.css', 'src/skills/token-build/examples/theme.example.css'],
-  ['build/components.md', 'src/skills/token-build/examples/components.example.md'],
-  ['build/DESIGN.md', 'src/skills/token-build/examples/design.example.md'],
+  ['build/tokens.css', 'test/fixtures/gold/tokens.example.css'],
+  ['build/theme.css', 'test/fixtures/gold/theme.example.css'],
+  ['build/components.md', 'test/fixtures/gold/components.example.md'],
+  ['build/DESIGN.md', 'test/fixtures/gold/design.example.md'],
 ];
 
 export const GOLD_PAIRS = [
   ...BASE_PAIRS,
   ...UI_PROFILE_IDS.map((profile) => {
-    const fileName = PROFILE_FILE_NAMES[profile];
+    const fileName = profileFileName(profile);
     const extension = fileName.endsWith('.json') ? 'json' : 'css';
     return [
       `build/profiles/${fileName}`,
-      `src/skills/token-build/examples/${profile}.example.${extension}`,
+      `test/fixtures/gold/${profile}.example.${extension}`,
     ];
   }),
 ];
@@ -58,15 +58,20 @@ export function runSampleCss({ root = rootDir } = {}) {
     });
   }
 
+  const cliScript = 'dist/cli/token-engine.mjs';
+  const exampleSpec = join(rootDir, 'dist/design-tokens/assets/style-spec.example.json').replaceAll('\\', '/');
+
   try {
-    run('dist/token-math/scripts/generate.mjs', [
+    run(cliScript, [
+      'generate',
       '--spec',
-      join(rootDir, 'dist/token-style/assets/style-spec.example.json').replaceAll('\\', '/'),
+      exampleSpec,
       '--out',
       'tokens',
     ]);
-    run('dist/token-audit/scripts/audit.mjs', ['--tokens', 'tokens']);
-    run('dist/token-build/scripts/build.mjs', [
+    run(cliScript, ['audit', '--tokens', 'tokens']);
+    run(cliScript, [
+      'build',
       '--tokens',
       'tokens',
       '--out',
@@ -74,9 +79,10 @@ export function runSampleCss({ root = rootDir } = {}) {
       '--theme',
       'light',
       '--spec',
-      join(rootDir, 'dist/token-style/assets/style-spec.example.json').replaceAll('\\', '/'),
+      exampleSpec,
     ]);
-    run('dist/token-build/scripts/build.mjs', [
+    run(cliScript, [
+      'build',
       '--tokens',
       'tokens',
       '--out',
@@ -85,7 +91,8 @@ export function runSampleCss({ root = rootDir } = {}) {
       'dark',
     ]);
     for (const profile of UI_PROFILE_IDS) {
-      run('dist/token-build/scripts/build.mjs', [
+      run(cliScript, [
+        'build',
         '--tokens',
         'tokens',
         '--out',

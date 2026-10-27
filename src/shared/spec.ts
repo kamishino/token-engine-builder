@@ -170,12 +170,12 @@ export function validateStyleSpec(raw: unknown): StyleSpecValidationResult {
         }
         for (const [path, alias] of Object.entries(paths as Record<string, unknown>)) {
           if (
-            !path.startsWith('semantic.') ||
+            (!path.startsWith('semantic.') && !path.startsWith('layout.')) ||
             typeof alias !== 'string' ||
             !ALIAS_PATTERN.test(alias)
           ) {
             errors.push(
-              `override "${path}" must start semantic. with an alias value like {color.neutral.300}`,
+              `override "${path}" must start with semantic. or layout. with an alias value like {color.neutral.300}`,
             );
           }
         }

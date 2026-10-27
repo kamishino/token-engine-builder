@@ -3,7 +3,7 @@
  * font, and radius signals and write a candidate style-spec.json.
  *
  * Extraction is evidence, not migration: nothing scanned is modified, and
- * the candidate must pass token-style's read-back before token-math runs.
+ * the candidate must pass design-tokens read-back before generation runs.
  */
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, extname, join, relative } from 'node:path';
@@ -794,7 +794,7 @@ export async function extractSpec(opts: ExtractSpecOptions): Promise<ExtractSpec
   if (composed === null) {
     return {
       code: EXIT.GENERIC,
-      error: 'no color signals found — fall back to the token-style interview',
+      error: 'no color signals found — fall back to the design-tokens interview',
     };
   }
   const { spec, notes: frontmatterNotes } = composed;
@@ -845,13 +845,13 @@ export async function extractSpec(opts: ExtractSpecOptions): Promise<ExtractSpec
     }
   }
 
-  log('next: token-style read-back (confirm or veto), then token-math generate');
+  log('next: design-tokens read-back (confirm or veto), then token-engine generate');
   return { code: EXIT.OK, spec };
 }
 
 export async function runExtract(argv = process.argv.slice(2)): Promise<number> {
   if (hasFlag(argv, '--help')) {
-    console.log(usageText('token-extract/scripts/extract.mjs'));
+    console.log(usageText('extract'));
     return 0;
   }
 
@@ -880,5 +880,5 @@ export async function runExtract(argv = process.argv.slice(2)): Promise<number> 
     console.error(result.error);
   }
 
-  return result.code === EXIT.OK ? 0 : 1;
+  return result.code;
 }

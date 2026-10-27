@@ -14,20 +14,31 @@ import {
   writeBuildStamp,
 } from '../scripts/build-engine.mjs';
 
-test('discoverScriptEntries discovers existing skills and scripts', () => {
-  const { scriptEntries, uniqueSkills } = discoverScriptEntries('src/skills');
-  assert.ok(scriptEntries.length >= 5);
-  assert.ok(uniqueSkills.includes('token-math'));
-  assert.ok(uniqueSkills.includes('token-audit'));
-  assert.ok(uniqueSkills.includes('token-build'));
-  assert.ok(uniqueSkills.includes('token-extract'));
+test('discoverScriptEntries discovers skills and scripts in a directory', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'discover-scripts-'));
+  try {
+    const skillA = join(dir, 'skill-a', 'scripts');
+    mkdirSync(skillA, { recursive: true });
+    writeFileSync(join(skillA, 'run.ts'), 'export const a = 1;');
+    const { scriptEntries, uniqueSkills } = discoverScriptEntries(dir);
+    assert.equal(scriptEntries.length, 1);
+    assert.deepEqual(uniqueSkills, ['skill-a']);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('discoverSkillEntries delegates to discoverScriptEntries and returns record map', () => {
-  const entries = discoverSkillEntries('src/skills');
-  assert.ok('token-math/scripts/generate' in entries);
-  assert.ok('token-audit/scripts/audit' in entries);
-  assert.ok('token-build/scripts/build' in entries);
+  const dir = mkdtempSync(join(tmpdir(), 'discover-skill-entries-'));
+  try {
+    const skillA = join(dir, 'skill-a', 'scripts');
+    mkdirSync(skillA, { recursive: true });
+    writeFileSync(join(skillA, 'run.ts'), 'export const a = 1;');
+    const entries = discoverSkillEntries(dir);
+    assert.ok('skill-a/scripts/run' in entries);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 test('computeBundleHash returns empty string on missing directory', () => {
   assert.equal(computeBundleHash('nonexistent-dir'), '');

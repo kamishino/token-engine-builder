@@ -22,17 +22,18 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const distDir = join(root, 'dist');
 const SKILLS = [
-  'ask-kami',
-  'improve-design-system',
-  'token-audit',
-  'token-build',
-  'token-extract',
-  'token-math',
-  'token-style',
+  'design-tokens',
+  'setup-pre-tokens',
 ];
 
 if (!existsSync(distDir)) {
   console.error('dist/ directory missing; run npm run build first');
+  process.exit(1);
+}
+
+const cliEntry = join(distDir, 'cli', 'token-engine.mjs');
+if (!existsSync(cliEntry)) {
+  console.error('dist/cli/token-engine.mjs missing; run npm run build first');
   process.exit(1);
 }
 
@@ -55,6 +56,8 @@ for (const skill of SKILLS) {
   cpSync(join(distDir, skill), join(skillsRoot, skill), { recursive: true });
 }
 
+const dtEngineEntry = join(skillsRoot, 'design-tokens', 'scripts', 'token-engine.mjs');
+
 // 2. Link Playwright packages so copied token-extract can resolve its dynamic import
 const tempNodeModules = join(tempRoot, 'node_modules');
 mkdirSync(tempNodeModules, { recursive: true });
@@ -73,12 +76,20 @@ for (const pkg of ['playwright', 'playwright-core']) {
   }
 }
 
-function scriptPath(skill, scriptName) {
-  return join(skillsRoot, skill, 'scripts', scriptName);
+function toSubcommand(skill, scriptName) {
+  if (scriptName === 'generate.mjs') return 'generate';
+  if (scriptName === 'audit.mjs') return 'audit';
+  if (scriptName === 'build.mjs') return 'build';
+  if (scriptName === 'figma.mjs') return 'figma';
+  if (scriptName === 'extract.mjs') return 'extract';
+  if (scriptName === 'route.mjs') return 'route';
+  if (scriptName === 'diagnose.mjs') return 'diagnose';
+  return skill;
 }
 
 function run(skill, scriptName, args, cwd) {
-  const res = spawnSync(process.execPath, [scriptPath(skill, scriptName), ...args], {
+  const subcmd = toSubcommand(skill, scriptName);
+  const res = spawnSync(process.execPath, [cliEntry, subcmd, ...args], {
     cwd,
     encoding: 'utf8',
     env: { ...process.env, NO_COLOR: '1' },
@@ -91,8 +102,9 @@ function run(skill, scriptName, args, cwd) {
 }
 
 function runAsync(skill, scriptName, args, cwd) {
+  const subcmd = toSubcommand(skill, scriptName);
   return new Promise((resolveResult) => {
-    const child = spawn(process.execPath, [scriptPath(skill, scriptName), ...args], {
+    const child = spawn(process.execPath, [cliEntry, subcmd, ...args], {
       cwd,
       env: { ...process.env, NO_COLOR: '1' },
     });
@@ -112,6 +124,19 @@ function runAsync(skill, scriptName, args, cwd) {
       });
     });
   });
+}
+
+function runBundled(subcmd, args, cwd) {
+  const res = spawnSync(process.execPath, [dtEngineEntry, subcmd, ...args], {
+    cwd,
+    encoding: 'utf8',
+    env: { ...process.env, NO_COLOR: '1' },
+  });
+  return {
+    code: res.status ?? 1,
+    stdout: res.stdout || '',
+    stderr: res.stderr || '',
+  };
 }
 
 function work(id) {
@@ -168,63 +193,69 @@ const CASES = [
   // --- Packaging & Help ---
   {
     id: 'P1',
-    title: 'packaging: all copied skills --help',
+    title: 'packaging: all subcommands --help via CLI and bundled design-tokens engine',
     run: async () => {
-      const scripts = [
-        ['ask-kami', 'route.mjs'],
-        ['improve-design-system', 'diagnose.mjs'],
-        ['token-audit', 'audit.mjs'],
-        ['token-build', 'build.mjs'],
-        ['token-build', 'figma.mjs'],
-        ['token-extract', 'extract.mjs'],
-        ['token-math', 'generate.mjs'],
+      const subcommands = [
+        'sync',
+        'init',
+        'audit',
+        'build',
+        'extract',
+        'generate',
+        'scaffold',
+        'route',
+        'diagnose',
+        'figma',
       ];
       const dir = work('P1');
-      for (const [skill, script] of scripts) {
-        const res = run(skill, script, ['--help'], dir);
-        expectExit(res, 0, `${skill}/${script} --help`);
-        expectContains(res.stdout, 'Usage:', `${skill}/${script} usage`);
-        expectContains(res.stdout, script, `${skill}/${script} script name`);
+      for (const cmd of subcommands) {
+        const res = run(cmd, null, ['--help'], dir);
+        expectExit(res, 0, `token-engine ${cmd} --help`);
+        expectContains(res.stdout, 'Usage:', `${cmd} usage`);
       }
+      const resBundled = runBundled('sync', ['--help'], dir);
+      expectExit(resBundled, 0, 'bundled engine sync --help');
+      expectContains(resBundled.stdout, 'Usage:', 'bundled engine usage');
     },
   },
   {
     id: 'P2',
-    title: 'packaging: token-style assets',
+    title: 'packaging: design-tokens assets, references, and bundled engine',
     run: async () => {
-      const sDir = join(skillsRoot, 'token-style');
+      const sDir = join(skillsRoot, 'design-tokens');
       expectFile(join(sDir, 'SKILL.md'), 'SKILL.md');
       const example = readJson(join(sDir, 'assets/style-spec.example.json'));
       const primaries = example.palette.filter((p) => p.role === 'primary');
       if (primaries.length !== 1) {
         throw new Error(`expected 1 primary in example spec, found ${primaries.length}`);
       }
-      const compact = readJson(join(sDir, 'examples/style-spec.compact.json'));
-      if (compact.rampSteps !== 9) {
-        throw new Error(`expected rampSteps 9 in compact spec, found ${compact.rampSteps}`);
-      }
       for (const ref of [
         'style-clusters.md',
         'design-mappings.md',
         'color-naming.md',
         'discovery-checklist.md',
+        'scales.md',
+        'contrast.md',
+        'heuristics.md',
+        'ui-library-profiles.md',
+        'routing-table.md',
+        'report-format.md',
+        'engine-and-build.md',
+        'token-math.md',
+        'dtcg-tiers.md',
       ]) {
         expectFile(join(sDir, 'references', ref), `references/${ref}`);
       }
+      expectFile(join(sDir, 'scripts/token-engine.mjs'), 'scripts/token-engine.mjs');
     },
   },
   {
     id: 'P3',
-    title: 'packaging: static directories across all skills',
+    title: 'packaging: static directories across surviving skills',
     run: async () => {
       const expectedDirs = {
-        'ask-kami': ['references'],
-        'improve-design-system': ['references'],
-        'token-audit': ['examples', 'references'],
-        'token-build': ['examples', 'references'],
-        'token-extract': ['examples', 'references'],
-        'token-math': ['assets', 'references', 'templates'],
-        'token-style': ['assets', 'examples', 'references'],
+        'design-tokens': ['assets', 'references', 'templates', 'scripts'],
+        'setup-pre-tokens': ['references', 'templates'],
       };
 
       for (const [skill, dirs] of Object.entries(expectedDirs)) {
@@ -239,6 +270,24 @@ const CASES = [
     },
   },
 
+  // --- Bundled Engine & Pipeline Seed ---
+  {
+    id: 'S0',
+    title: 'bundled engine sync end-to-end via dist/design-tokens',
+    run: async () => {
+      const dir = work('S0');
+      cpSync(
+        join(skillsRoot, 'design-tokens/assets/style-spec.example.json'),
+        join(dir, 'tokens.config.json'),
+      );
+      const res = runBundled('sync', ['--spec', 'tokens.config.json', '--theme', 'all', '--force'], dir);
+      expectExit(res, 0, 'bundled engine sync');
+      expectFile(join(dir, 'build/tokens.css'), 'bundled sync tokens.css');
+      expectFile(join(dir, 'build/theme.css'), 'bundled sync theme.css');
+      expectFile(join(dir, 'tokens/.token-engine-audit.json'), 'bundled sync audit stamp');
+    },
+  },
+
   // --- Pipeline Seed ---
   {
     id: 'S1',
@@ -246,7 +295,7 @@ const CASES = [
     run: async () => {
       const dir = work('seed');
       cpSync(
-        join(skillsRoot, 'token-style/assets/style-spec.example.json'),
+        join(skillsRoot, 'design-tokens/assets/style-spec.example.json'),
         join(dir, 'style-spec.json'),
       );
 
@@ -323,7 +372,7 @@ const CASES = [
         'state: spec=valid tokens=present audit=pass build=present',
         'seed route state',
       );
-      expectContains(routeRes.stdout, 'next: improve-design-system', 'seed route next');
+      expectContains(routeRes.stdout, 'next: diagnose', 'seed route next');
 
       // 6. diagnose
       const diagRes = run('improve-design-system', 'diagnose.mjs', ['--root', '.'], dir);
@@ -335,7 +384,7 @@ const CASES = [
           `seed diagnose had unexpected errors: ${errors.map((e) => e.id).join(', ')}`,
         );
       }
-      if (diagJson.nextActions[0]?.skill !== 'improve-design-system') {
+      if (diagJson.nextActions[0]?.skill !== 'diagnose') {
         throw new Error(`seed diagnose unexpected nextAction: ${diagJson.nextActions[0]?.skill}`);
       }
 
@@ -360,7 +409,7 @@ const CASES = [
       expectExit(res, 1, 'empty extract');
       expectContains(
         res.stderr,
-        'no color signals found — fall back to the token-style interview',
+        'no color signals found — fall back to the design-tokens interview',
         'empty extract stderr',
       );
       if (existsSync(join(dir, 'style-spec.json'))) {
@@ -451,7 +500,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       const dir = work('E4');
       const input = join(dir, 'input');
       mkdirSync(input, { recursive: true });
-      cpSync(join(skillsRoot, 'token-extract/examples/DESIGN.md'), join(input, 'DESIGN.md'));
+      cpSync(join(root, 'test/fixtures/DESIGN.md'), join(input, 'DESIGN.md'));
       const res = run(
         'token-extract',
         'extract.mjs',
@@ -576,7 +625,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
         ['--root', 'input', '--out', 'style-spec.json'],
         dir,
       );
-      expectExit(res2, 1, 'extract second no force');
+      expectExit(res2, 3, 'extract second no force');
       expectContains(res2.stderr, 'output exists:', 'output exists refusal');
 
       // 3. Dry-run writes nothing
@@ -611,11 +660,11 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
     run: async () => {
       const dir = work('E8');
       const resRoot = run('token-extract', 'extract.mjs', ['--root', 'missing-dir'], dir);
-      expectExit(resRoot, 1, 'missing root');
+      expectExit(resRoot, 2, 'missing root');
       expectContains(resRoot.stderr, 'root not found', 'root not found error');
 
       const resHtml = run('token-extract', 'extract.mjs', ['--html', 'missing.html'], dir);
-      expectExit(resHtml, 1, 'missing html');
+      expectExit(resHtml, 2, 'missing html');
       expectContains(resHtml.stderr, 'html file not found', 'html not found error');
     },
   },
@@ -627,7 +676,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
     run: async () => {
       const dir = work('M1');
       cpSync(
-        join(skillsRoot, 'token-style/examples/style-spec.compact.json'),
+        join(root, 'test/fixtures/style-spec.compact.json'),
         join(dir, 'spec.json'),
       );
       const res = run(
@@ -653,7 +702,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
     title: 'math: custom theme',
     run: async () => {
       const dir = work('M2');
-      const spec = readJson(join(skillsRoot, 'token-style/examples/style-spec.compact.json'));
+      const spec = readJson(join(root, 'test/fixtures/style-spec.compact.json'));
       spec.themes = {
         midnight: { mode: 'dark', surfaceSteps: { canvas: 100 }, actionStep: 50 },
       };
@@ -692,7 +741,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
     run: async () => {
       const dir = work('M3');
       cpSync(
-        join(skillsRoot, 'token-style/examples/style-spec.compact.json'),
+        join(root, 'test/fixtures/style-spec.compact.json'),
         join(dir, 'spec.json'),
       );
 
@@ -712,7 +761,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
         ['--spec', 'spec.json', '--out', 'tokens'],
         dir,
       );
-      expectExit(res2, 1, 'generate exists');
+      expectExit(res2, 3, 'generate exists');
       expectContains(res2.stderr, 'output exists:', 'output exists refusal');
 
       // 3. Dry-run
@@ -739,7 +788,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
         ['--spec', 'spec.json', '--out', 'tokens'],
         dir,
       );
-      expectExit(resTamper, 1, 'generate tamper refuse');
+      expectExit(resTamper, 3, 'generate tamper refuse');
       expectContains(
         resTamper.stderr,
         'refusing to overwrite hand-edited tokens',
@@ -767,10 +816,10 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
         ['--spec', 'nope.json', '--out', 'tokens'],
         dir,
       );
-      expectExit(resMissing, 1, 'missing spec');
+      expectExit(resMissing, 2, 'missing spec');
       expectContains(resMissing.stderr, 'style-spec not found:', 'missing spec stderr');
 
-      const badSpec = readJson(join(skillsRoot, 'token-style/examples/style-spec.compact.json'));
+      const badSpec = readJson(join(root, 'test/fixtures/style-spec.compact.json'));
       badSpec.palette.push({
         role: 'primary',
         name: 'red',
@@ -784,7 +833,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
         ['--spec', 'bad.json', '--out', 'tokens'],
         dir,
       );
-      expectExit(resBad, 1, 'invalid spec');
+      expectExit(resBad, 5, 'invalid spec');
       expectContains(
         resBad.stderr,
         'palette must contain exactly one primary color',
@@ -847,7 +896,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
     title: 'audit: low contrast override',
     run: async () => {
       const dir = work('A3');
-      const spec = readJson(join(skillsRoot, 'token-style/assets/style-spec.example.json'));
+      const spec = readJson(join(skillsRoot, 'design-tokens/assets/style-spec.example.json'));
       spec.overrides = {
         light: {
           'semantic.color.text.tertiary': '{color.neutral.200}',
@@ -862,7 +911,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
         ['--tokens', 'tokens', '--spec', 'low.json'],
         dir,
       );
-      expectExit(res, 1, 'audit low contrast');
+      expectExit(res, 4, 'audit low contrast');
       expectContains(res.stdout, 'audit FAIL', 'audit FAIL label');
       expectContains(res.stdout, 'FAIL  1.35:1', 'FAIL pair line');
       expectContains(
@@ -901,7 +950,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
         ['--tokens', 'tokens', '--min-ratio', '7'],
         dir,
       );
-      expectExit(resFloor, 1, 'audit ratio 7');
+      expectExit(resFloor, 4, 'audit ratio 7');
       expectContains(resFloor.stdout, 'min WCAG ratio 7:1', 'min ratio 7 header');
 
       // 3. Spec target minWcagRatio 7 fails
@@ -915,7 +964,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
         ['--tokens', 'tokens', '--spec', 'spec7.json'],
         dir,
       );
-      expectExit(resSpecFloor, 1, 'audit spec target 7');
+      expectExit(resSpecFloor, 4, 'audit spec target 7');
       expectContains(resSpecFloor.stdout, 'min WCAG ratio 7:1', 'spec target 7 header');
     },
   },
@@ -933,7 +982,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       writeJson(lightFile, lightData);
 
       const res = run('token-audit', 'audit.mjs', ['--tokens', 'tokens'], dir);
-      expectExit(res, 1, 'audit tamper');
+      expectExit(res, 4, 'audit tamper');
       expectContains(
         res.stdout,
         'FAIL  provenance: changed: semantic/light.tokens.json',
@@ -948,7 +997,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
     run: async () => {
       const dir = work('A6');
       const res = run('token-audit', 'audit.mjs', ['--tokens', 'missing-tokens'], dir);
-      expectExit(res, 1, 'missing tokens');
+      expectExit(res, 2, 'missing tokens');
       expectContains(res.stderr, 'tokens dir not found', 'missing tokens error');
     },
   },
@@ -1100,7 +1149,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
         ['--tokens', 'tokens', '--out', 'build-un', '--theme', 'light'],
         dir,
       );
-      expectExit(resRefuse, 1, 'refuse unaudited');
+      expectExit(resRefuse, 3, 'refuse unaudited');
       expectContains(
         resRefuse.stderr,
         'refusing to build: no fresh audit pass for this exact tree (stamp: missing)',
@@ -1136,7 +1185,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
         ['--tokens', 'tokens', '--out', 'build', '--theme', 'light', '--spec', 'style-spec.json'],
         dir,
       );
-      expectExit(resExists, 1, 'build overwrite refuse');
+      expectExit(resExists, 3, 'build overwrite refuse');
       expectContains(resExists.stderr, 'outputs exist in', 'outputs exist message');
 
       // 2. Tamper CSS file
@@ -1147,7 +1196,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
         ['--tokens', 'tokens', '--out', 'build', '--theme', 'light', '--spec', 'style-spec.json'],
         dir,
       );
-      expectExit(resTamper, 1, 'build tamper refuse');
+      expectExit(resTamper, 3, 'build tamper refuse');
       expectContains(
         resTamper.stderr,
         'refusing to overwrite hand-edited CSS',
@@ -1201,7 +1250,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
         ],
         dir,
       );
-      expectExit(res, 1, 'binding mismatch refuse');
+      expectExit(res, 3, 'binding mismatch refuse');
       expectContains(
         res.stderr,
         'refusing to build: tokens do not match',
@@ -1236,7 +1285,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
         ['--tokens', 'tokens', '--out', 'x', '--profile', 'nope'],
         dir,
       );
-      expectExit(resProfile, 1, 'unknown profile');
+      expectExit(resProfile, 2, 'unknown profile');
       expectContains(resProfile.stderr, 'unknown profile "nope"', 'unknown profile error');
 
       const resTheme = run(
@@ -1245,7 +1294,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
         ['--tokens', 'tokens', '--out', 'x', '--theme', 'nope'],
         dir,
       );
-      expectExit(resTheme, 1, 'missing theme');
+      expectExit(resTheme, 2, 'missing theme');
       expectContains(resTheme.stderr, 'theme not found:', 'missing theme error');
 
       const resTokens = run(
@@ -1254,7 +1303,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
         ['--tokens', 'missing-tokens', '--out', 'x'],
         dir,
       );
-      expectExit(resTokens, 1, 'missing tokens');
+      expectExit(resTokens, 2, 'missing tokens');
       expectContains(resTokens.stderr, 'tokens dir not found', 'missing tokens error');
     },
   },
@@ -1316,7 +1365,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
         ['--from-figma', 'figma.json', '--out', 'figtokens'],
         dir,
       );
-      expectExit(resAgain, 1, 'figma import overwrite refusal');
+      expectExit(resAgain, 3, 'figma import overwrite refusal');
       expectContains(resAgain.stderr, 'output exists:', 'output exists message');
 
       const resForce = run(
@@ -1328,15 +1377,15 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       expectExit(resForce, 0, 'figma import force');
 
       const resNoMode = run('token-build', 'figma.mjs', [], dir);
-      expectExit(resNoMode, 1, 'figma no mode');
+      expectExit(resNoMode, 2, 'figma no mode');
       expectContains(resNoMode.stderr, 'specify either --to-figma', 'specify mode error');
 
       const resMissingFile = run('token-build', 'figma.mjs', ['--from-figma', 'missing.json'], dir);
-      expectExit(resMissingFile, 1, 'figma missing file');
+      expectExit(resMissingFile, 2, 'figma missing file');
       expectContains(resMissingFile.stderr, 'figma variables file not found', 'missing file error');
 
       const resMissingTokens = run('token-build', 'figma.mjs', ['--to-figma', 'missing-dir'], dir);
-      expectExit(resMissingTokens, 1, 'figma missing tokens dir');
+      expectExit(resMissingTokens, 2, 'figma missing tokens dir');
       expectContains(resMissingTokens.stderr, 'tokens directory not found', 'missing tokens error');
     },
   },
@@ -1355,27 +1404,21 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
         'empty state',
       );
       const lines = res.stdout.split('\n');
-      const extractLine = lines.find((l) => l.startsWith('next: token-extract — node '));
+      const extractLine = lines.find((l) => l.startsWith('next: extract — node '));
       if (!extractLine) {
-        throw new Error(`missing next: token-extract command line in output: "${res.stdout}"`);
+        throw new Error(`missing next: extract command line in output: "${res.stdout}"`);
       }
-      const normalizedExtract = extractLine.replaceAll('\\', '/');
-      if (
-        !normalizedExtract.includes(
-          '/token-extract/scripts/extract.mjs --root . --out style-spec.json',
-        )
-      ) {
-        throw new Error(`expected absolute token-extract script path, got: "${extractLine}"`);
-      }
-      if (normalizedExtract.includes('node ./scripts/')) {
-        throw new Error(`extract command must not use cwd-relative ./scripts: "${extractLine}"`);
-      }
-      expectContains(res.stdout, 'next: token-style', 'token-style next line');
-      // Must not propose generate.mjs for token-style
-      const styleLine = lines.find((l) => l.startsWith('next: token-style'));
-      if (!styleLine) throw new Error('missing next: token-style line');
-      if (styleLine.includes('generate.mjs') || styleLine.includes(' — ')) {
-        throw new Error(`token-style line should not have script command: "${styleLine}"`);
+      expectContains(
+        extractLine,
+        'token-engine.mjs extract --root . --out tokens.config.json',
+        'extract command line',
+      );
+      expectContains(res.stdout, 'next: design-tokens', 'design-tokens next line');
+      // Must not propose generate for design-tokens
+      const styleLine = lines.find((l) => l.startsWith('next: design-tokens'));
+      if (!styleLine) throw new Error('missing next: design-tokens line');
+      if (styleLine.includes('generate') || styleLine.includes(' — ')) {
+        throw new Error(`design-tokens line should not have script command: "${styleLine}"`);
       }
     },
   },
@@ -1392,7 +1435,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       cpSync(join(seedDir, 'style-spec.json'), join(dSpec, 'style-spec.json'));
       const resSpec = run('ask-kami', 'route.mjs', ['--root', '.'], dSpec);
       expectContains(resSpec.stdout, 'state: spec=valid tokens=missing', 'spec-only state');
-      expectContains(resSpec.stdout, 'next: token-math', 'spec-only next');
+      expectContains(resSpec.stdout, 'next: generate', 'spec-only next');
 
       // 2. tokens unaudited
       const dTok = join(baseDir, 'tokens-un');
@@ -1401,7 +1444,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       run('token-math', 'generate.mjs', ['--spec', 'style-spec.json', '--out', 'tokens'], dTok);
       const resTok = run('ask-kami', 'route.mjs', ['--root', '.'], dTok);
       expectContains(resTok.stdout, 'tokens=present audit=missing', 'tokens-un state');
-      expectContains(resTok.stdout, 'next: token-audit', 'tokens-un next');
+      expectContains(resTok.stdout, 'next: audit', 'tokens-un next');
 
       // 3. audited no build
       const dAud = join(baseDir, 'audited');
@@ -1410,12 +1453,12 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       cpSync(join(seedDir, 'tokens'), join(dAud, 'tokens'), { recursive: true });
       const resAud = run('ask-kami', 'route.mjs', ['--root', '.'], dAud);
       expectContains(resAud.stdout, 'audit=pass build=missing', 'audited state');
-      expectContains(resAud.stdout, 'next: token-build', 'audited next');
+      expectContains(resAud.stdout, 'next: build', 'audited next');
 
       // 4. built system
       const resBuilt = run('ask-kami', 'route.mjs', ['--root', '.'], seedDir);
       expectContains(resBuilt.stdout, 'build=present', 'built state');
-      expectContains(resBuilt.stdout, 'next: improve-design-system', 'built next');
+      expectContains(resBuilt.stdout, 'next: diagnose', 'built next');
     },
   },
   {
@@ -1431,7 +1474,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       const data = JSON.parse(resJson.stdout);
       if (data.state.spec.status !== 'valid')
         throw new Error(`state.spec: ${data.state.spec.status}`);
-      if (data.nextActions[0]?.skill !== 'improve-design-system') {
+      if (data.nextActions[0]?.skill !== 'diagnose') {
         throw new Error(`nextAction: ${data.nextActions[0]?.skill}`);
       }
       if (typeof data.summary?.errors !== 'number' || typeof data.summary?.warnings !== 'number') {
@@ -1452,10 +1495,10 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       const resBad = run('ask-kami', 'route.mjs', ['--root', '.'], badDir);
       expectContains(resBad.stdout, 'spec=invalid', 'invalid spec state');
       const lines = resBad.stdout.split('\n');
-      const styleLine = lines.find((l) => l.startsWith('next: token-style'));
-      if (!styleLine) throw new Error('missing next: token-style line on invalid spec');
-      if (styleLine.includes('generate.mjs') || styleLine.includes(' — ')) {
-        throw new Error(`token-style line should not have command: "${styleLine}"`);
+      const styleLine = lines.find((l) => l.startsWith('next: design-tokens'));
+      if (!styleLine) throw new Error('missing next: design-tokens line on invalid spec');
+      if (styleLine.includes('generate') || styleLine.includes(' — ')) {
+        throw new Error(`design-tokens line should not have command: "${styleLine}"`);
       }
     },
   },
@@ -1476,17 +1519,17 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
         throw new Error('expected spec-missing error finding');
       }
       const skills = json.nextActions.map((a) => a.skill);
-      if (!skills.includes('token-extract') || !skills.includes('token-style')) {
-        throw new Error(`expected [token-extract, token-style], got ${skills}`);
+      if (!skills.includes('extract') || !skills.includes('design-tokens')) {
+        throw new Error(`expected [extract, design-tokens], got ${skills}`);
       }
-      const styleAction = json.nextActions.find((a) => a.skill === 'token-style');
+      const styleAction = json.nextActions.find((a) => a.skill === 'design-tokens');
       if (styleAction.command !== undefined) {
-        throw new Error(`expected token-style command undefined, got "${styleAction.command}"`);
+        throw new Error(`expected design-tokens command undefined, got "${styleAction.command}"`);
       }
-      const extractAction = json.nextActions.find((a) => a.skill === 'token-extract');
+      const extractAction = json.nextActions.find((a) => a.skill === 'extract');
       expectContains(
         extractAction.command,
-        'extract.mjs --root . --out style-spec.json',
+        'token-engine.mjs extract --root . --out tokens.config.json',
         'extract command',
       );
     },
@@ -1516,9 +1559,9 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       if (!json.findings.some((f) => f.id === 'visualizer-missing')) {
         throw new Error('expected visualizer-missing info finding');
       }
-      if (json.nextActions[0]?.skill !== 'improve-design-system') {
+      if (json.nextActions[0]?.skill !== 'diagnose') {
         throw new Error(
-          `expected nextAction improve-design-system, got ${json.nextActions[0]?.skill}`,
+          `expected nextAction diagnose, got ${json.nextActions[0]?.skill}`,
         );
       }
     },
@@ -1530,7 +1573,7 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       const dir = work('D3');
 
       // 1. low contrast
-      const spec = readJson(join(skillsRoot, 'token-style/assets/style-spec.example.json'));
+      const spec = readJson(join(skillsRoot, 'design-tokens/assets/style-spec.example.json'));
       spec.overrides = { light: { 'semantic.color.text.tertiary': '{color.neutral.200}' } };
       writeJson(join(dir, 'low.json'), spec);
 
@@ -1549,8 +1592,8 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       if (!auditFail || !auditFail.evidence.some((e) => e.includes('remedy:'))) {
         throw new Error('expected audit-fail error with remedy evidence');
       }
-      if (!jsonLow.nextActions.some((a) => a.skill === 'token-audit')) {
-        throw new Error('expected token-audit nextAction for contrast failure');
+      if (!jsonLow.nextActions.some((a) => a.skill === 'audit')) {
+        throw new Error('expected audit nextAction for contrast failure');
       }
 
       // 2. tamper
@@ -1572,8 +1615,8 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       ) {
         throw new Error('expected provenance-tampered error finding');
       }
-      if (!jsonTamper.nextActions.some((a) => a.skill === 'token-audit')) {
-        throw new Error('expected token-audit nextAction for tampered tree');
+      if (!jsonTamper.nextActions.some((a) => a.skill === 'audit')) {
+        throw new Error('expected audit nextAction for tampered tree');
       }
     },
   },
@@ -1593,12 +1636,11 @@ body { font-family: "Inter", system-ui, sans-serif; border-radius: 8px; }`,
       if (!jsonNoBuild.findings.some((f) => f.id === 'build-missing' && f.severity === 'warning')) {
         throw new Error('expected build-missing warning finding');
       }
-      if (jsonNoBuild.nextActions[0]?.skill !== 'token-build') {
+      if (jsonNoBuild.nextActions[0]?.skill !== 'build') {
         throw new Error(
-          `expected nextAction token-build, got ${jsonNoBuild.nextActions[0]?.skill}`,
+          `expected nextAction build, got ${jsonNoBuild.nextActions[0]?.skill}`,
         );
       }
-
       // Overrides
       const customSpec = resolve(join(dir, 'custom-spec.json'));
       const customTokens = resolve(join(dir, 'custom-tokens'));

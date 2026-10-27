@@ -5,11 +5,11 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { diagnoseDesignSystem } from '../src/shared/diagnose.ts';
 import { resolveSystemPaths } from '../src/shared/system-state.ts';
-import { runAudit } from '../src/skills/token-audit/scripts/audit.ts';
-import { runBuild } from '../src/skills/token-build/scripts/build.ts';
-import { runGenerate } from '../src/skills/token-math/scripts/generate.ts';
+import { runAudit } from '../src/shared/audit.ts';
+import { runBuild } from '../src/shared/build.ts';
+import { runGenerate } from '../src/shared/generate.ts';
 
-const exampleSpec = 'src/skills/token-style/assets/style-spec.example.json';
+const exampleSpec = 'src/skills/design-tokens/assets/style-spec.example.json';
 
 test('diagnoseDesignSystem reports spec-missing and routing nextActions on empty directory', () => {
   const dir = mkdtempSync(join(tmpdir(), 'diag-empty-'));
@@ -18,12 +18,12 @@ test('diagnoseDesignSystem reports spec-missing and routing nextActions on empty
     const diagnosis = diagnoseDesignSystem(dir, paths);
     assert.equal(diagnosis.state.spec.status, 'missing');
     assert.ok(diagnosis.findings.some((f) => f.id === 'spec-missing'));
-    const extractAction = diagnosis.nextActions.find((a) => a.skill === 'token-extract');
+    const extractAction = diagnosis.nextActions.find((a) => a.skill === 'extract');
     assert.ok(extractAction !== undefined);
-    assert.ok(extractAction.command.includes('extract.mjs'));
-    assert.ok(extractAction.command.includes('<token-extract-root>'));
+    assert.ok(extractAction.command.includes('token-engine.mjs extract'));
+    assert.ok(extractAction.command.includes('<skill-root>'));
     assert.doesNotMatch(extractAction.command, /~\/\.agents/);
-    const styleAction = diagnosis.nextActions.find((a) => a.skill === 'token-style');
+    const styleAction = diagnosis.nextActions.find((a) => a.skill === 'design-tokens');
     assert.ok(styleAction !== undefined);
     assert.equal(styleAction.command, undefined);
   } finally {
@@ -46,7 +46,7 @@ test('diagnoseDesignSystem reports spec-invalid with scriptless token-style next
     const diagnosis = diagnoseDesignSystem(dir, paths);
     assert.equal(diagnosis.state.spec.status, 'invalid');
     assert.ok(diagnosis.findings.some((f) => f.id === 'spec-invalid'));
-    const styleAction = diagnosis.nextActions.find((a) => a.skill === 'token-style');
+    const styleAction = diagnosis.nextActions.find((a) => a.skill === 'design-tokens');
     assert.ok(styleAction !== undefined);
     assert.equal(styleAction.command, undefined);
   } finally {
@@ -76,7 +76,7 @@ test('diagnoseDesignSystem flags low-contrast override with audit-fail and remed
     assert.ok(auditFinding !== undefined);
     assert.equal(auditFinding.severity, 'error');
     assert.ok(auditFinding.evidence.some((e) => e.includes('remedy:')));
-    assert.ok(diagnosis.nextActions.some((a) => a.skill === 'token-audit'));
+    assert.ok(diagnosis.nextActions.some((a) => a.skill === 'audit'));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -110,7 +110,7 @@ test('diagnoseDesignSystem reports healthy tree with no error findings', async (
 
     const errors = diagnosis.findings.filter((f) => f.severity === 'error');
     assert.equal(errors.length, 0);
-    assert.ok(diagnosis.nextActions.some((a) => a.skill === 'improve-design-system'));
+    assert.ok(diagnosis.nextActions.some((a) => a.skill === 'diagnose'));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

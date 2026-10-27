@@ -4,9 +4,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { inspectSystem, resolveSystemPaths } from '../src/shared/system-state.ts';
-import { runGenerate } from '../src/skills/token-math/scripts/generate.ts';
+import { runGenerate } from '../src/shared/generate.ts';
 
-const exampleSpec = 'src/skills/token-style/assets/style-spec.example.json';
+const exampleSpec = 'src/skills/design-tokens/assets/style-spec.example.json';
 
 test('inspectSystem correctly classifies missing system in empty directory', () => {
   const dir = mkdtempSync(join(tmpdir(), 'system-empty-'));

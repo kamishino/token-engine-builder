@@ -8,13 +8,8 @@ const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const distDir = join(rootDir, 'dist');
 
 const SKILLS = [
-  'ask-kami',
-  'improve-design-system',
-  'token-audit',
-  'token-build',
-  'token-extract',
-  'token-math',
-  'token-style',
+  'design-tokens',
+  'setup-pre-tokens',
 ];
 
 if (!existsSync(distDir)) {
@@ -35,14 +30,14 @@ for (const skill of SKILLS) {
   const skillDir = join(distDir, skill);
   const skillMdPath = join(skillDir, 'SKILL.md');
   if (!existsSync(skillMdPath)) {
-    fail(`${skill}: missing SKILL.md in dist/`);
+    fail(`${skill}: dist/${skill}/SKILL.md missing`);
     continue;
   }
 
   const md = readFileSync(skillMdPath, 'utf8');
 
-  // 1. Literal execution guard
-  if (!md.includes('Never run a command containing literal')) {
+  // 1. Literal execution guard if <...-root> placeholders are used
+  if (md.includes('-root>') && !md.includes('Never run a command containing literal')) {
     fail(`${skill}: SKILL.md missing literal-execution preflight guard`);
   }
 
@@ -53,10 +48,6 @@ for (const skill of SKILLS) {
 
   // 3. Command extraction and resolution
   const commands = [...md.matchAll(/node <([a-z0-9-]+)-root>\/scripts\/([a-z0-9.-]+\.mjs)/g)];
-  if (commands.length === 0) {
-    fail(`${skill}: no <...-root>/scripts command found in SKILL.md`);
-  }
-
   for (const [, target, script] of commands) {
     const targetRoot = target === 'skill' ? skillDir : join(distDir, target);
     const scriptPath = join(targetRoot, 'scripts', script);
@@ -75,21 +66,21 @@ for (const skill of SKILLS) {
     }
   }
 
-  // 4. ask-kami routing table verification
-  if (skill === 'ask-kami') {
+  // 4. routing table verification
+  if (skill === 'design-tokens') {
     const routingPath = join(skillDir, 'references/routing-table.md');
     if (!existsSync(routingPath)) {
-      fail('ask-kami: missing references/routing-table.md');
+      fail('design-tokens: missing references/routing-table.md');
     } else {
       const routingMd = readFileSync(routingPath, 'utf8');
       const routeCmds = [
         ...routingMd.matchAll(/node <([a-z0-9-]+)-root>\/scripts\/([a-z0-9.-]+\.mjs)/g),
       ];
       for (const [, target, script] of routeCmds) {
-        const targetRoot = join(distDir, target);
+        const targetRoot = target === 'skill' ? skillDir : join(distDir, target);
         const scriptPath = join(targetRoot, 'scripts', script);
         if (!existsSync(scriptPath)) {
-          fail(`ask-kami routing table references missing script: ${scriptPath}`);
+          fail(`design-tokens routing table references missing script: ${scriptPath}`);
           continue;
         }
         const res = spawnSync(process.execPath, [scriptPath, '--help'], {
@@ -97,9 +88,9 @@ for (const skill of SKILLS) {
           cwd: distDir,
         });
         if (res.status !== 0 || !res.stdout.includes('Usage:')) {
-          fail(`ask-kami routing table command ${target}/${script} failed (exit ${res.status})`);
+          fail(`design-tokens routing table command ${target}/${script} failed (exit ${res.status})`);
         } else {
-          pass(`ask-kami routing table -> ${target}/${script} --help`);
+          pass(`design-tokens routing table -> ${target}/${script} --help`);
         }
       }
     }

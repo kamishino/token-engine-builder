@@ -86,14 +86,14 @@ export interface CustomThemeConfig {
   /** Optional primary action step override. */
   actionStep?: number;
 }
-/** Output of skill `token-style`; input to `token-math/scripts/generate`. */
+/** Output of design-tokens interview / token-engine init; input to token-engine generate. */
 export interface StyleSpec {
   name: string;
-  /** Kobayashi style cluster id the anchor was picked from, when resolved (see token-style/references/style-clusters.md). */
+  /** Kobayashi style cluster id the anchor was picked from, when resolved (see references/style-clusters.md). */
   cluster?: string;
   /** Provenance only: guidance method the agent used when picking the palette. Generate does not derive colors from it. */
   harmony?: HarmonyMethod;
-  /** Creative palette (3–5 colors); token-math expands each anchor to a ramp. */
+  /** Creative palette (3–5 colors); token-engine generate expands each anchor to a ramp. */
   palette: PaletteColor[];
   /** Kobayashi bounds the palette was picked inside (copied from the cluster table at record time). */
   clusterBounds?: { h: [number, number]; c: [number, number]; l: [number, number] };
@@ -108,7 +108,7 @@ export interface StyleSpec {
     /** Base line-height multiplier the vertical-rhythm baseline derives from. Default 1.5. */
     baseLineHeight?: number;
   };
-  /** Optional guide prose recorded at token-style time, rendered into DESIGN.md. */
+  /** Optional guide prose recorded at spec creation time, rendered into DESIGN.md. */
   guide?: {
     overview?: string;
     dos?: string[];

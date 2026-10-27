@@ -77,7 +77,10 @@ export function runBuildAll(argv = process.argv.slice(2), { root = rootDir, runV
   });
 
   const shouldBuildCli =
-    only.length === 0 || only.includes('token-engine') || only.includes('cli');
+    only.length === 0 ||
+    only.includes('token-engine') ||
+    only.includes('cli') ||
+    only.includes('design-tokens');
   if (shouldBuildCli) {
     console.log(`\n[build] cli/token-engine`);
     runner({

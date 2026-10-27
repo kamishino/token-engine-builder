@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { runExtract } from '../src/skills/token-extract/scripts/extract.ts';
+import { runExtract } from '../src/shared/extract.ts';
 
 test('runExtract extracts palette with primary, secondary, and accent roles from CSS', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'extract-test-'));

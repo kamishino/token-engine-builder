@@ -4,10 +4,10 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { runDiagnose } from '../src/skills/improve-design-system/scripts/diagnose.ts';
-import { runGenerate } from '../src/skills/token-math/scripts/generate.ts';
+import { runDiagnose } from '../src/shared/diagnose.ts';
+import { runGenerate } from '../src/shared/generate.ts';
 
-const exampleSpec = 'src/skills/token-style/assets/style-spec.example.json';
+const exampleSpec = 'src/skills/design-tokens/assets/style-spec.example.json';
 
 test('runDiagnose --help returns 0', () => {
   assert.equal(runDiagnose(['--help']), 0);
