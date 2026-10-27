@@ -22,7 +22,7 @@ npm install        # all deps are devDependencies — Vite inlines them
 npm run check      # typecheck + lint + lint:skills + test + build + lint:css
 npm run build      # → dist/<skill>/ + dist/cli/ via scripts/build-all.mjs
 npm run deploy     # link dist/* into ~/.agents/skills (default; --dir <path> for others; rebuilds stale, prunes dead)
-npx token-engine   # unified CLI runner: sync, init, audit, build, extract, scaffold
+npx token-engine   # repo-local bin (checkout only); skills bundle dist/cli as scripts/token-engine.mjs
 ```
 
 Node `>=22.12`. Pure contracts verified via `npm test` (`node:test` unit tests in `test/`); portable smoke (`lint:css`) proves `dist/*` generation and gold parity.
@@ -37,7 +37,7 @@ Node `>=22.12`. Pure contracts verified via `npm test` (`node:test` unit tests i
 
 ## Working rules
 
-- Edit the colocated skill, not the mirror: `src/skills/<skill>/scripts/*.ts`, templates, assets. Never hand-edit `dist/`.
+- Edit source, not the mirror: engine code in `src/shared/` + `src/cli/`, skill content in `src/skills/<skill>/` (`SKILL.md`, `references/`, `assets/`; token templates live in `src/shared/templates/tokens/` and mirror into both skills at build). Never hand-edit `dist/`.
 - Shared code goes in `src/shared/`; skills import it — Rollup inlines it per skill at build time.
 - New CLI flag → update that skill's `SKILL.md` usage line in the same commit.
 - Token schema move → update `src/shared/templates` + `compiler.ts` + audit expectations together.

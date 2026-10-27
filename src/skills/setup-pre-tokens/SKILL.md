@@ -15,7 +15,7 @@ Prepare a frontend project with self-sufficient token and CSS prerequisites so `
 
 Treat the prerequisite foundation as a zero-decision mechanical substrate:
 - **Interface & Implementation**: The `tokens:build` and `lint:styles` scripts, entry outputs (`build/tokens.css`, `build/tokens.dark.css`, `<stylesRoot>/main.scss`), pinned devDependencies, and Sass 7-1 module architecture (`@use`).
-- **Seam**: This skill authors no brand decisions; seed tokens are valid structural placeholders that `design-tokens` completely replaces.
+- **Seam**: This skill authors no brand decisions; it scaffolds the canonical default 3-tier token system, and `design-tokens` rebrands its values from `tokens.config.json`.
 - **Locality & Leverage**: Centralize token compilation inside the target project, making it self-contained without external toolchain assumptions.
 
 Consult sibling references on demand:
@@ -71,7 +71,7 @@ Scaffold missing tooling configurations and wire npm scripts:
 
 ### 5. Scaffold Tokens & Styles
 Populate initial 3-tier token seeds and Sass 7-1 architecture:
-- **Tokens**: If `tokens/` is absent or contains no `*.tokens.json` files, copy `templates/tokens/**` to `tokens/` (primitive ramps, semantic `light`/`dark` themes, and component `button`). If tokens already exist, leave them untouched.
+- **Tokens**: If `tokens/` is absent or contains no `*.tokens.json` files, copy `templates/tokens/**` to `tokens/` (full canonical defaults: primitive ramps incl. feedback, semantic `light`/`dark`/`high-contrast`, 9 component files). If tokens already exist, leave them untouched.
 - **Sass 7-1**: Scaffold `<stylesRoot>/` directories (`abstracts/`, `base/`, `components/`, `layout/`, `pages/`, `themes/`, `vendors/`). Each folder receives an `_index.scss`. Seed partials: `base/_reset.scss`, `base/_typography.scss`, `components/_button.scss`, `abstracts/_mixins.scss`, and the root entry `<stylesRoot>/main.scss`. For ITCSS, Tailwind, or SMACSS, scaffold the folder/entry structure from [`references/fork-css-architectures.md`](references/fork-css-architectures.md) instead of `templates/styles/`.
 - Copy `templates/target-README.md` to `<stylesRoot>/README.md` if missing.
 - **Done when**: Token and stylesheet directories contain the complete structure without overwriting pre-existing user files.

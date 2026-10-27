@@ -16,7 +16,7 @@ The design system decouples styling into three strictly separated tiers:
 
 ### Tier 1: Primitive Tokens (`tokens/primitive/`)
 - **Rule**: Contains raw literal values only (`oklch()`, `px`, font family strings).
-- **Prohibition**: Zero `{alias}` references allowed.
+- **Prohibition**: Zero `{alias}` references to other tiers; the one named exception is intra-primitive aliasing (`grid.gutter.*` → `{spacing.*}`) so gutters breathe with density.
 - **Example**:
   ```json
   {
@@ -127,22 +127,21 @@ The engine computes ramps deterministically (`token-engine generate` / `token-en
 
 ### The 11-step OKLCH lightness ramp
 
-Every color scale spans 11 perceptually uniform steps (50 to 950). Values follow these exact lightness targets and chroma multipliers:
+Every color scale spans 11 perceptually uniform steps (50 to 950). Lightness values are computed relative to the anchor ($L_{\text{anchor}}$ at step 500) via offset table `RAMP_SETS[11]`, clamped to $[0.05, 0.98]$: $L = \min(0.98, \max(0.05, L_{\text{anchor}} + \text{offset}))$. Chroma tapers toward both ends: $C = \text{anchor.c} \times \max(0.1, 1 - (|\text{offset}| / 0.42) \times 0.9)$ (step 500 keeps exact anchor chroma):
 
-| Step | Lightness ($L$) | Chroma ($C$) Multiplier | Functional Role |
+| Step | $\Delta L$ Offset from Anchor | Chroma ($C$) Taper | Functional Role |
 | :--- | :--- | :--- | :--- |
-| **50** | `0.98` | $\le 0.03$ (subtle tint) | Canvas background (Light mode) |
-| **100** | `0.93` | $0.05$ | Surface background / Subtle borders |
-| **200** | `0.86` | $0.08$ | Raised cards / Muted badges |
-| **300** | `0.76` | $0.12$ | Decorative borders |
-| **400** | `0.65` | $0.15$ | Secondary accents |
-| **500** | `0.55` | $\text{Peak } C$ ($0.15 - 0.20$) | Primary brand anchor |
-| **600** | `0.45` | $0.90 \times \text{Peak } C$ | Primary hover / Focus rings |
-| **700** | `0.35` | $0.75 \times \text{Peak } C$ | High-contrast actions |
-| **800** | `0.25` | $0.50 \times \text{Peak } C$ | Raised surfaces (Dark mode) |
-| **900** | `0.15` | $0.30 \times \text{Peak } C$ | Surface background (Dark mode) |
-| **950** | `0.08` | $\le 0.03$ (deep obsidian) | Canvas background (Dark mode) |
-
+| **50** | `+0.42` | $\approx 0.10 \times \text{Anchor } C$ | Canvas background (Light mode) |
+| **100** | `+0.36` | $\approx 0.23 \times \text{Anchor } C$ | Surface background / Subtle borders |
+| **200** | `+0.28` | $\approx 0.40 \times \text{Anchor } C$ | Raised cards / Muted badges |
+| **300** | `+0.18` | $\approx 0.61 \times \text{Anchor } C$ | Decorative borders |
+| **400** | `+0.09` | $\approx 0.81 \times \text{Anchor } C$ | Secondary accents |
+| **500** | `0` (anchor) | $\text{Exact Anchor } C$ | Primary brand anchor |
+| **600** | `-0.08` | $\approx 0.83 \times \text{Anchor } C$ | Primary hover / Focus rings |
+| **700** | `-0.16` | $\approx 0.66 \times \text{Anchor } C$ | High-contrast actions |
+| **800** | `-0.24` | $\approx 0.49 \times \text{Anchor } C$ | Raised surfaces (Dark mode) |
+| **900** | `-0.32` | $\approx 0.31 \times \text{Anchor } C$ | Surface background (Dark mode) |
+| **950** | `-0.40` | $\approx 0.14 \times \text{Anchor } C$ | Canvas background (Dark mode) |
 #### Chroma scaling & gamut clamping
 - **Peak Chroma Zone**: Concentrate maximum chroma at steps 500 and 600 where the sRGB gamut volume is widest for midtones.
 - **Tapering Curve**: Smoothly taper chroma toward zero at step 50 ($L=0.98$) and step 950 ($L=0.08$) to avoid sRGB gamut clipping and prevent unnatural neon pastel artifacts.

@@ -9,7 +9,7 @@ const px = (value: number): DtcgDimensionValue => ({
   unit: 'px',
 });
 
-const TYPE_STEPS: ReadonlyArray<readonly [string, number]> = [
+export const TYPE_STEPS: ReadonlyArray<readonly [string, number]> = [
   ['xs', -2],
   ['sm', -1],
   ['base', 0],

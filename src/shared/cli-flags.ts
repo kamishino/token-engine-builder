@@ -51,6 +51,7 @@ export const COMMANDS: Record<CommandKey, CommandSpec> = {
   },
   init: {
     flags: [
+      { flag: '--spec', arg: '<tokens.config.json>' },
       { flag: '--root', arg: '<dir>' },
       { flag: '--force' },
       { flag: '--dry-run' },

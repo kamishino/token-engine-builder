@@ -11,7 +11,7 @@ Builds and packages self-contained AI agent skills and a unified CLI for 3-tier 
 | [design-tokens](src/skills/design-tokens/SKILL.md)       | **Flagship Skill** | Cognitive design token architecture: discovery, OKLCH scales, dual-gate audit, and framework integration               |
 | [setup-pre-tokens](src/skills/setup-pre-tokens/SKILL.md) | Setup Skill        | Scriptless, hand-invoked step 0: installs/configures formatter, Stylelint, Style Dictionary, Sass 7-1 + BEM and 3-tier token seeds before design-tokens |
 
-All deterministic pipeline operations (`sync`, `init`, `audit`, `build`, `extract`, `generate`, `scaffold`, `route`, `diagnose`, `figma`) are driven by the unified `token-engine` CLI bundled directly inside `design-tokens` and executable standalone via `npx token-engine`.
+All deterministic pipeline operations (`sync`, `init`, `audit`, `build`, `extract`, `generate`, `scaffold`, `route`, `diagnose`, `figma`) are driven by the unified `token-engine` CLI bundled directly inside `design-tokens` (`<skill-root>/scripts/token-engine.mjs`). Inside a checkout of this repo, `npx token-engine` resolves the repo-local `bin`; installed skills bundle the same CLI, and agents must invoke `<skill-root>/scripts/token-engine.mjs` — never `npx`.
 ## Where skills install
 
 Agent tools read skills from different folders. Common locations (check your agent's docs):

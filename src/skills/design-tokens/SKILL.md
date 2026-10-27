@@ -51,20 +51,20 @@ Construct or replace the 3-tier DTCG token hierarchy:
 - **Execution**:
   1. Run unified sync from the project root:
      `node <skill-root>/scripts/token-engine.mjs sync --spec tokens.config.json --force --out build/engine --theme all`
-     *Flags*: `--force` adopts and replaces seed starter tokens; `--out build/engine` parks advisory artifacts (`tokens.js`, `theme.css`, `DESIGN.md`) safely away from target build files; `--theme all` compiles all themes.
+     *Flags*: `--force` adopts the existing tree and regenerates all tiers from the spec; `--out build/engine` parks advisory artifacts (`tokens.js`, `theme.css`, `DESIGN.md`) safely away from target build files; `--theme all` compiles all themes.
   2. If the project contains `sd.config.mjs`, run the target's build script:
      `<pm> run tokens:build`
-     This is the compiler of record for `build/tokens.css`, `build/tokens.dark.css`, and `<stylesRoot>/abstracts/_variables.scss`.
+     This is the compiler of record for `build/tokens.css`, `build/tokens.dark.css`, and `<stylesRoot>/abstracts/_variables.scss`. If no `sd.config.mjs` exists, the engine output `build/engine/tokens.css` is the compiled record and the import target.
   3. If sync exits 4 at audit, report failing contrast pairs and remediate via [`references/contrast.md`](references/contrast.md) (remediation ladder). Never pass `--allow-unaudited`.
   4. Targeted subcommands and flag reference are documented in [`references/engine-and-build.md`](references/engine-and-build.md) §6 (or via `node <skill-root>/scripts/token-engine.mjs <cmd> --help`); exit codes follow the 0 ok / 2 usage / 3 refusal / 4 audit fail / 5 validation taxonomy.
-- **Done when**: The token tree contains complete feedback roles and component tokens, and `build/tokens.css` is regenerated.
+- **Done when**: The token tree contains complete feedback roles and component tokens, and `build/tokens.css` (via `tokens:build`) or `build/engine/tokens.css` is regenerated.
 
 ### 4. Codebase Modernization
 Wire tokens into host components:
 - Pierce Shadow DOM boundaries by injecting compiled CSS inline into `:host` scopes.
 - In Sass projects, consume generated `$semantic-color-*` and `$component-*` variables. Re-run `npm run tokens:build` after token updates so `abstracts/_variables.scss` stays current.
 - Replace hardcoded color literals with semantic custom properties (`background: var(--semantic-color-bg-canvas)`). Consult [`references/token-system.md`](references/token-system.md) for layout-role bindings when replacing spacing literals.
-- Establish `@tokens` package aliasing **only** if a workspace tokens package already exists or the user explicitly requests one (`sync --package @tokens`). In standard projects, import directly from `build/tokens.css`.
+- Establish `@tokens` package aliasing **only** if a workspace tokens package already exists or the user explicitly requests one (`sync --package @tokens`). In standard projects, import directly from `build/tokens.css` (or `build/engine/tokens.css` when `sd.config.mjs` is absent).
 - **Done when**: Hardcoded styling literals in host components are migrated to semantic tokens.
 
 ### 5. Visual Proof
@@ -82,6 +82,6 @@ Generate visual verification through the engine's built-in visualizer:
 Verify these observable states before completing work:
 - [ ] Raw `#hex` or `rgba()` literals in styled components are migrated to `var(--semantic-color-*)` (or Sass `$` equivalents).
 - [ ] Every component token resolves through a semantic token alias.
-- [ ] `build/tokens.css` was regenerated this run and application stylesheet imports resolve cleanly.
+- [ ] `build/tokens.css` (via `tokens:build`) or `build/engine/tokens.css` was regenerated this run and application stylesheet imports resolve cleanly.
 - [ ] `token-engine sync` exited 0 with a verified audit stamp in `tokens/.token-engine-audit.json`.
 - [ ] `build/engine/visualizer.html` generated this run and its path reported.

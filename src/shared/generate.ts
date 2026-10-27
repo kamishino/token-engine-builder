@@ -65,7 +65,7 @@ export function generateTokens(opts: GenerateTokensOptions): GenerateTokensResul
 
   if (dryRun) {
     log(`would generate 3-tier tokens for "${spec.name}" → ${outDir}`);
-    log('would copy: templates/tokens/** (primitive and component templates)');
+    log('would copy: templates/tokens/** (3-tier canonical templates)');
     for (const { segments, note } of planned) {
       log(`would write: ${segments.join('/')}${note === undefined ? '' : ` (${note})`}`);
     }

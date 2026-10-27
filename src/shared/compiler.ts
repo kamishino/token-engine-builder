@@ -15,6 +15,7 @@ import StyleDictionary from 'style-dictionary';
 import { fileHeader, formattedVariables, usesReferences } from 'style-dictionary/utils';
 import { clampToSrgb, dtcgToOklch, formatOklch, oklchToHex, parseToOklch } from './colors.js';
 import { SEMANTIC_ROLE_PATHS } from './roles.js';
+import { TYPE_STEPS } from './scales.js';
 import {
   loadTokenSources,
   semanticThemeFile,
@@ -382,6 +383,14 @@ async function designMdFormat(args: TokenFormatArgs): Promise<string> {
   return sections.join('\n');
 }
 
+const hexOfValue = (value: string): string | undefined => {
+  try {
+    return oklchToHex(parseToOklch(value));
+  } catch {
+    return undefined;
+  }
+};
+
 export function buildVisualizerModel(
   dictionary: { allTokens: ResolvedToken[] },
   options: { label?: string; guide?: BuildTokensOptions['guide'] } = {},
@@ -390,18 +399,118 @@ export function buildVisualizerModel(
   const name = options.guide?.name ?? 'Design System';
   const dict = new ResolvedDictionary(dictionary.allTokens);
 
+  // 1. Semantic color collection and reverse alias mapping
+  const semanticTokens = dictionary.allTokens.filter(
+    (t) => t.path[0] === 'semantic' && t.path[1] === 'color' && t.path.length >= 3,
+  );
+  const reverseMap = new Map<string, string[]>();
+  const semanticsByGroup = new Map<
+    string,
+    Array<{ path: string; value: string; hex?: string | undefined; source?: string | undefined }>
+  >();
+
+  for (const t of semanticTokens) {
+    const dottedPath = t.path.join('.');
+    const rawVal = t.original?.$value ?? t.original?.value ?? t.$value ?? t.value;
+    let source: string | undefined;
+    if (typeof rawVal === 'string') {
+      const match = /^\{([^}]+)\}$/.exec(rawVal.trim());
+      if (match?.[1] !== undefined) {
+        source = match[1];
+        const list = reverseMap.get(source) ?? [];
+        list.push(dottedPath);
+        reverseMap.set(source, list);
+      }
+    }
+
+    const group = t.path[2] as string;
+    const value = String(tokenValue(t));
+    const hex = hexOfValue(value);
+    const list = semanticsByGroup.get(group) ?? [];
+    list.push({ path: dottedPath, value, hex, source });
+    semanticsByGroup.set(group, list);
+  }
+
+  const ORDERED_GROUPS = ['bg', 'text', 'action', 'border', 'feedback'];
+  const allGroups = new Set(semanticsByGroup.keys());
+  const sortedGroupKeys = [
+    ...ORDERED_GROUPS.filter((g) => allGroups.has(g)),
+    ...Array.from(allGroups).filter((g) => !ORDERED_GROUPS.includes(g)),
+  ];
+  const semantics = sortedGroupKeys.map((group) => ({
+    group,
+    roles: semanticsByGroup.get(group) ?? [],
+  }));
+
+  // 2. Color ramps
   const colorTokens = dictionary.allTokens.filter(
     (t) => t.path[0] === 'color' && t.path.length >= 3,
   );
-  const rampsMap = new Map<string, Array<{ step: string; value: string }>>();
+  const rampsMap = new Map<
+    string,
+    Array<{
+      step: string;
+      value: string;
+      hex?: string | undefined;
+      semantics: string[];
+    }>
+  >();
   for (const t of colorTokens) {
-    const group = t.path[1] as string;
-    const step = t.path[2] as string;
+    let group: string;
+    let step: string;
+    if (t.path.length === 3) {
+      group = t.path[1] as string;
+      step = t.path[2] as string;
+    } else {
+      group = `${t.path[1]}-${t.path[2]}`;
+      step = t.path[t.path.length - 1] as string;
+    }
+    const value = String(tokenValue(t));
+    const hex = hexOfValue(value);
+    const tokenDotted = t.path.join('.');
+    const mappedSemantics = reverseMap.get(tokenDotted) ?? [];
+
     const list = rampsMap.get(group) ?? [];
-    list.push({ step, value: String(tokenValue(t)) });
+    list.push({ step, value, hex, semantics: mappedSemantics });
     rampsMap.set(group, list);
   }
   const ramps = Array.from(rampsMap.entries()).map(([group, steps]) => ({ group, steps }));
+
+  // 3. Typography
+  const typeStepsMap = new Map(TYPE_STEPS);
+  const typeTokens = dictionary.allTokens.filter(
+    (t) => t.path[0] === 'font-size' && t.path.length >= 2,
+  );
+  const stepsList = typeTokens.map((t) => {
+    const step = t.path[1] as string;
+    const fontSize = String(tokenValue(t));
+    const lineHeight = dict.values.get(`line-height.${step}`);
+    return { step, fontSize, lineHeight };
+  });
+  stepsList.sort((a, b) => {
+    const orderA = typeStepsMap.get(a.step);
+    const orderB = typeStepsMap.get(b.step);
+    if (orderA !== undefined && orderB !== undefined) return orderA - orderB;
+    if (orderA !== undefined) return -1;
+    if (orderB !== undefined) return 1;
+    return 0;
+  });
+
+  const weightTokens = dictionary.allTokens.filter(
+    (t) => t.path[0] === 'font-weight' && t.path.length >= 2,
+  );
+  const weights = weightTokens.map((t) => ({
+    name: t.path[1] as string,
+    value: String(tokenValue(t)),
+  }));
+
+  const fontFamily = dict.optional('font-family.sans', 'system-ui, sans-serif');
+
+  const typography = {
+    fontFamily,
+    steps: stepsList,
+    weights,
+  };
 
   const cssVars = {
     bg: dict.optional(SEMANTIC_ROLE_PATHS.BG_CANVAS, '#ffffff'),
@@ -412,10 +521,10 @@ export function buildVisualizerModel(
     primaryText: dict.optional(SEMANTIC_ROLE_PATHS.ACTION_PRIMARY_TEXT, '#ffffff'),
     border: dict.optional(SEMANTIC_ROLE_PATHS.BORDER_DEFAULT, '#e5e7eb'),
     radius: dict.optional('radius.md', '8px'),
-    font: dict.optional('font-family.sans', 'system-ui, sans-serif'),
+    font: fontFamily,
   };
 
-  return { name, label, ramps, cssVars };
+  return { name, label, ramps, semantics, typography, cssVars };
 }
 
 async function visualizerHtmlFormat(args: TokenFormatArgs): Promise<string> {

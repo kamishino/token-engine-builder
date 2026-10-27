@@ -5,7 +5,36 @@
 export interface VisualizerModel {
   name: string;
   label: string;
-  ramps: Array<{ group: string; steps: Array<{ step: string; value: string }> }>;
+  ramps: Array<{
+    group: string;
+    steps: Array<{
+      step: string;
+      value: string;
+      hex?: string | undefined;
+      semantics: string[];
+    }>;
+  }>;
+  semantics: Array<{
+    group: string;
+    roles: Array<{
+      path: string;
+      value: string;
+      hex?: string | undefined;
+      source?: string | undefined;
+    }>;
+  }>;
+  typography: {
+    fontFamily: string;
+    steps: Array<{
+      step: string;
+      fontSize: string;
+      lineHeight?: string | undefined;
+    }>;
+    weights: Array<{
+      name: string;
+      value: string;
+    }>;
+  };
   cssVars: {
     bg: string;
     surface: string;
@@ -20,17 +49,111 @@ export interface VisualizerModel {
 }
 
 export function renderVisualizerHtml(model: VisualizerModel): string {
-  const rampHtml = model.ramps
-    .map(({ group, steps }) => {
-      const chips = steps
-        .map(
-          (s) =>
-            `<div style="flex:1;min-width:60px;height:70px;background:${s.value};display:flex;flex-direction:column;justify-content:flex-end;padding:6px;font-size:10px;color:${Number(s.step) >= 600 ? '#fff' : '#000'};border-radius:4px;"><span>${s.step}</span></div>`,
-        )
-        .join('');
-      return `<div style="margin-bottom:1.5rem;"><h3 style="font-size:1rem;margin-bottom:0.5rem;text-transform:capitalize;">${group}</h3><div style="display:flex;gap:4px;flex-wrap:wrap;">${chips}</div></div>`;
-    })
-    .join('');
+  const rampHtml =
+    model.ramps.length === 0
+      ? '<p style="color:var(--text-muted);">No color ramp tokens in this theme.</p>'
+      : model.ramps
+          .map(({ group, steps }) => {
+            const chips = steps
+              .map((s) => {
+                const hexHtml = s.hex
+                  ? `<span style="font-family:monospace;font-size:10px;margin-top:2px;font-weight:600;">${s.hex}</span>`
+                  : '';
+                const oklchHtml = `<span style="font-size:10px;color:var(--text-muted);word-break:break-all;">${s.value}</span>`;
+                const badgesHtml =
+                  s.semantics.length > 0
+                    ? `<div style="display:flex;flex-wrap:wrap;gap:2px;margin-top:4px;">` +
+                      s.semantics
+                        .map((sem) => {
+                          const shortName = sem.startsWith('semantic.color.')
+                            ? sem.slice('semantic.color.'.length)
+                            : sem;
+                          return `<span style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:1px 4px;border-radius:9999px;font-size:10px;" title="${sem}">${shortName}</span>`;
+                        })
+                        .join('') +
+                      `</div>`
+                    : '';
+                return (
+                  `<div style="flex:1;min-width:92px;display:flex;flex-direction:column;border:1px solid var(--border);border-radius:4px;padding:4px;background:var(--surface);box-sizing:border-box;">` +
+                  `<div style="height:50px;background:${s.value};display:flex;align-items:flex-end;padding:4px;font-size:10px;font-weight:600;color:${Number(s.step) >= 600 ? '#fff' : '#000'};border-radius:2px;"><span>${s.step}</span></div>` +
+                  `<div style="display:flex;flex-direction:column;margin-top:4px;">${hexHtml}${oklchHtml}${badgesHtml}</div>` +
+                  `</div>`
+                );
+              })
+              .join('');
+            return `<div style="margin-bottom:1.5rem;"><h3 style="font-size:1rem;margin-bottom:0.5rem;text-transform:capitalize;">${group}</h3><div style="display:flex;gap:6px;flex-wrap:wrap;">${chips}</div></div>`;
+          })
+          .join('');
+
+  const semanticsHtml =
+    model.semantics.length === 0
+      ? '<p style="color:var(--text-muted);">No semantic color tokens in this theme.</p>'
+      : model.semantics
+          .map(({ group, roles }) => {
+            const rows = roles
+              .map((r) => {
+                const shortRole = r.path.startsWith('semantic.color.')
+                  ? r.path.slice('semantic.color.'.length)
+                  : r.path;
+                const hexText = r.hex ?? '—';
+                const sourceText = r.source ? `{${r.source}}` : '—';
+                return (
+                  `<tr style="border-bottom:1px solid var(--border);">` +
+                  `<td style="padding:0.5rem;width:32px;"><div style="width:24px;height:24px;background:${r.value};border:1px solid var(--border);border-radius:4px;"></div></td>` +
+                  `<td style="padding:0.5rem;font-family:monospace;font-size:0.875rem;">${shortRole}</td>` +
+                  `<td style="padding:0.5rem;font-family:monospace;font-size:0.875rem;">${hexText}</td>` +
+                  `<td style="padding:0.5rem;font-size:0.875rem;color:var(--text-muted);word-break:break-all;">${r.value}</td>` +
+                  `<td style="padding:0.5rem;font-family:monospace;font-size:0.875rem;color:var(--text-muted);">${sourceText}</td>` +
+                  `</tr>`
+                );
+              })
+              .join('');
+            return (
+              `<div style="margin-bottom:1.5rem;"><h3 style="font-size:1rem;margin-bottom:0.5rem;text-transform:capitalize;">${group}</h3>` +
+              `<table style="width:100%;border-collapse:collapse;font-size:0.875rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">` +
+              `<thead><tr style="background:var(--surface);color:var(--text-muted);border-bottom:1px solid var(--border);text-align:left;">` +
+              `<th style="padding:0.5rem;"></th><th style="padding:0.5rem;">Role</th><th style="padding:0.5rem;">HEX</th><th style="padding:0.5rem;">Value</th><th style="padding:0.5rem;">Source</th>` +
+              `</tr></thead><tbody>${rows}</tbody></table></div>`
+            );
+          })
+          .join('');
+
+  const typographyStepsHtml =
+    model.typography.steps.length === 0
+      ? '<p style="color:var(--text-muted);">No typography tokens in this theme.</p>'
+      : `<table style="width:100%;border-collapse:collapse;font-size:0.875rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">` +
+        `<thead><tr style="background:var(--surface);color:var(--text-muted);border-bottom:1px solid var(--border);text-align:left;">` +
+        `<th style="padding:0.5rem;">Step</th><th style="padding:0.5rem;">Specimen</th><th style="padding:0.5rem;">Size</th><th style="padding:0.5rem;">Line height</th>` +
+        `</tr></thead><tbody>` +
+        model.typography.steps
+          .map((s) => {
+            const lh = s.lineHeight ?? '—';
+            return (
+              `<tr style="border-bottom:1px solid var(--border);">` +
+              `<td style="padding:0.5rem;font-weight:600;width:60px;">${s.step}</td>` +
+              `<td style="padding:0.5rem;overflow:hidden;"><span style="font-family:var(--font);font-size:${s.fontSize};line-height:${s.lineHeight ?? 'inherit'};white-space:nowrap;">Aa</span></td>` +
+              `<td style="padding:0.5rem;font-family:monospace;font-size:0.875rem;width:90px;">${s.fontSize}</td>` +
+              `<td style="padding:0.5rem;font-family:monospace;font-size:0.875rem;color:var(--text-muted);width:90px;">${lh}</td>` +
+              `</tr>`
+            );
+          })
+          .join('') +
+        `</tbody></table>`;
+
+  const weightsHtml =
+    model.typography.weights.length > 0
+      ? `<div style="display:flex;gap:1.5rem;flex-wrap:wrap;align-items:center;margin-top:1rem;padding:0.75rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);">${model.typography.weights
+          .map(
+            (w) =>
+              `<span style="font-family:var(--font);font-size:1rem;font-weight:${w.value};">Aa <span style="font-size:0.75rem;color:var(--text-muted);font-weight:normal;">(${w.name} ${w.value})</span></span>`,
+          )
+          .join('')}</div>`
+      : '';
+
+  const typographyHtml =
+    `<p style="margin-bottom:1rem;">Font family: <code style="font-family:var(--font);font-weight:600;">${model.typography.fontFamily}</code></p>` +
+    typographyStepsHtml +
+    (model.typography.steps.length > 0 ? weightsHtml : '');
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -99,7 +222,13 @@ export function renderVisualizerHtml(model: VisualizerModel): string {
     <h2>1. Color Ramps</h2>
     ${rampHtml}
 
-    <h2>2. Component Specimens</h2>
+    <h2>2. Semantic Colors</h2>
+    ${semanticsHtml}
+
+    <h2>3. Typography</h2>
+    ${typographyHtml}
+
+    <h2>4. Component Specimens</h2>
     <div class="specimen-card">
       <h3 style="margin-top:0;">Card Specimen</h3>
       <p style="color:var(--text-muted);">This card tests surface background, borders, radius, and typography bindings.</p>

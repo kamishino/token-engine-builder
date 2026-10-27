@@ -56,7 +56,6 @@ Options:
   --package [name]      Scaffold a monorepo workspace package.json
   --root <dir>          Target project root directory (default: current working directory)
   --baseline <file>     Pre-audit baseline JSON for Before-vs-After scorecard
-  --audit-baseline      Extract production CSS contrast baseline before generating
   --allow-unaudited     Compile CSS even without fresh passing audit stamp
   --force               Overwrite existing outputs deliberately
   --dry-run             Preview actions without writing to disk
@@ -98,6 +97,7 @@ const INIT_USAGE = `Usage: token-engine init [options]
 Detect codebase context and initialize tokens.config.json.
 
 Options:
+  --spec <path>         Path to tokens.config.json (default: tokens.config.json)
   --root <dir>          Root directory to scan (default: .)
   --force               Overwrite existing spec file
   --dry-run             Preview extraction without writing
@@ -110,10 +110,9 @@ Generate starter companion configs for formatter, linter, and CSS setup.
 
 Options:
   --root <dir>          Target project directory (default: .)
-  --formatter <name>    Formatter config to generate: prettier (default) or biome
-  --linter <name>       Style linter config to generate: stylelint (default) or eslint
+  --formatter <name>    Formatter config to generate: prettier (default), biome, or none
+  --linter <name>       Style linter config to generate: stylelint (default), eslint, or none
   --css <name>          CSS import file to generate: native (default) or tailwind
-  --force               Overwrite existing configuration files
   --dry-run             Preview scaffolding without writing
   --json                Emit machine-readable JSON output
   --help                Show this help message`;
