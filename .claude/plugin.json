@@ -1,6 +1,6 @@
 {
   "name": "token-engine-builder",
-  "version": "1.5.1",
+  "version": "2.0.0",
   "description": "AI agent skill pipeline and unified deterministic CLI for 3-tier W3C DTCG design tokens (OKLCH, WCAG+APCA, Style Dictionary v5, UI profiles)",
   "author": {
     "name": "kamishino"
