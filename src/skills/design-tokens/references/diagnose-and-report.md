@@ -1,6 +1,6 @@
 # Design System Review — Report Format
 
-Read during Phase 1 (Silent Context Triage) when handling a review-only or diagnostic request that outputs an HTML health report.
+Read during Phase 1 (Context Triage) when handling a review-only or diagnostic request that outputs an HTML health report.
 
 The design system review is rendered as a single self-contained HTML file in the OS temp directory (`<tmpdir>/design-system-review-<timestamp>.html`). Tailwind and Mermaid both come from CDNs, paired with a small inline fallback CSS block so the document remains legible offline.
 
@@ -148,3 +148,7 @@ When `state.spec.status === 'missing'`, replace the findings cards with a **Syst
 - **Layout & Density**: 4px grid spacing, density setting (`comfortable` vs `compact`), corner radii presets.
 - **Specification Skeleton**: a valid, complete `tokens.config.json` preview ready to be recorded.
 - **Handoff Action**: invoke `design-tokens` (or `token-engine extract` if code colors exist) to record the proposal into the project root.
+
+## Presenting the report
+
+Rendering the HTML is not done. Present the Top Recommendation in chat (one hole, one command), give the report path, and offer exactly two continuations: fix now or stop at the report. No mutation follows from a review-only request without the user's fix-now instruction.

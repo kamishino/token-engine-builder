@@ -2,7 +2,7 @@
 
 Operational guide for invoking the bundled `token-engine` CLI and managing build artifacts alongside target project compilers.
 
-Read during Phase 1 (Silent Context Triage) to verify engine availability, or Phase 3 (Architect Tokens) and Phase 4 (Codebase Modernization) when executing CLI subcommands, targeting UI profiles, or coordinating compilers of record.
+Read during Phase 1 (Context Triage) to verify engine availability, or Phase 3 (Architect Tokens) and Phase 4 (Codebase Modernization) when executing CLI subcommands, targeting UI profiles, or coordinating compilers of record.
 
 ---
 

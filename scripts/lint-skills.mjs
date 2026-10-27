@@ -10,6 +10,8 @@
  *   - All relative links exist on disk.
  *   - agents/openai.yaml exists.
  *   - No README.md in skill directory; child entries ⊆ {scripts, templates, assets, examples, references, agents}.
+ *   - Process steps must not be titled Silent (state evidence aloud).
+ *   - Named skills must contain their human-engagement anchors (ENGAGEMENT_ANCHORS).
  * - Plugin.json skills match src/skills directories.
  * - Flags documented in CLI COMMANDS appear in design-tokens documentation.
  */
@@ -26,8 +28,11 @@ const FORBIDDEN_LITERALS = [
   '{color.brand.500}',
   'Respect the tiers in any manual edit',
   '7 fg/bg role pairs',
-  'style-spec',
-];
+   'style-spec',
+  'Silent Context Triage',
+  'Silent Triage',
+  'Single-Touch Plan',
+ ];
 
 const ALLOWED_FRONTMATTER_KEYS = new Set([
   'name',
@@ -52,6 +57,23 @@ const ALLOWED_SKILL_SUBDIRS = new Set([
   'references',
   'agents',
 ]);
+
+const ENGAGEMENT_ANCHORS = {
+  'design-tokens': [
+    '**Checkpoint (evidence brief)**',
+    '**Checkpoint (palette read-back)**',
+    '**Checkpoint (visual review)**',
+    'runners-up',
+    'autonomous opt-out',
+    'Human reaction to the visualizer is recorded',
+  ],
+  'setup-pre-tokens': [
+    'zero-decision, not zero-visibility',
+    '**Gate (plan confirmation)**',
+    '**Handoff context**',
+    'autonomous opt-out',
+  ],
+};
 
 export function runLint({ root = rootDir } = {}) {
   const skillsDir = join(root, 'src', 'skills');
@@ -136,6 +158,12 @@ export function runLint({ root = rootDir } = {}) {
         fail('command uses a <...-root> placeholder without the literal-execution guard');
       }
 
+      for (const anchor of ENGAGEMENT_ANCHORS[entry.name] ?? []) {
+        if (!skillContent.includes(anchor)) {
+          fail(`SKILL.md is missing human-engagement anchor "${anchor}"`);
+        }
+      }
+
       const match = skillContent.match(/^---\n([\s\S]*?)\n---/);
       if (match?.[1] === undefined) {
         fail('missing frontmatter block');
@@ -204,6 +232,9 @@ export function runLint({ root = rootDir } = {}) {
           const title = h3Headings[i][1].trim();
           if (!/^### \d+\. /.test(h3Headings[i][0])) {
             fail(`process step heading "${title}" must match /^### \\d+\\. /`);
+          }
+          if (/\bSilent\b/.test(title)) {
+            fail(`process step heading "${title}" must not be "Silent" — state evidence aloud`);
           }
           const startIdx = h3Headings[i].index;
           const nextIdx =

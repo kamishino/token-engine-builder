@@ -1,6 +1,6 @@
 # Discovery & Evidence Reference
 
-Read during Phase 1 (Silent Context Triage) on brownfield projects, or Phase 2 (Socratic Aesthetic Synthesis) when extracting or interpreting candidate styling.
+Read during Phase 1 (Context Triage) on brownfield projects, or Phase 2 (Socratic Aesthetic Synthesis) when extracting or interpreting candidate styling.
 
 ## Scan before interviewing
 
@@ -21,6 +21,7 @@ A missing group is still a finding ("no token files found — greenfield"). Neve
 ### How findings enter the record
 
 - Existing brand color found → propose it as the anchor candidate (converted to OKLCH) at read-back; cluster resolution then _checks_ which cluster box it falls in instead of choosing freely.
+- Extract candidates → the Step 2 candidate table: one row per `evidence:` line (OKLCH · source/name · verdict: winner / runner-up / collapsed→role).
 - Existing tokens found → default posture is replace-the-color-layer, report-the-rest; explicit "keep" from the user overrides.
 - Nothing found → pure interview path ([`palette.md`](palette.md)), no scan output to reconcile.
 
@@ -50,7 +51,7 @@ A Markdown file starting with a `---` frontmatter block is parsed as a Stitch DE
 | Lightness 0.35–0.75                                  | +20 (else −20) |
 | Each additional occurrence                           | +2             |
 
-The winner becomes the candidate anchor. Backgrounds and text colors are common but score low by design — the anchor should be the brand signal, not the canvas.
+The winner becomes the candidate anchor. Backgrounds and text colors are common but score low by design — the anchor should be the brand signal, not the canvas. Scores exist to explain the winner to the human — never present the winner without the runners-up it beat.
 
 ### Other signals
 

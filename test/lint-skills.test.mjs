@@ -294,3 +294,73 @@ test('runLint reports invalid CLI flag documented for command in design-tokens',
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('runLint reports missing human-engagement anchors for design-tokens', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'lint-anchors-'));
+  try {
+    const skillDir = join(dir, 'src', 'skills', 'design-tokens');
+    makeValidSkill(skillDir, 'design-tokens');
+
+    const failures = runLint({ root: dir });
+    assert.ok(
+      failures.some((f) =>
+        f.includes('missing human-engagement anchor "**Checkpoint (visual review)**"'),
+      ),
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('runLint reports a Silent process step heading', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'lint-silent-step-'));
+  try {
+    const skillDir = join(dir, 'src', 'skills', 'demo');
+    makeValidSkill(skillDir);
+    const skillContent = readFileSync(join(skillDir, 'SKILL.md'), 'utf8');
+    writeFileSync(
+      join(skillDir, 'SKILL.md'),
+      skillContent.replace('### 1. First Step', '### 1. Silent Setup'),
+      'utf8',
+    );
+
+    const failures = runLint({ root: dir });
+    assert.ok(failures.some((f) => f.includes('must not be "Silent"')));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('runLint reports forbidden Silent Triage literal in a linked reference', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'lint-ref-silent-'));
+  try {
+    const skillDir = join(dir, 'src', 'skills', 'demo');
+    makeValidSkill(skillDir);
+    const refsDir = join(skillDir, 'references');
+    mkdirSync(refsDir, { recursive: true });
+    writeFileSync(
+      join(refsDir, 'doc.md'),
+      '# Doc\nRead during Phase 1 (Silent Triage) here.\n',
+      'utf8',
+    );
+
+    const skillContent = readFileSync(join(skillDir, 'SKILL.md'), 'utf8');
+    writeFileSync(
+      join(skillDir, 'SKILL.md'),
+      skillContent.replace(
+        'Interface and implementation.',
+        'See [references/doc.md](references/doc.md).',
+      ),
+      'utf8',
+    );
+
+    const failures = runLint({ root: dir });
+    assert.ok(
+      failures.some((f) =>
+        f.includes('references/doc.md contains forbidden stale literal "Silent Triage"'),
+      ),
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

@@ -18,6 +18,7 @@ Audit matrix and default tooling configuration for `setup-pre-tokens`.
 | **Tokens Directory** | `tokens/**/*.tokens.json` | *(Scaffolds 3-tier seeds)* | — |
 | **Styles Directory** | `src/styles/` or `styles/` | *(Scaffolds 7-1 partials)* | — |
 
+Step 2 presents this matrix per slot with the evidence actually found — detection is never surfaced as bare defaults.
 ---
 
 ## 2. Package Manager Precedence

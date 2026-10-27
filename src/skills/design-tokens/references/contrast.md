@@ -19,13 +19,13 @@ Text pairs gate at `--min-ratio` (default 4.5) AND `--min-apca` (default Lc 60).
 
 ## Reading a marginal pass
 
-Light-cluster systems (anchor lightness ≥ 0.65) land action pairs near ≈4.5:1 by construction — light action surfaces sit two ramp steps below a light anchor. A 4.5–4.8 pass there is expected, not a defect; report it as marginal so the human knows the margin is thin.
+Light-cluster systems (anchor lightness ≥ 0.65) land action pairs near ≈4.5:1 by construction — light action surfaces sit two ramp steps below a light anchor. A 4.5–4.8 pass there is expected, not a defect; report it as marginal so the human knows the margin is thin. List marginal pairs at the Step 5 visual-review checkpoint with the option to return to this ladder; never present them as clean passes.
 
 ## Remediation ladder
 
-1. **Record the step move in the spec** (`overrides.<theme>.<path>` → one step further from its background, e.g. `neutral.700` → `neutral.800`), then re-run `token-engine generate` (or `token-engine sync`). The audit report's `remedy:` suggestion automatically searches the failing role's own ramp (foreground first, background when no foreground step clears the floor); the recorded override is still the decision. Overrides are applied by generate into the semantic files and survive regeneration; editing a generated semantic file directly does not (and trips the provenance manifest).
-2. **Shift the anchor** `l` by ≥ 0.05 in `tokens.config.json` and re-run `token-engine generate` — only when step moves can't fix it (whole ramp is misplaced).
-3. **Escalate** with the failing pairs table after 3 loops. Lowering `--min-ratio` or `--min-apca` is the user's call, never a remediation.
+1. **Record the step move in the spec** (`overrides.<theme>.<path>` → one step further from its background, e.g. `neutral.700` → `neutral.800`), then re-run `token-engine generate` (or `token-engine sync`). The audit report's `remedy:` suggestion automatically searches the failing role's own ramp (foreground first, background when no foreground step clears the floor); the recorded override is still the decision. Overrides are applied by generate into the semantic files and survive regeneration; editing a generated semantic file directly does not (and trips the provenance manifest). State the recorded override (path, old → new) in the Step 3 narration; no pause — this is the deterministic remedy.
+2. **Checkpoint (anchor shift)**: when step moves can't fix it (whole ramp misplaced), present the failing pairs, the proposed anchor (old OKLCH → new, Δl ≥ 0.05), and its brand consequence; edit `tokens.config.json` and re-run `token-engine generate` only after the user's reaction. Under autonomous opt-out, state the shift as a default and apply it.
+3. **Gate** — **Escalate** with the failing pairs table after 3 loops. Lowering `--min-ratio` or `--min-apca` is the user's call, never a remediation.
 
 ## Quick ΔL check
 
